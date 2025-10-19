@@ -12,13 +12,12 @@ internal class AnalyzerApiClientService(Uri baseUrl, string apiKey) : IDisposabl
 {
     private static Uri AnalysisResultEndpoint => new ("api/analysis/result", UriKind.Relative);
 
-
     private readonly HttpClient _httpClient = new() {
         BaseAddress = baseUrl,
         DefaultRequestHeaders =
-            {
-                { "Api-Key", apiKey }
-            }
+        {
+            { "Api-Key", apiKey }
+        }
     };
 
     public async Task<HttpResponseMessage> PostAnalysisResultAsync(AnalysisResult result)

@@ -2,7 +2,7 @@
 
 namespace devops_pr_analyzer.Extensions;
 
-public static class LanguageMapper
+internal static class LanguageMapper
 {
     public static EProgrammingLanguage FromFileName(string file)
     {

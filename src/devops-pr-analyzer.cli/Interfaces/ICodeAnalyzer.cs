@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace devops_pr_analyzer.cli.Interfaces;
 
-public interface ICodeAnalyzer
+internal interface ICodeAnalyzer
 {
     EProgrammingLanguage Language { get; }
     Task<shared.Models.AnalysisResult> AnalyzeAsync(string solutionPath);

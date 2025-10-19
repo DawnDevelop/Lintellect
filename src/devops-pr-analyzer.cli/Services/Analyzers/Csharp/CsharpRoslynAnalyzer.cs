@@ -1,5 +1,4 @@
 ﻿using devops_pr_analyzer.cli.Interfaces;
-using devops_pr_analyzer.cli.Services.Git;
 using devops_pr_analyzer.Extensions;
 using devops_pr_analyzer.shared.Models;
 using Microsoft.Build.Locator;
@@ -34,9 +33,6 @@ internal class CSharpAnalyzer : ICodeAnalyzer
 
         var findings = new List<AnalyzerFindings>();
 
-        var changeDetector = CodeChangeDetectorFactory.Create();
-        var changedFiles = changeDetector.GetChangedFiles(["*.cs", "*.json"]);
-
         foreach (var project in solution.Projects)
         {
             var compilation = await project.GetCompilationAsync().ConfigureAwait(false);
@@ -52,7 +48,7 @@ internal class CSharpAnalyzer : ICodeAnalyzer
                 await withAnalyzers.GetAnalyzerDiagnosticsAsync().ConfigureAwait(false);
             diagnostics.AddRange(analyzerDiagnostics);
 
-            foreach (var d in GetFilteredDiagnostics(diagnostics, changedFiles))
+            foreach (var d in GetFilteredDiagnostics(diagnostics))
             {
                 var span = d.Location.GetLineSpan();
                 findings.Add(new AnalyzerFindings
@@ -73,14 +69,13 @@ internal class CSharpAnalyzer : ICodeAnalyzer
         };
     }
 
-    private static IEnumerable<Diagnostic> GetFilteredDiagnostics(ImmutableArray<Diagnostic> diagnostics, IReadOnlySet<string> changedFiles)
+    private static IEnumerable<Diagnostic> GetFilteredDiagnostics(ImmutableArray<Diagnostic> diagnostics)
     {
         return diagnostics.Where(d => d.Location.IsInSource &&
                         (d.Severity == DiagnosticSeverity.Warning
                         || d.Severity == DiagnosticSeverity.Error
                         || d.Severity == DiagnosticSeverity.Info) 
-                        && !d.Location.SourceTree.FilePath.Contains("/obj/", StringComparison.OrdinalIgnoreCase) &&
-                        (changedFiles.Count == 0 || changedFiles.Contains(Path.GetFullPath(d.Location.SourceTree.FilePath))));
+                        && !d.Location.SourceTree.FilePath.Contains("/obj/", StringComparison.OrdinalIgnoreCase));
     }
 
     private static ImmutableArray<DiagnosticAnalyzer> LoadMicrosoftAnalyzers()

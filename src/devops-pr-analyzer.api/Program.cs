@@ -38,8 +38,7 @@ try
 {
     await app.RunAsync();
 }
-catch (Exception ex)
+catch (Exception)
 {
-    
 	throw;
 }

@@ -1,4 +1,5 @@
 ﻿using devops_pr_analyzer.cli.Interfaces;
+using devops_pr_analyzer.cli.Services.Git;
 using devops_pr_analyzer.shared.Models;
 
 namespace devops_pr_analyzer.cli.Services;
@@ -10,6 +11,15 @@ internal class LanguageAnalysisOrchestrator(EProgrammingLanguage language)
     {
         
         var result = await codeAnalyzer.AnalyzeAsync(path).ConfigureAwait(false);
+        var gitInfo = GitInfoExtractorFactory.Create().ExtractInfo();
+        
+        if(gitInfo is null)
+        {
+            Console.WriteLine("Warning: Unable to extract Git information.");
+            return result;
+        }
+
+        result.GitInfo = gitInfo;
         return result;
     }
 
