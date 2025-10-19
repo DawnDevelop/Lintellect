@@ -1,8 +1,15 @@
 # GitHub Copilot Instructions for devops-pr-analyzer
 
-## Project Overview
+## Architecture Overview
 
-This is a DevOps Pull Request Analyzer tool that performs static code analysis on pull requests from GitHub and Azure DevOps. The solution consists of multiple projects that work together to analyze code changes, extract diagnostics, and provide feedback through an API.
+This is a **multi-project .NET solution** for static code analysis on pull requests, designed to run in CI/CD pipelines (GitHub Actions, Azure DevOps) or via API. The architecture follows a **separation of concerns** pattern:
+
+- **CLI** (`devops-pr-analyzer.cli`): Stateless analyzer that runs in CI/CD, extracts PR context from environment variables, performs Roslyn-based analysis, and optionally posts results to API
+- **API** (`devops-pr-analyzer.api`): ASP.NET Core service that receives analysis results, processes PR events via Azure Service Bus, and integrates with DevOps platforms
+- **Shared** (`devops-pr-analyzer.shared`): Data contracts (`AnalysisResult`, `GitInfo`, `AnalyzerFindings`) shared between CLI and API
+- **AppHost** & **ServiceDefaults**: .NET Aspire orchestration for local development with OpenTelemetry, health checks, and service discovery
+
+**Key Data Flow**: CI/CD runs CLI → Roslyn analyzes code → CLI detects Git context → Results posted to API → API processes with AI → DevOps integration
 
 ## Solution Structure
 
@@ -81,6 +88,7 @@ The CLI tool is designed to run in CI/CD pipelines:
 ### GitHub Actions
 
 The tool extracts information from these environment variables:
+
 - `GITHUB_REF`: Format `refs/pull/{pr_number}/merge` or `refs/pull/{pr_number}/head`
 - `GITHUB_SHA`: Commit SHA
 - `GITHUB_REPOSITORY`: Repository name (owner/repo)
@@ -88,6 +96,7 @@ The tool extracts information from these environment variables:
 ### Azure DevOps
 
 The tool supports Azure DevOps through:
+
 - `AzureDevOpsInfoExtractor` for extracting pipeline information
 - Integration with Azure Service Bus for messaging
 - TFS/Azure DevOps client libraries
@@ -144,12 +153,6 @@ When working with code analysis:
 2. Use records for immutable data
 3. Use classes for mutable data with init-only properties where appropriate
 4. Add XML documentation for public APIs
-
-## Performance Considerations
-
-- The test project copies analyzer DLLs during build (see custom MSBuild target)
-- Use `CopyLocalLockFileAssemblies` in API project for proper assembly loading
-- Consider memory usage when analyzing large repositories
 
 ## When Suggesting Code
 

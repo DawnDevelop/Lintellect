@@ -29,7 +29,7 @@ internal class StaticAnalysisCommand : Command
         var serviceUrl = new Option<string>("--api-url")
         {
             Description = "AiPrReview.Service base URL",
-            Required = true,
+            Required = false,
             Validators =
             {
                 result =>
@@ -46,7 +46,7 @@ internal class StaticAnalysisCommand : Command
         var apiKey = new Option<string>("--api-key")
         {
             Description = "API key",
-            Required = true
+            Required = false
         };
 
         var language = new Option<EProgrammingLanguage>("--language")
@@ -62,16 +62,35 @@ internal class StaticAnalysisCommand : Command
 
         SetAction(async (parseResult) =>
         {
+            Console.WriteLine("Starting static analysis...");
+            Console.WriteLine();
+
             var languageOptionResult = parseResult.GetValue(language);
-            var orchestrator = new LanguageAnalysisOrchestrator(languageOptionResult);
             var path = parseResult.GetValue(solution)!;
             var serviceUrlValue = parseResult.GetValue(serviceUrl);
             var apiKeyValue = parseResult.GetValue(apiKey);
 
+            Console.WriteLine($"Configuration:");
+            Console.WriteLine($"  Solution Path: {path}");
+            Console.WriteLine($"  Language: {languageOptionResult}");
+            Console.WriteLine($"  API URL: {serviceUrlValue}");
+            Console.WriteLine($"  API Key: {(string.IsNullOrEmpty(apiKeyValue) ? "Not provided" : "***")}");
+            Console.WriteLine();
+
+            var orchestrator = new LanguageAnalysisOrchestrator(languageOptionResult);
             var analysisResult = await orchestrator.RunAsync(path).ConfigureAwait(false);
+
+            Console.WriteLine();
+            Console.WriteLine($"Analysis completed: {analysisResult.Findings.Count} finding(s) detected");
+            Console.WriteLine($"  Errors: {analysisResult.Findings.Count(f => f.Severity == "Error")}");
+            Console.WriteLine($"  Warnings: {analysisResult.Findings.Count(f => f.Severity == "Warning")}");
+            Console.WriteLine($"  Info: {analysisResult.Findings.Count(f => f.Severity == "Info")}");
+            Console.WriteLine();
 
             if (apiKeyValue is null || serviceUrlValue is null)
             {
+                Console.WriteLine("No API credentials provided. Outputting findings to console:");
+                Console.WriteLine();
                 foreach (var finding in analysisResult.Findings)
                 {
                     Console.WriteLine($"[{finding.Severity}] {finding.RuleId}: {finding.Message} at {finding.FilePath}:{finding.Line}");
@@ -79,13 +98,16 @@ internal class StaticAnalysisCommand : Command
             }
             else
             {
+                Console.WriteLine("Posting results to API...");
                 using var client = new AnalyzerApiClientService(new Uri(serviceUrlValue), apiKeyValue);
                 await client.PostAnalysisResultAsync(analysisResult).ConfigureAwait(false);
+                Console.WriteLine("✓ Results successfully posted to API");
             }
-                
             
-
-
+            Console.WriteLine();
+            Console.WriteLine("========================================");
+            Console.WriteLine("Analysis pipeline completed successfully");
+            Console.WriteLine("========================================");
 
             return 0;
         });

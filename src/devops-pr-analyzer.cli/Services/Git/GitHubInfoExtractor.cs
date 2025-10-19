@@ -9,7 +9,6 @@ namespace devops_pr_analyzer.cli.Services.Git;
 
 internal sealed class GitHubInfoExtractor : IGitInfoExtractor
 {
-
     public GitInfo? ExtractInfo()
     {
         var gitHubRef = Env("GITHUB_REF");

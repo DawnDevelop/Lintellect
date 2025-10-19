@@ -30,8 +30,4 @@
 		<ProjectReference Include="..\devops-pr-analyzer.shared\devops-pr-analyzer.shared.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="Extensions\" />
-	</ItemGroup>
-
 </Project>

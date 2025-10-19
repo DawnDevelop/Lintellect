@@ -4,4 +4,4 @@ using System.Text;
 
 namespace devops_pr_analyzer.shared.Models;
 
-public record GitInfo(string PullRequestId, string CommitId, string RepositoryName);
+public record GitInfo(string Identifier, string CommitId, string RepositoryName, GitInfoType Type = GitInfoType.Unknown);

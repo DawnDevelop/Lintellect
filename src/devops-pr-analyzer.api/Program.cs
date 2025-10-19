@@ -9,8 +9,6 @@ builder.AddServiceDefaults();
 // Add services to the container.
 builder.Services.AddOpenApi();
 
-builder.AddServiceBusProcessing(builder.Configuration.GetConnectionString("AzureServiceBus") ?? "");
-
 // Register API Key configuration
 builder.Services.Configure<AuthorizationOptions>(x =>
 {

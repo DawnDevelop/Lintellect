@@ -29,12 +29,16 @@ internal class CSharpAnalyzer : ICodeAnalyzer
 
         var solution = await workspace.OpenSolutionAsync(solutionPath).ConfigureAwait(false);
 
-        var analyzers = LoadMicrosoftAnalyzers();
+        //var analyzers = LoadMicrosoftAnalyzers();
 
         var findings = new List<AnalyzerFindings>();
 
         foreach (var project in solution.Projects)
         {
+            var analyzers = project.AnalyzerReferences
+                .SelectMany(r => r.GetAnalyzers(LanguageNames.CSharp))
+                .ToImmutableArray();
+
             var compilation = await project.GetCompilationAsync().ConfigureAwait(false);
             if (compilation == null)
                 continue;
