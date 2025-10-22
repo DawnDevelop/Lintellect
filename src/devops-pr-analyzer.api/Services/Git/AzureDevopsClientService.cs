@@ -320,14 +320,14 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
     public async Task<Dictionary<string, string>> GetPullRequestCompactDiffsAsync(
         string projectName, 
         string repositoryName, 
-        int pullRequestId, 
+        int pullRequestId,
         int contextLines = 3,
         int maxNewFileLines = 50,
         int maxLinesPerFile = 1000)
     {
         var gitClient = await GetGitClient().ConfigureAwait(false);
         var pullRequest = await GetPullRequestAsync(projectName, repositoryName, pullRequestId).ConfigureAwait(false);
-
+        
         // Get the list of changed files
         var commitDiffs = await gitClient.GetCommitDiffsAsync(
             projectName,
@@ -347,6 +347,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
             .ConfigureAwait(false);
 
         var compactDiffs = new Dictionary<string, string>();
+        commitDiffs.Changes = commitDiffs.Changes.Where(x => !x.Item.IsFolder);
 
         if (commitDiffs.Changes is null)
         {

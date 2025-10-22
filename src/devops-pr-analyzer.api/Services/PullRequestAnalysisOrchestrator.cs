@@ -352,9 +352,9 @@ public sealed class AnalysisOptions
     /// </summary>
     public int MaxLinesPerFile { get; init; } = 1000;
 
-    public bool IncludeSummary { get; init; } = false;
+    public bool IncludeSummary { get; init; } = true;
 
-    public bool IncludeComprehensiveComment { get; init; } = false;
+    public bool IncludeComprehensiveComment { get; init; } = true;
 
     public bool IncludeInlineSuggestions { get; init; } = true;
     /// <summary>
