@@ -4,7 +4,7 @@ using System.Text;
 
 namespace devops_pr_analyzer.shared.Models;
 
-public enum GitInfoType
+public enum EGitInfoType
 {
     Unknown,
     PullRequest,

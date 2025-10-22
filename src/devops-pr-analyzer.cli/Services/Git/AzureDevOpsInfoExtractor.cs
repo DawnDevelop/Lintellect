@@ -15,6 +15,7 @@ internal sealed class AzureDevOpsInfoExtractor : IGitInfoExtractor
         var commitId = Env("BUILD_SOURCEVERSION");
         var repositoryName = Env("BUILD_REPOSITORY_NAME");
         var buildReason = Env("BUILD_REASON");
+        var projectName = Env("SYSTEM_TEAMPROJECT");
 
         if (string.IsNullOrWhiteSpace(commitId) || string.IsNullOrWhiteSpace(repositoryName))
             return null;
@@ -22,18 +23,18 @@ internal sealed class AzureDevOpsInfoExtractor : IGitInfoExtractor
         // Determine build type
         if (!string.IsNullOrWhiteSpace(pullRequestId))
         {
-            return new GitInfo(pullRequestId, commitId, repositoryName, GitInfoType.PullRequest);
+            return new GitInfo(pullRequestId, commitId, repositoryName, EGitInfoType.PullRequest);
         }
 
         var buildId = Env("BUILD_BUILDID") ?? "unknown";
         var type = buildReason switch
         {
-            "IndividualCI" => GitInfoType.CIBuild,
-            "Manual" => GitInfoType.ManualBuild,
-            _ => GitInfoType.Unknown
+            "IndividualCI" => EGitInfoType.CIBuild,
+            "Manual" => EGitInfoType.ManualBuild,
+            _ => EGitInfoType.Unknown
         };
 
-        return new GitInfo(buildId, commitId, repositoryName, type);
+        return new GitInfo(buildId, commitId, repositoryName, type, ProjectName: projectName);
     }
 
     private static string? Env(string k) => Environment.GetEnvironmentVariable(k);
