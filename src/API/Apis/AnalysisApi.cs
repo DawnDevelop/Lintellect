@@ -112,6 +112,8 @@ public sealed record AnalyzePullRequestRequest
     /// Use comprehensive mode for detailed analysis (larger diffs, all files).
     /// </summary>
     public bool UseComprehensiveMode { get; init; } = false;
+
+    public bool EnableCodeOwners { get; init; } = false;
 }
 
 /// <summary>

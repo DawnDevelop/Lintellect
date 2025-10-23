@@ -52,10 +52,11 @@ public interface IGitClient
     /// <param name="repositoryName">The name or ID of the repository.</param>
     /// <param name="branchName">The branch name (e.g., "main", "master"). If null, uses the default branch.</param>
     /// <returns>The content of the copilot-instructions.md file, or null if not found.</returns>
-    Task<string?> RetrieveCustomInstructionsAsync(
+    Task<string?> GetFileAsync(
         string projectName,
         string repositoryName,
-        string? branchName = null);
+        string? branchName = null,
+        params string[] possiblePaths);
 
     /// <summary>
     /// Creates a new comment thread on a pull request.

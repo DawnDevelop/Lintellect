@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\devops-pr-analyzer.cli\devops-pr-analyzer.cli.csproj" />
+    <ProjectReference Include="..\..\src\CLI\CLI.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -36,9 +36,7 @@
     <ItemGroup>
       <AnalyzerDlls Include="$(NuGetPackageRoot)microsoft.codeanalysis.netanalyzers\**\*.dll" />
     </ItemGroup>
-    <Copy SourceFiles="@(AnalyzerDlls)" 
-          DestinationFolder="$(OutputPath)analyzers\dotnet\cs" 
-          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(AnalyzerDlls)" DestinationFolder="$(OutputPath)analyzers\dotnet\cs" SkipUnchangedFiles="true" />
     <Message Importance="high" Text="Copied analyzer DLLs to $(OutputPath)analyzers\dotnet\cs" />
   </Target>
 

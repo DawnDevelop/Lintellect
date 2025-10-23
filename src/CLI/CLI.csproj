@@ -36,15 +36,15 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\devops-pr-analyzer.shared\devops-pr-analyzer.shared.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<InternalsVisibleTo Include="devops-pr-analyzer.cli.unittests" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<None Include="..\..\README.md" Pack="true" PackagePath="\" Condition="Exists('..\..\README.md')" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Shared\Shared.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -29,43 +29,22 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
     /// <inheritdoc />
     public async Task<GitPullRequest> GetPullRequestAsync(string projectName, string repositoryName, int pullRequestId)
     {
-        var gitClient = await GetGitClient().ConfigureAwait(false);
-        return await gitClient.GetPullRequestAsync(projectName, repositoryName, pullRequestId).ConfigureAwait(false);
+        var gitClient = await GetGitClient();
+        return await gitClient.GetPullRequestAsync(projectName, repositoryName, pullRequestId);
     }
 
     /// <inheritdoc />
-    public async Task<string?> RetrieveCustomInstructionsAsync(
+    public async Task<string?> GetFileAsync(
         string projectName,
         string repositoryName,
-        string? branchName = null)
+        string? branchName = null,
+        params string[] possiblePaths)
     {
-        var gitClient = await GetGitClient().ConfigureAwait(false);
+        var gitClient = await GetGitClient();
 
         // If no branch specified, get the default branch
-        if (string.IsNullOrWhiteSpace(branchName))
-        {
-            try
-            {
-                var repository = await gitClient.GetRepositoryAsync(projectName, repositoryName).ConfigureAwait(false);
-                branchName = repository.DefaultBranch?.Replace("refs/heads/", string.Empty) ?? "main";
-            }
-            catch
-            {
-                // Fallback to common default branch names
-                branchName = "main";
-            }
-        }
-
-        // Common locations where copilot-instructions.md might be stored
-        var possiblePaths = new[]
-        {
-            "/.github/copilot-instructions.md",
-            "/.github/COPILOT-INSTRUCTIONS.md",
-            "/.copilot/copilot-instructions.md",
-            "/docs/copilot-instructions.md",
-            "/copilot-instructions.md",
-            "/COPILOT-INSTRUCTIONS.md"
-        };
+        var repository = await gitClient.GetRepositoryAsync(projectName, repositoryName);
+        branchName = repository.DefaultBranch?.Replace("refs/heads/", string.Empty) ?? "main";
 
         foreach (var path in possiblePaths)
         {
@@ -77,7 +56,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
                     path,
                     branchName,
                     useCommitId: false)
-                    .ConfigureAwait(false);
+                    ;
 
                 if (content is not null)
                 {
@@ -104,8 +83,8 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
     /// <returns>A collection of commits in the pull request.</returns>
     public async Task<IReadOnlyList<GitCommitRef>> GetPullRequestCommitsAsync(string projectName, string repositoryName, int pullRequestId)
     {
-        var gitClient = await GetGitClient().ConfigureAwait(false);
-        var commits = await gitClient.GetPullRequestCommitsAsync(projectName, repositoryName, pullRequestId).ConfigureAwait(false);
+        var gitClient = await GetGitClient();
+        var commits = await gitClient.GetPullRequestCommitsAsync(projectName, repositoryName, pullRequestId);
         return commits;
     }
 
@@ -118,8 +97,8 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
     /// <returns>A collection of file changes in the commit.</returns>
     public async Task<GitCommitChanges> GetCommitChangesAsync(string projectName, string repositoryName, string commitId)
     {
-        var gitClient = await GetGitClient().ConfigureAwait(false);
-        return await gitClient.GetChangesAsync(projectName, commitId, repositoryName).ConfigureAwait(false);
+        var gitClient = await GetGitClient();
+        return await gitClient.GetChangesAsync(projectName, commitId, repositoryName);
     }
 
     /// <summary>
@@ -132,11 +111,11 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
     /// <returns>A collection of file changes between the two commits.</returns>
     public async Task<GitCommitDiffs> GetCommitDiffsAsync(string projectName, string repositoryName, string baseCommitId, string targetCommitId)
     {
-        var gitClient = await GetGitClient().ConfigureAwait(false);
+        var gitClient = await GetGitClient();
         return await gitClient.GetCommitDiffsAsync(projectName, repositoryName, true, top: 1000,
             baseVersionDescriptor: new GitBaseVersionDescriptor { Version = baseCommitId, VersionType = GitVersionType.Commit },
             targetVersionDescriptor: new GitTargetVersionDescriptor { Version = targetCommitId, VersionType = GitVersionType.Commit })
-            .ConfigureAwait(false);
+            ;
     }
 
     /// <summary>
@@ -149,8 +128,8 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
     /// <returns>A collection of file changes in the pull request.</returns>
     public async Task<GitCommitDiffs> GetPullRequestDiffAsync(string projectName, string repositoryName, int pullRequestId)
     {
-        var gitClient = await GetGitClient().ConfigureAwait(false);
-        var pullRequest = await GetPullRequestAsync(projectName, repositoryName, pullRequestId).ConfigureAwait(false);
+        var gitClient = await GetGitClient();
+        var pullRequest = await GetPullRequestAsync(projectName, repositoryName, pullRequestId);
 
         // Get diff between source and target branches
         return await gitClient.GetCommitDiffsAsync(
@@ -168,7 +147,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
                 Version = pullRequest.SourceRefName.Replace("refs/heads/", string.Empty),
                 VersionType = GitVersionType.Branch
             })
-            .ConfigureAwait(false);
+            ;
     }
 
     /// <summary>
@@ -182,7 +161,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
     /// <returns>A stream containing the file contents.</returns>
     public async Task<Stream> GetFileContentAsync(string projectName, string repositoryName, string filePath, string commitId)
     {
-        var gitClient = await GetGitClient().ConfigureAwait(false);
+        var gitClient = await GetGitClient();
         return await gitClient.GetItemContentAsync(
             project: projectName,
             repositoryId: repositoryName,
@@ -192,7 +171,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
                 Version = commitId,
                 VersionType = GitVersionType.Commit
             })
-            .ConfigureAwait(false);
+            ;
     }
 
     /// <summary>
@@ -213,7 +192,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
     {
         try
         {
-            var gitClient = await GetGitClient().ConfigureAwait(false);
+            var gitClient = await GetGitClient();
             using var stream = await gitClient.GetItemContentAsync(
                 project: projectName,
                 repositoryId: repositoryName,
@@ -223,10 +202,10 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
                     Version = versionIdentifier,
                     VersionType = useCommitId ? GitVersionType.Commit : GitVersionType.Branch
                 })
-                .ConfigureAwait(false);
+                ;
 
             using var reader = new StreamReader(stream);
-            return await reader.ReadToEndAsync().ConfigureAwait(false);
+            return await reader.ReadToEndAsync();
         }
         catch (Exception)
         {
@@ -239,7 +218,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
     /// Retrieves the actual text content of a file as a string from a commit.
     /// </summary>
     public async Task<string?> GetFileTextAsync(string projectName, string repositoryName, string filePath, string commitId)
-        => await GetFileTextAsync(projectName, repositoryName, filePath, commitId, useCommitId: true).ConfigureAwait(false);
+        => await GetFileTextAsync(projectName, repositoryName, filePath, commitId, useCommitId: true);
 
     /// <summary>
     /// Retrieves the unified diff format for a specific file change in a pull request.
@@ -253,8 +232,8 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
     /// <returns>A unified diff string showing the changes, or null if unable to generate.</returns>
     public async Task<string?> GetFileDiffAsync(string projectName, string repositoryName, string filePath, string baseCommitId, string targetCommitId)
     {
-        var baseContent = await GetFileTextAsync(projectName, repositoryName, filePath, baseCommitId).ConfigureAwait(false);
-        var targetContent = await GetFileTextAsync(projectName, repositoryName, filePath, targetCommitId).ConfigureAwait(false);
+        var baseContent = await GetFileTextAsync(projectName, repositoryName, filePath, baseCommitId);
+        var targetContent = await GetFileTextAsync(projectName, repositoryName, filePath, targetCommitId);
 
         return DiffGenerationHelper.GenerateUnifiedDiff(filePath, baseContent, targetContent);
     }
@@ -262,8 +241,8 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
     /// <inheritdoc />
     public async Task<Dictionary<string, string>> GetPullRequestFileDiffsAsync(string projectName, string repositoryName, int pullRequestId)
     {
-        var gitClient = await GetGitClient().ConfigureAwait(false);
-        var pullRequest = await GetPullRequestAsync(projectName, repositoryName, pullRequestId).ConfigureAwait(false);
+        var gitClient = await GetGitClient();
+        var pullRequest = await GetPullRequestAsync(projectName, repositoryName, pullRequestId);
 
         // Get the list of changed files
         var commitDiffs = await gitClient.GetCommitDiffsAsync(
@@ -281,7 +260,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
                 Version = pullRequest.SourceRefName.Replace("refs/heads/", string.Empty),
                 VersionType = GitVersionType.Branch
             })
-            .ConfigureAwait(false);
+            ;
 
         var fileDiffs = new Dictionary<string, string>();
 
@@ -305,7 +284,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
             if (baseCommitId is null || targetCommitId is null)
                 continue;
 
-            var diff = await GetFileDiffAsync(projectName, repositoryName, filePath, baseCommitId, targetCommitId).ConfigureAwait(false);
+            var diff = await GetFileDiffAsync(projectName, repositoryName, filePath, baseCommitId, targetCommitId);
             
             if (diff is not null)
             {
@@ -325,8 +304,8 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
         int maxNewFileLines = 50,
         int maxLinesPerFile = 1000)
     {
-        var gitClient = await GetGitClient().ConfigureAwait(false);
-        var pullRequest = await GetPullRequestAsync(projectName, repositoryName, pullRequestId).ConfigureAwait(false);
+        var gitClient = await GetGitClient();
+        var pullRequest = await GetPullRequestAsync(projectName, repositoryName, pullRequestId);
         
         // Get the list of changed files
         var commitDiffs = await gitClient.GetCommitDiffsAsync(
@@ -344,7 +323,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
                 Version = pullRequest.SourceRefName.Replace("refs/heads/", string.Empty),
                 VersionType = GitVersionType.Branch
             })
-            .ConfigureAwait(false);
+            ;
 
         var compactDiffs = new Dictionary<string, string>();
         commitDiffs.Changes = commitDiffs.Changes.Where(x => !x.Item.IsFolder);
@@ -376,7 +355,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
                 contextLines,
                 maxNewFileLines,
                 maxLinesPerFile)
-                .ConfigureAwait(false);
+                ;
             
             if (compactDiff is not null)
             {
@@ -400,8 +379,8 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
         int maxNewFileLines,
         int maxLinesPerFile)
     {
-        var baseContent = await GetFileTextAsync(projectName, repositoryName, filePath, baseCommitId).ConfigureAwait(false);
-        var targetContent = await GetFileTextAsync(projectName, repositoryName, filePath, targetCommitId).ConfigureAwait(false);
+        var baseContent = await GetFileTextAsync(projectName, repositoryName, filePath, baseCommitId);
+        var targetContent = await GetFileTextAsync(projectName, repositoryName, filePath, targetCommitId);
 
         return DiffGenerationHelper.GenerateCompactDiff(filePath, baseContent, targetContent, contextLines, maxNewFileLines, maxLinesPerFile);
     }
@@ -413,7 +392,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
         int pullRequestId,
         string comment)
     {
-        var gitClient = await GetGitClient().ConfigureAwait(false);
+        var gitClient = await GetGitClient();
 
         var thread = new GitPullRequestCommentThread
         {
@@ -434,7 +413,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
             repositoryName,
             pullRequestId
             )
-            .ConfigureAwait(false);
+            ;
     }
 
     public async Task<GitPullRequestCommentThread> CreateCodeChangeCommentAsync(
@@ -447,7 +426,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
         int? lineFrom = null,
         int? lineTo = null)
     {
-        var gitClient = await GetGitClient().ConfigureAwait(false);
+        var gitClient = await GetGitClient();
 
         var commentContent = new StringBuilder();
         
@@ -509,7 +488,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
             projectName,
             repositoryName,
             pullRequestId)
-            .ConfigureAwait(false);
+            ;
     }
 
     /// <inheritdoc />
@@ -520,9 +499,9 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
         string textToAppend,
         string separator = "\n\n---\n\n")
     {
-        var gitClient = await GetGitClient().ConfigureAwait(false);
+        var gitClient = await GetGitClient();
         var pullRequest = await GetPullRequestAsync(projectName, repositoryName, pullRequestId)
-            .ConfigureAwait(false);
+            ;
 
         var existingDescription = pullRequest.Description ?? string.Empty;
         var newDescription = string.IsNullOrWhiteSpace(existingDescription)
@@ -530,7 +509,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
             : $"{existingDescription}{separator}{textToAppend}";
 
         return await UpdateDescriptionAsync(projectName, repositoryName, pullRequestId, newDescription)
-            .ConfigureAwait(false);
+            ;
     }
 
     /// <summary>
@@ -548,7 +527,7 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
         int pullRequestId,
         string newDescription)
     {
-        var gitClient = await GetGitClient().ConfigureAwait(false);
+        var gitClient = await GetGitClient();
 
         var updatedPr = new GitPullRequest
         {
@@ -560,6 +539,6 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
             projectName,
             repositoryName,
             pullRequestId)
-            .ConfigureAwait(false);
+            ;
     }
 }

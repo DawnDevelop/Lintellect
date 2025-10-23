@@ -43,7 +43,7 @@ public sealed class PullRequestAnalysisOrchestrator(
         {
             // Step 1: Retrieve diffs from Git provider
             _logger.LogDebug("Retrieving diffs from Git provider...");
-            var diffs = await GetDiffsAsync(analysisResult, options, cancellationToken).ConfigureAwait(false);
+            var diffs = await GetDiffsAsync(analysisResult, options, cancellationToken);
 
             _logger.LogInformation("Retrieved {DiffCount} file diffs", diffs.Count);
 
@@ -70,7 +70,7 @@ public sealed class PullRequestAnalysisOrchestrator(
             var summary = string.Empty;
             if (options.IncludeSummary)
             {
-                summary = await CreateAndAddSummaryAsync(filteredAnalysisResult, diffs, analyzer, aiAnalyzerModel, cancellationToken).ConfigureAwait(false);
+                summary = await CreateAndAddSummaryAsync(filteredAnalysisResult, diffs, analyzer, aiAnalyzerModel, cancellationToken);
             }
 
             // Step 5: Generate detailed analysis (comprehensive review)
@@ -78,12 +78,12 @@ public sealed class PullRequestAnalysisOrchestrator(
             var detailedAnalysis = string.Empty;
             if(options.IncludeComprehensiveComment)
             {
-                detailedAnalysis = await CreateAndAddComprehensiveCommentAsync(filteredAnalysisResult, diffs, analyzer, aiAnalyzerModel, cancellationToken).ConfigureAwait(false);
+                detailedAnalysis = await CreateAndAddComprehensiveCommentAsync(filteredAnalysisResult, diffs, analyzer, aiAnalyzerModel, cancellationToken);
             }
 
             if(options.IncludeInlineSuggestions)
             {
-                var suggestions = await analyzer.GenerateInlineSuggestionsAsync(aiAnalyzerModel, diffs, cancellationToken).ConfigureAwait(false);
+                var suggestions = await analyzer.GenerateInlineSuggestionsAsync(aiAnalyzerModel, diffs, cancellationToken);
                 foreach (var suggestion in suggestions.Where(x => !string.IsNullOrWhiteSpace(x.SuggestedCode)))
                 {
                     // Build context from title, rule ID, and explanation
@@ -96,7 +96,7 @@ public sealed class PullRequestAnalysisOrchestrator(
                         suggestion.FilePath, 
                         suggestion.LineFrom,
                         suggestion.LineTo)  // Support multi-line suggestions
-                        .ConfigureAwait(false);
+                        ;
                 }
             }
 
@@ -201,7 +201,7 @@ public sealed class PullRequestAnalysisOrchestrator(
         var detailedAnalysis = await analyzer.AnalyzeAsync(
             aiAnalyzerModel,
             diffs,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken);
         await prService.AddCommentAsync(analysisResult, detailedAnalysis);
         _logger.LogInformation("Detailed analysis generated ({Length} chars)", detailedAnalysis.Length);
 
@@ -216,7 +216,7 @@ public sealed class PullRequestAnalysisOrchestrator(
         summary = await analyzer.GenerateSummaryAsync(
             aiAnalyzerModel,
             diffs,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken);
         _logger.LogInformation("PR summary generated ({Length} chars)", summary.Length);
 
         if (!string.IsNullOrWhiteSpace(summary))
@@ -247,7 +247,7 @@ public sealed class PullRequestAnalysisOrchestrator(
         _logger.LogInformation("Generating quick summary for PR #{PullRequest}",
             analysisResult.GitInfo?.Identifier ?? "Unknown");
 
-        var diffs = await GetDiffsAsync(analysisResult, options, cancellationToken).ConfigureAwait(false);
+        var diffs = await GetDiffsAsync(analysisResult, options, cancellationToken);
         
         // Filter findings to only include files in the PR
         var filteredAnalysisResult = FilterFindingsByPullRequestFiles(analysisResult, diffs);
@@ -255,7 +255,7 @@ public sealed class PullRequestAnalysisOrchestrator(
         var analyzer = _analyzerResolver.GetAnalyzerService(analyzerType);
 
         return await analyzer.GenerateSummaryAsync(new AnalyzerServiceModel(filteredAnalysisResult, string.Empty), diffs, cancellationToken)
-            .ConfigureAwait(false);
+            ;
     }
 
 
@@ -271,7 +271,7 @@ public sealed class PullRequestAnalysisOrchestrator(
                 contextLines: options.ContextLines,
                 maxNewFileLines: options.MaxNewFileLines,
                 maxLinesPerFile: options.MaxLinesPerFile)
-                .ConfigureAwait(false);
+                ;
         }
         catch (Exception ex)
         {

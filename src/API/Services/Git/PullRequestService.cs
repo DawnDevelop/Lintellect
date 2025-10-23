@@ -12,6 +12,7 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
 {
     private readonly IGitClientResolver _clientResolver = clientResolver ?? throw new ArgumentNullException(nameof(clientResolver));
 
+
     public IGitClientResolver ClientResolver => _clientResolver;
 
     /// <summary>
@@ -33,7 +34,7 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
         ValidateAnalysisResult(analysisResult);
 
         var (projectName, repositoryName, pullRequestId) = ExtractPullRequestInfo(analysisResult);
-        
+
         // Get the appropriate client based on the provider
         var gitClient = _clientResolver.GetClient(analysisResult);
 
@@ -44,7 +45,7 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
             contextLines,
             maxNewFileLines,
             maxLinesPerFile)
-            .ConfigureAwait(false);
+            ;
 
         return diffs;
     }
@@ -55,35 +56,80 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
     /// </summary>
     /// <param name="analysisResult">Analysis result containing PR information.</param>
     /// <returns>Custom instructions content, or null if not found.</returns>
-    public async Task<string?> GetCustomInstructionsAsync(AnalysisResult analysisResult)
+    public async Task<string?> GetCustomInstructionsAsync(
+        AnalysisResult analysisResult)
     {
-        try
+        ValidateAnalysisResult(analysisResult);
+
+        var (projectName, repositoryName, pullRequestId) = ExtractPullRequestInfo(analysisResult);
+        var gitClient = _clientResolver.GetClient(analysisResult);
+
+        // Get the target branch from the PR
+        var pullRequest = await gitClient.GetPullRequestAsync(projectName, repositoryName, pullRequestId);
+        // Extract branch name from refs/heads/branchname format
+        var targetBranch = pullRequest.SourceRefName?.Replace("refs/heads/", string.Empty);
+
+        // Common locations where copilot-instructions.md might be stored
+        var possiblePaths = new[]
         {
-            ValidateAnalysisResult(analysisResult);
+            "/.github/copilot-instructions.md",
+            "/.github/COPILOT-INSTRUCTIONS.md",
+            "/.copilot/copilot-instructions.md",
+            "/docs/copilot-instructions.md",
+            "/copilot-instructions.md",
+            "/COPILOT-INSTRUCTIONS.md"
+        };
 
-            var (projectName, repositoryName, pullRequestId) = ExtractPullRequestInfo(analysisResult);
-            var gitClient = _clientResolver.GetClient(analysisResult);
+        return await gitClient.GetFileAsync(
+            projectName,
+            repositoryName,
+            targetBranch,
+            possiblePaths);
+    }
 
-            // Get the target branch from the PR
-            var pullRequest = await gitClient.GetPullRequestAsync(projectName, repositoryName, pullRequestId)
-                .ConfigureAwait(false);
+    /// <summary>
+    /// Retrieves the contents of the CODEOWNERS file from the target branch of the pull request specified in the
+    /// analysis result.
+    /// </summary>
+    /// <remarks>The method searches for the CODEOWNERS file in several common locations within the
+    /// repository's target branch. If multiple files are present, the first match in the search order is
+    /// returned.</remarks>
+    /// <param name="analysisResult">The analysis result containing information about the pull request and repository from which to locate the
+    /// CODEOWNERS file. Cannot be null.</param>
+    /// <returns>A string containing the contents of the CODEOWNERS file if found; otherwise, null.</returns>
+    public async Task<string?> GetCodeOwnersFileAsync(AnalysisResult analysisResult)
+    {
+        ValidateAnalysisResult(analysisResult);
 
-            // Extract branch name from refs/heads/branchname format
-            var targetBranch = pullRequest.SourceRefName?.Replace("refs/heads/", string.Empty);
+        var (projectName, repositoryName, pullRequestId) = ExtractPullRequestInfo(analysisResult);
+        var gitClient = _clientResolver.GetClient(analysisResult);
 
-            return await gitClient.RetrieveCustomInstructionsAsync(
-                projectName,
-                repositoryName,
-                targetBranch)
-                .ConfigureAwait(false);
-        }
-        catch (Exception ex)
+        // Get the target branch from the PR
+        var pullRequest = await gitClient.GetPullRequestAsync(projectName, repositoryName, pullRequestId);
+        
+        // Extract branch name from refs/heads/branchname format
+        var targetBranch = pullRequest.SourceRefName?.Replace("refs/heads/", string.Empty);
+
+        // Common locations where copilot-instructions.md might be stored
+        var possiblePaths = new[]
         {
-            // Log but don't fail - custom instructions are optional
-            // The orchestrator can handle null gracefully
-            System.Diagnostics.Debug.WriteLine($"Failed to retrieve custom instructions: {ex.Message}");
-            return null;
-        }
+            "/.github/CODEOWNERS.md",
+            "/.github/CODEOWNERS",
+            "/CODEOWNERS.md",
+            "/CODEOWNERS",
+            "/.docs/CODEOWNERS.md",
+            "/docs/CODEOWNERS.md",
+            "/.docs/CODEOWNERS",
+            "/docs/CODEOWNERS"
+        };
+
+        var content = await gitClient.GetFileAsync(
+            projectName,
+            repositoryName,
+            targetBranch,
+            possiblePaths);
+
+        return content;
     }
 
     /// <summary>
@@ -105,8 +151,7 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
             projectName,
             repositoryName,
             pullRequestId,
-            comment)
-            .ConfigureAwait(false);
+            comment);
     }
 
     /// <summary>
@@ -140,8 +185,7 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
             context,
             filePath,
             lineFrom,
-            lineTo)
-            .ConfigureAwait(false);
+            lineTo);
     }
 
     /// <summary>
@@ -167,8 +211,7 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
             repositoryName,
             pullRequestId,
             textToAppend,
-            separator)
-            .ConfigureAwait(false);
+            separator);
     }
 
     /// <summary>

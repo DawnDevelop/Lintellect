@@ -42,4 +42,13 @@ public interface IAnalyzerService
         AnalyzerServiceModel analysisResult,
         Dictionary<string, string> diffs,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Analyzes CODEOWNERS file content and extracts structured code ownership information.
+    /// Uses AI to parse and interpret CODEOWNERS file format, returning suggested owners for files.
+    /// </summary>
+    /// <param name="codeOwnerFileContent">The raw content of the CODEOWNERS file to analyze.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>JSON-formatted string containing parsed code ownership information, or null if analysis fails.</returns>
+    Task<string?> GetCodeOwnersAsync(string codeOwnerFileContent, CancellationToken cancellationToken = default);
 }

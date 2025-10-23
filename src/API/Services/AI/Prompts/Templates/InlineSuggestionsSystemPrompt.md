@@ -42,7 +42,7 @@ Each suggestion must include the file path, line number, explanation, and correc
       "severity": "Warning",
       "title": "Refactor method for better error handling",
       "explanation": "This method should use ConfigureAwait(false) and proper async/await pattern",
-      "suggestedCode": "public async Task ProcessAsync()\n    {\n        await DoWorkAsync().ConfigureAwait(false);\n    }"
+      "suggestedCode": "public async Task ProcessAsync()\n    {\n        await DoWorkAsync();\n    }"
     }
   ]
 }
@@ -100,14 +100,14 @@ Examples:
 ```
 +42:    public async Task ProcessAsync()
 +43:    {
-+44:        await DoWorkAsync().ConfigureAwait(false);
++44:        await DoWorkAsync();
 +45:    }
 ```
 ```json
 {
   "line": 42,
   "lineTo": 45,
-  "suggestedCode": "    public async Task ProcessAsync()\n    {\n        await DoWorkAsync().ConfigureAwait(false);\n    }"
+  "suggestedCode": "    public async Task ProcessAsync()\n    {\n        await DoWorkAsync();\n    }"
 }
 ```
 ☝️ Notice: Line numbers `42`, `43`, `44`, `45` are stripped out, only the actual code content remains

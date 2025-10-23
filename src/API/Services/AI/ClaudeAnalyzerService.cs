@@ -49,4 +49,9 @@ internal sealed class ClaudeAnalyzerService(ClaudeAnalyzerOptions options) : IAn
         // This is a placeholder implementation
         throw new NotImplementedException("Claude analyzer integration is not yet implemented.");
     }
+
+    public Task<string?> GetCodeOwnersAsync(string codeOwnerFileContent, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
 }

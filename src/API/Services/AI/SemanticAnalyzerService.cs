@@ -20,9 +20,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
     private readonly PromptTemplateService _templateService = new();
     private readonly AnalysisPromptBuilder _promptBuilder = new();
 
-    /// <summary>
-    /// Analyzes code findings and diffs using AI to provide insights and recommendations.
-    /// </summary>
+    // <inheritdoc/>
     public async Task<string> AnalyzeAsync(
         AnalyzerServiceModel analysisResult,
         Dictionary<string, string> diffs,
@@ -53,14 +51,42 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
             executionSettings: executionSettings,
             kernel: kernel,
             cancellationToken: cancellationToken)
-            .ConfigureAwait(false);
+            ;
 
         return response.Content ?? "No analysis generated.";
     }
 
-    /// <summary>
-    /// Generates a concise summary of the pull request suitable for DevOps PR comments.
-    /// </summary>
+    // <inheritdoc/>
+    public async Task<string?> GetCodeOwnersAsync(
+        string codeOwnerFileContent,
+        CancellationToken cancellationToken = default)
+    {
+        var kernel = CreateKernel(_options);
+        var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
+
+        var systemPrompt = _templateService.RenderTemplate("CodeOwnerSystemPrompt");
+
+        var chatHistory = new ChatHistory(systemPrompt);
+        chatHistory.AddUserMessage(codeOwnerFileContent);
+
+        var executionSettings = new AzureOpenAIPromptExecutionSettings
+        {
+            MaxTokens = _options.MaxTokens,
+            Temperature = 0.2, // Lower temperature for more precise suggestions
+            ResponseFormat = "json_object" // Request JSON output for structured parsing
+        };
+
+        var response = await chatCompletionService.GetChatMessageContentAsync(
+            chatHistory,
+            executionSettings: executionSettings,
+            kernel: kernel,
+            cancellationToken: cancellationToken)
+            ;
+
+        return response.Content;
+    }
+
+    // <inheritdoc/>
     public async Task<string> GenerateSummaryAsync(
         AnalyzerServiceModel analysisResult,
         Dictionary<string, string> diffs,
@@ -84,19 +110,13 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
             executionSettings: executionSettings,
             kernel: kernel,
             cancellationToken: cancellationToken)
-            .ConfigureAwait(false);
+            ;
 
         return response.Content ?? "No summary generated.";
     }
 
-    /// <summary>
-    /// Generates inline code suggestions that can be posted as PR comments.
-    /// Returns structured suggestions with file paths and line numbers.
-    /// </summary>
-    /// <param name="analysisResult">The analysis result with findings and custom instructions.</param>
-    /// <param name="diffs">Dictionary of file paths to their compact diffs.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>List of inline suggestions ready to be posted.</returns>
+
+    // <inheritdoc/>
     public async Task<List<InlineSuggestion>> GenerateInlineSuggestionsAsync(
         AnalyzerServiceModel analysisResult,
         Dictionary<string, string> diffs,
@@ -135,7 +155,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
             executionSettings: executionSettings,
             kernel: kernel,
             cancellationToken: cancellationToken)
-            .ConfigureAwait(false);
+            ;
 
         if (string.IsNullOrWhiteSpace(response.Content))
         {

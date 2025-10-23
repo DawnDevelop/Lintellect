@@ -2,9 +2,9 @@
   <Folder Name="/tests/">
     <Project Path="tests/devops-pr-analyzer.cli.unittests/devops-pr-analyzer.cli.unittests.csproj" Id="23001e5e-e6a8-4b2e-be18-36aa87a4422f" />
   </Folder>
-  <Project Path="src/devops-pr-analyzer.shared/devops-pr-analyzer.shared.csproj" Id="d60058b2-8423-4f43-baff-8ee764050dda" />
-  <Project Path="src/devops-pr-analyzer.AppHost/devops-pr-analyzer.AppHost.csproj" />
-  <Project Path="src/devops-pr-analyzer.cli/devops-pr-analyzer.cli.csproj" Id="569b8aba-92ec-4c76-af79-16a8c31b70a3" />
-  <Project Path="src/devops-pr-analyzer.ServiceDefaults/devops-pr-analyzer.ServiceDefaults.csproj" />
-  <Project Path="src/devops-pr-analyzer.api/devops-pr-analyzer.api.csproj" />
+  <Project Path="src/API/API.csproj" />
+  <Project Path="src/AppHost/AppHost.csproj" />
+  <Project Path="src/CLI/CLI.csproj" Id="569b8aba-92ec-4c76-af79-16a8c31b70a3" />
+  <Project Path="src/ServiceDefaults/ServiceDefaults.csproj" />
+  <Project Path="src/Shared/Shared.csproj" Id="d60058b2-8423-4f43-baff-8ee764050dda" />
 </Solution>
