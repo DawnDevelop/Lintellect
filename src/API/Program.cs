@@ -2,6 +2,7 @@ using Aspire.Npgsql.EntityFrameworkCore.PostgreSQL;
 using devops_pr_analyzer;
 using devops_pr_analyzer.Apis;
 using devops_pr_analyzer.Apis.Authorization;
+using devops_pr_analyzer.Apis.Infrastructure;
 using devops_pr_analyzer.Apis.Options;
 using devops_pr_analyzer.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -38,6 +39,7 @@ builder.Services.AddSingleton<ApiKeyEndpointFilter>();
 builder.Services.AddAnalyzerServices(builder.Configuration);
 builder.Services.AddGitClients(builder.Configuration);
 builder.Services.AddApplicationServices();
+builder.Services.AddExceptionHandler<CustomExceptionHandler>();
 
 builder.AddNpgsqlDbContext<ApplicationDbContext>("postgresdb");
 builder.Services.AddInfrastructureServices();
@@ -55,6 +57,7 @@ if (app.Environment.IsDevelopment())
 
 await app.MigrateAsync();
 
+app.UseExceptionHandler(options => { });
 app.UseHttpsRedirection();
 app.MapAnalysisApi();
 

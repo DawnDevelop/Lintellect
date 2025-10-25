@@ -16,5 +16,10 @@ public class AnalysisRequest
 
     public bool EnableDescriptionSummary { get; set; } = true;
 
-    public bool EnableCodeOwners { get; set; } = false;
+    public bool EnableAzureDevopsCodeOwners { get; set; } = false;
+
+    // Git provider credentials - configured per request
+    public string? DevopsPat { get; set; }
+    public string? AzureDevOpsOrgUrl { get; set; }
+    public string? GitHubToken { get; set; }
 }

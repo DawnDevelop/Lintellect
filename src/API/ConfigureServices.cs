@@ -24,36 +24,8 @@ public static class ConfigureServices
 {
     public static IServiceCollection AddGitClients(this IServiceCollection services, IConfiguration configuration)
     {
-        // Only register Azure DevOps if configured
-        var devopsPat = configuration.GetValue<string>("DevopsPAT");
-        var orgUrl = configuration.GetValue<string>("AzureDevOpsOrgUrl");
-
-        if (!string.IsNullOrWhiteSpace(devopsPat) && !string.IsNullOrWhiteSpace(orgUrl))
-        {
-            services.AddKeyedScoped<IGitClient, AzureDevopsClientService>(
-                EGitProvider.AzureDevops,
-                (sp, key) =>
-                {
-                    var logger = sp.GetRequiredService<ILogger<AzureDevopsClientService>>();
-                    return new AzureDevopsClientService(devopsPat, new Uri(orgUrl));
-                });
-        }
-
-        // Only register GitHub if configured
-        var githubToken = configuration.GetValue<string>("GitHubToken");
-        if (!string.IsNullOrWhiteSpace(githubToken))
-        {
-            services.AddKeyedScoped<IGitClient, GitHubClientService>(
-                EGitProvider.GitHub,
-                (sp, key) =>
-                {
-                    var logger = sp.GetRequiredService<ILogger<GitHubClientService>>();
-                    return new GitHubClientService(githubToken, logger);
-                });
-        }
-
-        // Register the resolver that picks the right client based on AnalysisResult
-        services.AddScoped<IGitClientResolver, GitClientResolver>();
+        // Register the factory for creating Git clients with dynamic credentials
+        services.AddScoped<IGitClientFactory, GitClientFactory>();
 
         // Register the diff service
         services.AddScoped<PullRequestService>();

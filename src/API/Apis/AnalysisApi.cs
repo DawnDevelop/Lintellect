@@ -17,13 +17,8 @@ public static class AnalysisApi
     public static IEndpointRouteBuilder MapAnalysisApi(this IEndpointRouteBuilder app)
     {
         var api = app.MapGroup("api/analysis")
-            .WithTags("Analysis")
-            .AddEndpointFilter<ApiKeyEndpointFilter>();
-
-        api.MapPost("/start", StartAnalysisFromCli)
-            .WithName("StartAnalysisFromCli")
-            .WithSummary("Start AI analysis from CLI results")
-            .WithDescription("Submit static analysis results from CLI to start background AI analysis.");
+            .WithTags("Analysis");
+            //.AddEndpointFilter<ApiKeyEndpointFilter>();
 
         api.MapPost("/analyze", SubmitAnalysis)
             .WithName("SubmitAnalysis")
@@ -43,32 +38,14 @@ public static class AnalysisApi
         return app;
     }
 
-    private static async Task<Accepted<SubmitAnalysisResponse>> StartAnalysisFromCli(
-        [FromServices] IMediator mediator,
-        [FromServices] AnalysisJobQueue jobQueue,
-        [FromBody] StartAnalysisFromCliRequest request,
-        CancellationToken cancellationToken)
-    {
-
-        // Submit the analysis job for background processing
-        var jobId = await mediator.Send(new SubmitAnalysisCommand(
-            request.AnalysisResult),
-            cancellationToken);
-
-        return TypedResults.Accepted($"/api/analysis/status/{jobId}", new SubmitAnalysisResponse(jobId,
-            "Pending",
-            "AI analysis started successfully from CLI static analysis"));
-    }
-
     private static async Task<Accepted<SubmitAnalysisResponse>> SubmitAnalysis(
         [FromServices] IMediator mediator,
         [FromServices] AnalysisJobQueue jobQueue,
-        [FromBody] SubmitAnalysisRequest request,
+        [FromBody] SubmitAnalysisCommand command,
         CancellationToken cancellationToken)
     {
 
-        var jobId = await mediator.Send(new SubmitAnalysisCommand(
-            request.CliAnalysisResult), cancellationToken);
+        var jobId = await mediator.Send(command, cancellationToken);
 
         return TypedResults.Accepted($"/api/analysis/status/{jobId}", new SubmitAnalysisResponse(jobId,
             "Pending",

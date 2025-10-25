@@ -77,9 +77,28 @@ internal class StaticAnalysisCommand : Command
             DefaultValueFactory = _ => true
         };
 
-        var enableCodeOwners = new Option<bool>("--EnableCodeOwners")
+        var enableCodeOwners = new Option<bool>("--EnableAzureDevopsCodeOwners")
         {
             DefaultValueFactory = _ => false
+        };
+
+        // Git provider credentials
+        var devopsPat = new Option<string>("--devops-pat")
+        {
+            Description = "Azure DevOps Personal Access Token",
+            Required = false
+        };
+
+        var azureDevOpsOrgUrl = new Option<string>("--azure-devops-org-url")
+        {
+            Description = "Azure DevOps Organization URL (e.g., https://dev.azure.com/yourorg)",
+            Required = false
+        };
+
+        var githubToken = new Option<string>("--github-token")
+        {
+            Description = "GitHub Personal Access Token",
+            Required = false
         };
 
         Options.Add(solution);
@@ -93,6 +112,10 @@ internal class StaticAnalysisCommand : Command
         Options.Add(enableDescriptionSummary);
         Options.Add(enableCodeOwners);
 
+        Options.Add(devopsPat);
+        Options.Add(azureDevOpsOrgUrl);
+        Options.Add(githubToken);
+
         SetAction(async (parseResult) =>
         {
             Console.WriteLine("Starting static analysis...");
@@ -103,6 +126,9 @@ internal class StaticAnalysisCommand : Command
             var serviceUrlValue = parseResult.GetValue(serviceUrl);
             var apiKeyValue = parseResult.GetValue(apiKey);
             var exclusionPatterns = parseResult.GetValue(exclusions) ?? [];
+            var devopsPatValue = parseResult.GetValue(devopsPat);
+            var azureDevOpsOrgUrlValue = parseResult.GetValue(azureDevOpsOrgUrl);
+            var githubTokenValue = parseResult.GetValue(githubToken);
 
             Console.WriteLine($"Configuration:");
             Console.WriteLine($"  Solution Path: {path}");
@@ -110,6 +136,9 @@ internal class StaticAnalysisCommand : Command
             Console.WriteLine($"  API URL: {serviceUrlValue}");
             Console.WriteLine($"  API Key: {(string.IsNullOrEmpty(apiKeyValue) ? "Not provided" : "***")}");
             Console.WriteLine($"  Exclusions: {(exclusionPatterns.Length > 0 ? string.Join(", ", exclusionPatterns) : "None")}");
+            Console.WriteLine($"  DevOps PAT: {(string.IsNullOrEmpty(devopsPatValue) ? "Not provided" : "***")}");
+            Console.WriteLine($"  Azure DevOps Org URL: {azureDevOpsOrgUrlValue ?? "Not provided"}");
+            Console.WriteLine($"  GitHub Token: {(string.IsNullOrEmpty(githubTokenValue) ? "Not provided" : "***")}");
             Console.WriteLine();
 
             var orchestrator = new LanguageAnalysisOrchestrator(languageOptionResult);
@@ -118,7 +147,12 @@ internal class StaticAnalysisCommand : Command
             analysisResult.EnableInlineSuggestions = parseResult.GetValue(enableInlineSuggestions);
             analysisResult.EnableSummaryComment = parseResult.GetValue(enableSummaryComment);
             analysisResult.FileExclusions = exclusionPatterns.ToList();
-            analysisResult.EnableCodeOwners = parseResult.GetValue(enableCodeOwners);
+            analysisResult.EnableAzureDevopsCodeOwners = parseResult.GetValue(enableCodeOwners);
+
+            // Set Git provider credentials
+            analysisResult.DevopsPat = devopsPatValue;
+            analysisResult.AzureDevOpsOrgUrl = azureDevOpsOrgUrlValue;
+            analysisResult.GitHubToken = githubTokenValue;
 
             Console.WriteLine();
             Console.WriteLine($"Analysis completed: {analysisResult.Findings.Count} finding(s) detected");

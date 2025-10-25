@@ -1,5 +1,7 @@
+using devops_pr_analyzer.Application.Common.Exceptions;
 using FluentValidation;
 using MediatR;
+using ValidationException = devops_pr_analyzer.Application.Common.Exceptions.ValidationException;
 
 namespace devops_pr_analyzer.Application.Common.Behaviors;
 

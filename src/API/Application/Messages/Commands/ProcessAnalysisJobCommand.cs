@@ -142,7 +142,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
         List<string> changedFilePaths,
         CancellationToken cancellationToken)
     {
-        if (!analysisRequest.EnableCodeOwners)
+        if (!analysisRequest.EnableAzureDevopsCodeOwners)
             return null;
 
         var codeOwnersContent = await prService.GetCodeOwnersFileAsync(analysisRequest);
@@ -178,7 +178,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
         }
 
         // Add code owners
-        if (analysisRequest.EnableCodeOwners && results.CodeOwners?.CodeOwners.Count > 0)
+        if (analysisRequest.EnableAzureDevopsCodeOwners && results.CodeOwners?.CodeOwners.Count > 0)
         {
             await prService.AddCodeOwnersToPullRequest(
                 analysisRequest,

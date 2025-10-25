@@ -1,10 +1,12 @@
 using devops_pr_analyzer.Application.Interfaces;
 using devops_pr_analyzer.Application.Models;
+using devops_pr_analyzer.shared.Models;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
 using Microsoft.VisualStudio.Services.WebApi;
 using Octokit;
+using System.Net.Http;
 
-namespace devops_pr_analyzer.Infrastructure.Services.Git;
+namespace devops_pr_analyzer.Infrastructure.Services.Git.GitHub;
 
 /// <summary>
 /// GitHub client implementation using Octokit.NET following CleanArchitecture pattern.
@@ -382,6 +384,113 @@ public sealed class GitHubClientService : IGitClient
 
     public Task AddCodeOwnersToPr(string projectName, int pullRequestId, CodeOwnersResult codeOwners, string? repositoryName = null)
     {
-        throw new NotImplementedException();
+        // GitHub natively supports CODEOWNERS file - no implementation needed
+        _logger.LogInformation("GitHub natively supports CODEOWNERS file. No additional implementation needed for PR #{PullRequestId}", pullRequestId);
+        throw new NotSupportedException($"GitHub natively supports CODEOWNERS file. No additional implementation needed for PR #{pullRequestId}");
     }
+
+    public async Task<List<CheckPermissionResult>> HasSufficientPermissionsAsync(AnalysisRequest analysisRequest)
+    {
+        var owner = analysisRequest.GitInfo!.ProjectName;
+        var repoName = analysisRequest.GitInfo.RepositoryName;
+        var pullRequestId = analysisRequest.GitInfo.PullRequestId;
+        var results = new List<CheckPermissionResult>();
+
+        try
+        {
+            // First, verify basic access to repository and pull request
+            var repository = await _client.Repository.Get(owner, repoName);
+            if (repository == null)
+            {
+                results.Add(new CheckPermissionResult(false, $"Repository '{owner}/{repoName}' not found"));
+                return results;
+            }
+
+            var pullRequest = await _client.PullRequest.Get(owner, repoName, pullRequestId);
+            if (pullRequest == null)
+            {
+                results.Add(new CheckPermissionResult(false, $"Pull request #{pullRequestId} not found in repository '{owner}/{repoName}'"));
+                return results;
+            }
+
+            // Get token scopes by making a simple API call
+            var scopes = await GetTokenScopesAsync();
+            if (scopes == null || scopes.Count == 0)
+            {
+                results.Add(new CheckPermissionResult(false, "Unable to determine token scopes"));
+                return results;
+            }
+
+            // Check required permissions based on enabled features
+            // Repository read permission (always required)
+            var hasRepoRead = scopes.Contains("repo") || scopes.Contains("public_repo");
+            results.Add(new CheckPermissionResult(hasRepoRead, hasRepoRead ? null : "Repository Read: Missing 'repo' or 'public_repo' scope"));
+
+            // Pull request read permission (always required - covered by repo scope)
+            results.Add(new CheckPermissionResult(hasRepoRead, hasRepoRead ? null : "Pull Request Read: Missing 'repo' or 'public_repo' scope"));
+
+            // Pull request comment permission (required for summary comments and inline suggestions)
+            if (analysisRequest.EnableSummaryComment || analysisRequest.EnableInlineSuggestions)
+            {
+                var hasCommentScope = scopes.Contains("repo") || scopes.Contains("public_repo");
+                results.Add(new CheckPermissionResult(hasCommentScope, hasCommentScope ? null : "Pull Request Comments: Missing 'repo' or 'public_repo' scope"));
+            }
+
+            // Pull request edit permission (required for description updates)
+            if (analysisRequest.EnableDescriptionSummary)
+            {
+                var hasEditScope = scopes.Contains("repo") || scopes.Contains("public_repo");
+                results.Add(new CheckPermissionResult(hasEditScope, hasEditScope ? null : "Pull Request Edit: Missing 'repo' or 'public_repo' scope"));
+            }
+
+            return results;
+        }
+        catch (Octokit.AuthorizationException)
+        {
+            results.Add(new CheckPermissionResult(false, "Authentication failed: Invalid or expired GitHub token"));
+            return results;
+        }
+        catch (Octokit.ForbiddenException)
+        {
+            results.Add(new CheckPermissionResult(false, "Insufficient permissions: GitHub token lacks required scopes"));
+            return results;
+        }
+        catch (Exception ex)
+        {
+            results.Add(new CheckPermissionResult(false, $"Permission check failed: {ex.Message}"));
+            return results;
+        }
+    }
+
+    private async Task<List<string>?> GetTokenScopesAsync()
+    {
+        try
+        {
+            // Make a simple API call to get the current user, which will include OAuth scopes in response headers
+            var user = await _client.User.Current();
+
+            // The scopes should be available in the response headers
+            // Since we can't easily access them from Octokit, we'll use a different approach
+            // We'll make a direct HTTP request to get the scopes
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("token", _client.Credentials.GetToken());
+            httpClient.DefaultRequestHeaders.UserAgent.Add(new System.Net.Http.Headers.ProductInfoHeaderValue("DevOps-PR-Analyzer", "1.0"));
+
+            var response = await httpClient.GetAsync("https://api.github.com");
+            if (response.Headers.TryGetValues("X-OAuth-Scopes", out var scopeValues))
+            {
+                var scopesHeader = scopeValues.FirstOrDefault();
+                if (!string.IsNullOrEmpty(scopesHeader))
+                {
+                    return scopesHeader.Split(',').Select(s => s.Trim()).ToList();
+                }
+            }
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
 }

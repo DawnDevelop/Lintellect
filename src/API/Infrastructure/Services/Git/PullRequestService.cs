@@ -9,12 +9,9 @@ namespace devops_pr_analyzer.Infrastructure.Services.Git;
 /// Service for interacting with pull requests from any Git provider.
 /// Handles diffs, custom instructions, comments, and description updates with token optimization for AI analysis.
 /// </summary>
-public sealed class PullRequestService(IGitClientResolver clientResolver)
+public sealed class PullRequestService(IGitClientFactory clientFactory)
 {
-    private readonly IGitClientResolver _clientResolver = clientResolver ?? throw new ArgumentNullException(nameof(clientResolver));
-
-
-    public IGitClientResolver ClientResolver => _clientResolver;
+    private readonly IGitClientFactory _clientFactory = clientFactory ?? throw new ArgumentNullException(nameof(clientFactory));
 
     /// <summary>
     /// Retrieves compact diffs for a pull request from an AnalysisResult.
@@ -33,7 +30,7 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
         int maxLinesPerFile = 1000)
     {
         // Get the appropriate client based on the provider
-        var gitClient = _clientResolver.GetClient(analysisResult);
+        var gitClient = _clientFactory.CreateClient(analysisResult);
 
         var diffs = await gitClient.GetPullRequestCompactDiffsAsync(
             analysisResult.GitInfo!.ProjectName!,
@@ -56,7 +53,7 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
         AnalysisRequest analysisResult)
     {
 
-        var gitClient = _clientResolver.GetClient(analysisResult);
+        var gitClient = _clientFactory.CreateClient(analysisResult);
 
         // Get the target branch from the PR
         var pullRequest = await gitClient.GetPullRequestAsync(
@@ -96,7 +93,7 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
     /// <returns>A string containing the contents of the CODEOWNERS file if found; otherwise, null.</returns>
     public async Task<string?> GetCodeOwnersFileAsync(AnalysisRequest analysisResult)
     {
-        var gitClient = _clientResolver.GetClient(analysisResult);
+        var gitClient = _clientFactory.CreateClient(analysisResult);
 
 
         // Get the target branch from the PR
@@ -104,7 +101,7 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
             analysisResult.GitInfo!.ProjectName!,
             analysisResult.GitInfo!.RepositoryName,
             analysisResult.GitInfo!.PullRequestId);
-        
+
         // Extract branch name from refs/heads/branchname format
         var targetBranch = pullRequest.SourceRefName?.Replace("refs/heads/", string.Empty);
 
@@ -140,7 +137,7 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
         AnalysisRequest analysisResult,
         string comment)
     {
-        var gitClient = _clientResolver.GetClient(analysisResult);
+        var gitClient = _clientFactory.CreateClient(analysisResult);
 
         return await gitClient.CreateCommentAsync(
             analysisResult.GitInfo!.ProjectName!,
@@ -167,7 +164,7 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
         int lineFrom,
         int? lineTo = null)
     {
-        var gitClient = _clientResolver.GetClient(analysisResult);
+        var gitClient = _clientFactory.CreateClient(analysisResult);
 
         return await gitClient.CreateCodeChangeCommentAsync(
             analysisResult.GitInfo!.ProjectName!,
@@ -193,7 +190,7 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
         string textToAppend,
         string separator = "\n\n---\n\n")
     {
-        var gitClient = _clientResolver.GetClient(analysisResult);
+        var gitClient = _clientFactory.CreateClient(analysisResult);
 
         return await gitClient.AppendToDescriptionAsync(
             analysisResult.GitInfo!.ProjectName!,
@@ -214,7 +211,7 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
         AnalysisRequest analysisResult,
         CodeOwnersResult codeOwners)
     {
-        var gitClient = _clientResolver.GetClient(analysisResult);
+        var gitClient = _clientFactory.CreateClient(analysisResult);
 
         await gitClient.AddCodeOwnersToPr(
             analysisResult.GitInfo!.ProjectName!,

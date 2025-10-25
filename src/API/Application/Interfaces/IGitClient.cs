@@ -1,4 +1,5 @@
 ﻿using devops_pr_analyzer.Application.Models;
+using devops_pr_analyzer.shared.Models;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
 
 namespace devops_pr_analyzer.Application.Interfaces;
@@ -126,4 +127,11 @@ public interface IGitClient
         int pullRequestId,
         CodeOwnersResult codeOwners,
         string? repositoryName = null);
+
+    /// <summary>
+    /// Checks if the current user has sufficient permissions for the analysis request.
+    /// </summary>
+    /// <param name="analysisRequest">The analysis request containing Git information and credentials.</param>
+    /// <returns>A task that represents the asynchronous operation to check permissions, returning detailed permission results for each required permission.</returns>
+    Task<List<CheckPermissionResult>> HasSufficientPermissionsAsync(AnalysisRequest analysisRequest);
 }

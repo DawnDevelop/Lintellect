@@ -1,6 +1,7 @@
 ﻿using devops_pr_analyzer.Application.Interfaces;
 using devops_pr_analyzer.Application.Models;
 using devops_pr_analyzer.Infrastructure.Extensions;
+using devops_pr_analyzer.shared.Models;
 using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
 using Microsoft.VisualStudio.Services.Account.Client;
@@ -8,8 +9,16 @@ using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.Identity;
 using Microsoft.VisualStudio.Services.Identity.Client;
 using Microsoft.VisualStudio.Services.OAuth;
+using Microsoft.VisualStudio.Services.Security.Client;
+using Microsoft.VisualStudio.Services.Tokens.TokenAdmin.Client;
 using Microsoft.VisualStudio.Services.WebApi;
+using Microsoft.VisualStudio.Services.WebApi.HttpClients;
+using Octokit;
+using System.IO;
+using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 
 namespace devops_pr_analyzer.Infrastructure.Services.Git;
 
@@ -32,6 +41,9 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
 
     public Task<IdentityHttpClient> GetIdentityGitClient()
         => _connection.GetClientAsync<IdentityHttpClient>();
+
+    public Task<SecurityHttpClient> GetSecurityClient() =>
+        _connection.GetClientAsync<SecurityHttpClient>();
 
     /// <inheritdoc />
     public async Task<GitPullRequest> GetPullRequestAsync(string projectName, string repositoryName, int pullRequestId)
@@ -545,6 +557,125 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
             pullRequestId);
     }
 
+    // <inheritDoc />
+    public async Task<List<CheckPermissionResult>> HasSufficientPermissionsAsync(AnalysisRequest analysisRequest)
+    {
+        var project = analysisRequest.GitInfo!.ProjectName;
+        var repoName = analysisRequest.GitInfo.RepositoryName;
+        var pullRequestId = analysisRequest.GitInfo.PullRequestId;
+        var results = new List<CheckPermissionResult>();
+
+        try
+        {
+            // Test basic repository access
+            var gitClient = await GetHttpGitClient();
+            var repositories = await gitClient.GetRepositoriesAsync(project);
+
+            // Check if the specific repository exists
+            var targetRepo = repositories.FirstOrDefault(r => r.Name.Equals(repoName, StringComparison.OrdinalIgnoreCase));
+            if (targetRepo == null)
+            {
+                results.Add(new CheckPermissionResult(false, $"Repository '{repoName}' not found in project '{project}'"));
+                return results;
+            }
+
+            // Test pull request access
+            var pullRequest = await gitClient.GetPullRequestAsync(project, repoName, pullRequestId);
+            if (pullRequest == null)
+            {
+                results.Add(new CheckPermissionResult(false, $"Pull request #{pullRequestId} not found in repository '{repoName}'"));
+                return results;
+            }
+
+            // Test required permissions based on enabled features
+            // Code read permission (always required)
+            var codeReadResult = await TestPermissionAsync(async () =>
+            {
+                await gitClient.GetRepositoriesAsync(project);
+            });
+            results.Add(new CheckPermissionResult(codeReadResult.Success, codeReadResult.Success ? null : $"Code Read: {codeReadResult.Reason}"));
+
+            // Code write permission (required for inline suggestions)
+            if (analysisRequest.EnableInlineSuggestions)
+            {
+                var codeWriteResult = await TestPermissionAsync(async () =>
+                {
+                    // Test by attempting to create a push (will fail validation but tests write scope)
+                    await gitClient.CreatePushAsync(new GitPush(), project, repoName);
+                });
+                results.Add(new CheckPermissionResult(codeWriteResult.Success, codeWriteResult.Success ? null : $"Code Write: {codeWriteResult.Reason}"));
+            }
+
+            // Pull request comment permission (required for summary comments and inline suggestions)
+            if (analysisRequest.EnableSummaryComment || analysisRequest.EnableInlineSuggestions)
+            {
+                var prCommentResult = await TestPermissionAsync(async () =>
+                {
+                    // Test by attempting to create a comment thread (will fail validation but tests comment scope)
+                    var badThread = new GitPullRequestCommentThread();
+                    await gitClient.CreateThreadAsync(badThread, project, repoName, pullRequestId);
+                });
+                results.Add(new CheckPermissionResult(prCommentResult.Success, prCommentResult.Success ? null : $"Pull Request Comments: {prCommentResult.Reason}"));
+            }
+
+            // Pull request edit permission (required for description updates)
+            if (analysisRequest.EnableDescriptionSummary)
+            {
+                var prEditResult = await TestPermissionAsync(async () =>
+                {
+                    // Test by attempting to update PR (will fail validation but tests edit scope)
+                    var invalidUpdate = new GitPullRequest { Title = "" };
+                    await gitClient.UpdatePullRequestAsync(invalidUpdate, project, repoName, pullRequestId);
+                });
+                results.Add(new CheckPermissionResult(prEditResult.Success, prEditResult.Success ? null : $"Pull Request Edit: {prEditResult.Reason}"));
+            }
+
+            // Identity read permission (required for code owners)
+            if (analysisRequest.EnableAzureDevopsCodeOwners)
+            {
+                var identityReadResult = await TestPermissionAsync(async () =>
+                {
+                    var identityClient = await GetIdentityGitClient();
+                    var ids = await identityClient.ReadIdentitiesAsync(IdentitySearchFilter.General, "me");
+                    _ = ids.Count;
+                });
+                results.Add(new CheckPermissionResult(identityReadResult.Success, identityReadResult.Success ? null : $"Identity Read: {identityReadResult.Reason}"));
+            }
+
+            return results;
+        }
+        catch (VssUnauthorizedException)
+        {
+            results.Add(new CheckPermissionResult(false, "Authentication failed: Invalid or expired PAT token"));
+            return results;
+        }
+        catch (Exception ex)
+        {
+            results.Add(new CheckPermissionResult(false, $"Permission check failed: {ex.Message}"));
+            return results;
+        }
+    }
+
+    private static async Task<(bool Success, string? Reason)> TestPermissionAsync(Func<Task> action)
+    {
+        try
+        {
+            await action();
+            return (true, null);
+        }
+        catch (VssUnauthorizedException)
+        {
+            return (false, "Insufficient permissions - PAT token lacks required scope");
+        }
+        catch (VssServiceException)
+        {
+            return (true, null); //Because of forced 400
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Permission test failed: {ex.Message}");
+        }
+    }
 
     // <inheritDoc />
     public async Task AddCodeOwnersToPr(
