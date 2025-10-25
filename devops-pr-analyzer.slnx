@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/tests/">
+    <Project Path="tests/devops-pr-analyzer.api.functionaltests/devops-pr-analyzer.api.functionaltests.csproj" />
+    <Project Path="tests/devops-pr-analyzer.api.unittests/devops-pr-analyzer.api.unittests.csproj" />
     <Project Path="tests/devops-pr-analyzer.cli.unittests/devops-pr-analyzer.cli.unittests.csproj" Id="23001e5e-e6a8-4b2e-be18-36aa87a4422f" />
   </Folder>
   <Project Path="src/API/API.csproj" />

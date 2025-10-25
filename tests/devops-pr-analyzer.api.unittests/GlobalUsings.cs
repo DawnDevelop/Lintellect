@@ -1,0 +1,13 @@
+global using devops_pr_analyzer.api.unittests.Builders;
+global using devops_pr_analyzer.Application.Common.Interfaces;
+global using devops_pr_analyzer.Application.Messages.Commands;
+global using devops_pr_analyzer.Application.Messages.Queries;
+global using devops_pr_analyzer.Domain.Entities;
+global using devops_pr_analyzer.Domain.Enums;
+global using devops_pr_analyzer.Domain.Events;
+global using devops_pr_analyzer.Infrastructure.Services;
+global using devops_pr_analyzer.shared.Models;
+global using FluentAssertions;
+global using Mediator;
+global using Moq;
+global using NUnit.Framework;

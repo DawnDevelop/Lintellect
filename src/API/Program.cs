@@ -79,3 +79,6 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 app.MapAnalysisApi();
 
 await app.RunAsync();
+
+// Make Program class accessible to tests
+public partial class Program { }

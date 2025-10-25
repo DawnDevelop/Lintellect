@@ -1,0 +1,15 @@
+global using devops_pr_analyzer.api.functionaltests.Utilities;
+global using devops_pr_analyzer.Apis.Models;
+global using devops_pr_analyzer.Application.Interfaces;
+global using devops_pr_analyzer.Application.Messages.Commands;
+global using devops_pr_analyzer.Application.Messages.Queries;
+global using devops_pr_analyzer.Application.Models;
+global using devops_pr_analyzer.Domain.Enums;
+global using devops_pr_analyzer.shared.Models;
+global using FluentAssertions;
+global using Microsoft.AspNetCore.Mvc.Testing;
+global using Microsoft.TeamFoundation.SourceControl.WebApi;
+global using NUnit.Framework;
+global using System.Net;
+global using System.Net.Http.Json;
+global using System.Text.Json;

@@ -2,8 +2,8 @@
 
 public class AnalysisRequest
 {
-    public EProgrammingLanguage Language { get; init; }
-    public IReadOnlyCollection<AnalyzerFindings> Findings { get; init; } = [];
+    public EProgrammingLanguage Language { get; set; }
+    public IReadOnlyCollection<AnalyzerFindings> Findings { get; set; } = [];
 
     public GitInfo? GitInfo { get; set; }
     public EGitProvider GitProvider { get; set; }
