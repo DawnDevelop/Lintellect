@@ -1,6 +1,6 @@
 using devops_pr_analyzer.Application.Common.Interfaces;
 using devops_pr_analyzer.Domain.Enums;
-using MediatR;
+using Mediator;
 
 namespace devops_pr_analyzer.Application.Messages.Commands;
 
@@ -17,13 +17,13 @@ public sealed record UpdateAnalysisJobStatusCommand(
 /// <summary>
 /// Handler for UpdateAnalysisJobStatusCommand following CleanArchitecture pattern.
 /// </summary>
-public sealed class UpdateAnalysisJobStatusCommandHandler(IApplicationDbContext context) : IRequestHandler<UpdateAnalysisJobStatusCommand>
+public sealed class UpdateAnalysisJobStatusCommandHandler(IApplicationDbContext context) : IRequestHandler<UpdateAnalysisJobStatusCommand, Unit>
 {
-    public async Task Handle(UpdateAnalysisJobStatusCommand request, CancellationToken cancellationToken)
+    public async ValueTask<Unit> Handle(UpdateAnalysisJobStatusCommand request, CancellationToken cancellationToken)
     {
         var job = await context.AnalysisJobs.FindAsync([request.JobId], cancellationToken: cancellationToken);
-        if (job == null)
-            return;
+        if (job is null)
+            return default;
 
         if (request.Status == AnalysisStatus.Running && job.Status == AnalysisStatus.Pending)
         {
@@ -35,5 +35,6 @@ public sealed class UpdateAnalysisJobStatusCommandHandler(IApplicationDbContext 
         }
 
         await context.SaveChangesAsync(cancellationToken);
+        return default;
     }
 }

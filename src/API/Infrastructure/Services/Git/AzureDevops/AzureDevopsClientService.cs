@@ -29,21 +29,34 @@ namespace devops_pr_analyzer.Infrastructure.Services.Git;
 /// initialized with the provided organization URL and PAT, enabling access to organization-level resources.</remarks>
 /// <param name="devopsPat">The personal access token used to authenticate requests to Azure DevOps. Cannot be null or empty.</param>
 /// <param name="orgUri">The base URL of the Azure DevOps organization. (https://dev.azure.com/orgname) </param>
-public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
+public class AzureDevopsClientService : IGitClient
 {
-    private readonly VssConnection _connection = new(orgUri, new VssOAuthAccessTokenCredential(devopsPat));
+    private readonly VssConnection _connection;
 
-    public Task<GitHttpClient> GetHttpGitClient()
-        => _connection.GetClientAsync<GitHttpClient>();
+    // Thread-safe lazy initialization using Lazy<Task<T>>
+    private readonly Lazy<Task<GitHttpClient>> _gitClient;
+    private readonly Lazy<Task<ProjectHttpClient>> _projectClient;
+    private readonly Lazy<Task<IdentityHttpClient>> _identityClient;
+    private readonly Lazy<Task<SecurityHttpClient>> _securityClient;
 
-    public Task<ProjectHttpClient> GetProjectGitClient()
-        => _connection.GetClientAsync<ProjectHttpClient>();
+    public AzureDevopsClientService(string devopsPat, Uri orgUri)
+    {
+        _connection = new VssConnection(orgUri, new VssOAuthAccessTokenCredential(devopsPat));
 
-    public Task<IdentityHttpClient> GetIdentityGitClient()
-        => _connection.GetClientAsync<IdentityHttpClient>();
+        // Initialize lazy clients with proper async factory
+        _gitClient = new Lazy<Task<GitHttpClient>>(() => _connection.GetClientAsync<GitHttpClient>());
+        _projectClient = new Lazy<Task<ProjectHttpClient>>(() => _connection.GetClientAsync<ProjectHttpClient>());
+        _identityClient = new Lazy<Task<IdentityHttpClient>>(() => _connection.GetClientAsync<IdentityHttpClient>());
+        _securityClient = new Lazy<Task<SecurityHttpClient>>(() => _connection.GetClientAsync<SecurityHttpClient>());
+    }
 
-    public Task<SecurityHttpClient> GetSecurityClient() =>
-        _connection.GetClientAsync<SecurityHttpClient>();
+    public Task<GitHttpClient> GetHttpGitClient() => _gitClient.Value;
+
+    public Task<ProjectHttpClient> GetProjectGitClient() => _projectClient.Value;
+
+    public Task<IdentityHttpClient> GetIdentityGitClient() => _identityClient.Value;
+
+    public Task<SecurityHttpClient> GetSecurityClient() => _securityClient.Value;
 
     /// <inheritdoc />
     public async Task<GitPullRequest> GetPullRequestAsync(string projectName, string repositoryName, int pullRequestId)

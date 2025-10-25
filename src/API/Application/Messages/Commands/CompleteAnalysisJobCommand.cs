@@ -1,6 +1,6 @@
 using devops_pr_analyzer.Application.Common.Interfaces;
 using devops_pr_analyzer.shared.Models;
-using MediatR;
+using Mediator;
 
 namespace devops_pr_analyzer.Application.Messages.Commands;
 
@@ -17,20 +17,24 @@ public sealed record CompleteAnalysisJobCommand(
 /// <summary>
 /// Handler for CompleteAnalysisJobCommand following CleanArchitecture pattern.
 /// </summary>
-public sealed class CompleteAnalysisJobCommandHandler(IApplicationDbContext context) : IRequestHandler<CompleteAnalysisJobCommand>
+public sealed class CompleteAnalysisJobCommandHandler(IApplicationDbContext context) : IRequestHandler<CompleteAnalysisJobCommand, Unit>
 {
-    public async Task Handle(CompleteAnalysisJobCommand request, CancellationToken cancellationToken)
+    public async ValueTask<Unit> Handle(CompleteAnalysisJobCommand request, CancellationToken cancellationToken)
     {
         var job = await context.AnalysisJobs.FindAsync(request.JobId, cancellationToken);
-        if (job == null)
-            return;
+        if(job is not null)
+        {
+            job.Complete(
+                request.Summary,
+                request.DetailedAnalysis,
+                request.InlineSuggestions,
+                request.AnalyzerUsed);
 
-        job.Complete(
-            request.Summary,
-            request.DetailedAnalysis,
-            request.InlineSuggestions,
-            request.AnalyzerUsed);
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        
 
-        await context.SaveChangesAsync(cancellationToken);
+        return default;
     }
+
 }

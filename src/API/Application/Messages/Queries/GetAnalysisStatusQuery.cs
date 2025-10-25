@@ -1,6 +1,6 @@
 using devops_pr_analyzer.Application.Common.Interfaces;
 using devops_pr_analyzer.Domain.Entities;
-using MediatR;
+using Mediator;
 using Microsoft.EntityFrameworkCore;
 
 namespace devops_pr_analyzer.Application.Messages.Queries;
@@ -22,7 +22,7 @@ public sealed class GetAnalysisStatusQueryHandler : IRequestHandler<GetAnalysisS
         _context = context;
     }
 
-    public async Task<AnalysisJob?> Handle(GetAnalysisStatusQuery request, CancellationToken cancellationToken)
+    public async ValueTask<AnalysisJob?> Handle(GetAnalysisStatusQuery request, CancellationToken cancellationToken)
     {
         return await _context.AnalysisJobs
             .FirstOrDefaultAsync(job => job.Id == request.JobId, cancellationToken);

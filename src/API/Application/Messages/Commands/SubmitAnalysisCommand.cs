@@ -3,7 +3,7 @@ using devops_pr_analyzer.Domain.Entities;
 using devops_pr_analyzer.Domain.Enums;
 using devops_pr_analyzer.Infrastructure.Services;
 using devops_pr_analyzer.shared.Models;
-using MediatR;
+using Mediator;
 
 namespace devops_pr_analyzer.Application.Messages.Commands;
 
@@ -18,7 +18,7 @@ public sealed record SubmitAnalysisCommand(
 /// </summary>
 public sealed class SubmitAnalysisCommandHandler(IApplicationDbContext context, AnalysisJobQueue queue) : IRequestHandler<SubmitAnalysisCommand, Guid>
 {
-    public async Task<Guid> Handle(SubmitAnalysisCommand request, CancellationToken cancellationToken)
+    public async ValueTask<Guid> Handle(SubmitAnalysisCommand request, CancellationToken cancellationToken)
     {
         var analysisJob = new AnalysisJob(request.AnalysisRequest);
 

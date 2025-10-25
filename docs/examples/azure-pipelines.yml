@@ -1,0 +1,37 @@
+trigger: none # Trigger on every pull request by setting build validation inside the options
+
+pool:
+  vmImage: "ubuntu-latest"
+
+variables:
+  buildConfiguration: "Release"
+
+stages:
+  - stage: Analyze
+    displayName: "Analyze PR"
+    jobs:
+      - job: AnalyzePR
+        displayName: "Analyze Pull Request"
+        steps:
+          - task: UseDotNet@2
+            displayName: "Use .NET 10"
+            inputs:
+              packageType: "sdk"
+              version: "10.0.x"
+
+          - task: DotNetCoreCLI@2
+            displayName: "Install DevOps PR Analyzer"
+            inputs:
+              command: "custom"
+              custom: "tool"
+              arguments: "install --global devops-pr-analyzer"
+
+          - task: DotNetCoreCLI@2
+            displayName: "Analyze Pull Request"
+            inputs:
+              command: "custom"
+              custom: "devops-pr-analyzer"
+              arguments: 'analyze --Language "csharp" --EnableSummaryComment --EnableInlineSuggestions --EnableAzureDevopsCodeOwners'
+            env:
+              DEVOPS_PR_AI_API_ENDPOINT: $(AI_API_ENDPOINT) # Can be left empty if using claude
+              DEVOPS_PR_AI_API_KEY: $(AI_API_KEY)

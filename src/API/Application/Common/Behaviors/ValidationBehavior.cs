@@ -1,17 +1,17 @@
 using devops_pr_analyzer.Application.Common.Exceptions;
 using FluentValidation;
-using MediatR;
+using Mediator;
 using ValidationException = devops_pr_analyzer.Application.Common.Exceptions.ValidationException;
 
 namespace devops_pr_analyzer.Application.Common.Behaviors;
 
 /// <summary>
-/// Validation behavior for MediatR requests following CleanArchitecture pattern.
+/// Validation behavior for Mediator requests following CleanArchitecture pattern.
 /// </summary>
-public sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TRequest>> validators) : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : notnull
+public sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TRequest>> validators, ILogger<TRequest> logger) : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : IMessage
 {
-    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    public async ValueTask<TResponse> Handle(TRequest request, MessageHandlerDelegate<TRequest, TResponse> next, CancellationToken cancellationToken)
     {
         if (validators.Any())
         {
@@ -26,9 +26,12 @@ public sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidat
                 .ToList();
 
             if (failures.Count != 0)
+            {
+                logger.LogWarning("Validation failed: {@Failures}", failures);
                 throw new ValidationException(failures);
+            }
         }
 
-        return await next(cancellationToken);
+        return await next(request, cancellationToken);
     }
 }

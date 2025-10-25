@@ -3,7 +3,7 @@ using devops_pr_analyzer.Application.Models;
 using devops_pr_analyzer.Infrastructure.Extensions;
 using devops_pr_analyzer.Infrastructure.Services.Git;
 using devops_pr_analyzer.shared.Models;
-using MediatR;
+using Mediator;
 using System.Reflection.Metadata.Ecma335;
 
 namespace devops_pr_analyzer.Application.Messages.Commands;
@@ -22,7 +22,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
     PullRequestService prService,
     IAnalyzerServiceResolver analyzerResolver) : IRequestHandler<ProcessAnalysisJobCommand, PullRequestAnalysisReportModel>
 {
-    public async Task<PullRequestAnalysisReportModel> Handle(ProcessAnalysisJobCommand request, CancellationToken cancellationToken)
+    public async ValueTask<PullRequestAnalysisReportModel> Handle(ProcessAnalysisJobCommand request, CancellationToken cancellationToken)
     {
         // Step 1: Get and filter diffs
         var diffs = await GetFilteredDiffsAsync(request.AnalysisRequest, cancellationToken);
@@ -146,7 +146,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
             return null;
 
         var codeOwnersContent = await prService.GetCodeOwnersFileAsync(analysisRequest);
-        
+
         if (codeOwnersContent == null)
             return null;
 

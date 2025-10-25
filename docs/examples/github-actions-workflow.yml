@@ -1,0 +1,46 @@
+name: PR Analysis
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch full history for better analysis
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install DevOps PR Analyzer
+        run: |
+          dotnet tool install --global devops-pr-analyzer
+
+      - name: Analyze Pull Request
+        run: |
+          devops-pr-analyzer analyze \
+            --project-name "${{ github.repository_owner }}" \
+            --repository-name "${{ github.event.repository.name }}" \
+            --pull-request-id "${{ github.event.number }}" \
+            --language "csharp" \
+            --api-endpoint "${{ secrets.AI_API_ENDPOINT }}" \
+            --api-key "${{ secrets.AI_API_KEY }}" \
+            --EnableSummaryComment \
+            --EnableInlineSuggestions \
+            --EnableAzureDevopsCodeOwners
+        env:
+          DEVOPS_PR_AI_API_ENDPOINT: ${{ secrets.AI_API_ENDPOINT }}
+          DEVOPS_PR_AI_API_KEY: ${{ secrets.AI_API_KEY }}
+
+      - name: Check Analysis Results
+        if: failure()
+        run: |
+          echo "Analysis failed. Check the logs above for details."
+          exit 1

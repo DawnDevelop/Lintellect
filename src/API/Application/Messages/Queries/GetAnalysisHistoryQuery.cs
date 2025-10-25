@@ -1,6 +1,6 @@
 using devops_pr_analyzer.Application.Common.Interfaces;
 using devops_pr_analyzer.Domain.Entities;
-using MediatR;
+using Mediator;
 using Microsoft.EntityFrameworkCore;
 
 namespace devops_pr_analyzer.Application.Messages.Queries;
@@ -19,7 +19,7 @@ public sealed record GetAnalysisHistoryQuery(
 /// </summary>
 public sealed class GetAnalysisHistoryQueryHandler(IApplicationDbContext context) : IRequestHandler<GetAnalysisHistoryQuery, IEnumerable<AnalysisJob>>
 {
-    public async Task<IEnumerable<AnalysisJob>> Handle(GetAnalysisHistoryQuery request, CancellationToken cancellationToken)
+    public async ValueTask<IEnumerable<AnalysisJob>> Handle(GetAnalysisHistoryQuery request, CancellationToken cancellationToken)
     {
         var query = context.AnalysisJobs.AsQueryable();
 

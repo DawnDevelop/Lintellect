@@ -10,9 +10,12 @@ using devops_pr_analyzer.Infrastructure.Persistence;
 using devops_pr_analyzer.Infrastructure.Services;
 using devops_pr_analyzer.Infrastructure.Services.AI;
 using devops_pr_analyzer.Infrastructure.Services.Git;
+using devops_pr_analyzer.Infrastructure.Resilience;
+using devops_pr_analyzer.Infrastructure.Telemetry;
+using devops_pr_analyzer.Apis.Options;
 using devops_pr_analyzer.shared.Models;
 using FluentValidation;
-using MediatR;
+using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -92,13 +95,28 @@ public static class ConfigureServices
         return services;
     }
 
+    public static IServiceCollection AddResiliencePolicies(this IServiceCollection services)
+    {
+        // Add HTTP client with resilience policies
+        services.AddHttpClient("ClaudeApi")
+            .AddPolicyHandler(ResiliencePolicies.GetAiApiPolicy());
+
+        services.AddHttpClient("GitHubApi")
+            .AddPolicyHandler(ResiliencePolicies.GetCombinedPolicy());
+
+        services.AddHttpClient("AzureDevOpsApi")
+            .AddPolicyHandler(ResiliencePolicies.GetCombinedPolicy());
+
+        return services;
+    }
+
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        // Add MediatR
-        services.AddMediatR(cfg =>
+        // Add Mediator
+        services.AddMediator(options =>
         {
-            cfg.RegisterServicesFromAssembly(typeof(ConfigureServices).Assembly);
-            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+            options.ServiceLifetime = ServiceLifetime.Scoped;
+            options.PipelineBehaviors = [typeof(ValidationBehavior<,>), typeof(LoggingBehaviour<,>)];
         });
 
         // Add FluentValidation
@@ -115,6 +133,9 @@ public static class ConfigureServices
         // Register background services
         services.AddSingleton<AnalysisJobQueue>();
         services.AddHostedService<AnalysisBackgroundService>();
+
+        // Register metrics
+        services.AddSingleton<AnalysisMetrics>();
 
         return services;
     }

@@ -5,7 +5,7 @@ using devops_pr_analyzer.Application.Messages.Queries;
 using devops_pr_analyzer.Infrastructure.Services;
 using devops_pr_analyzer.Infrastructure.Services.Git;
 using devops_pr_analyzer.shared.Models;
-using MediatR;
+using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
@@ -18,7 +18,7 @@ public static class AnalysisApi
     {
         var api = app.MapGroup("api/analysis")
             .WithTags("Analysis");
-            //.AddEndpointFilter<ApiKeyEndpointFilter>();
+        //.AddEndpointFilter<ApiKeyEndpointFilter>();
 
         api.MapPost("/analyze", SubmitAnalysis)
             .WithName("SubmitAnalysis")
