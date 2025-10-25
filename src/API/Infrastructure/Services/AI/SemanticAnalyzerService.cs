@@ -2,6 +2,7 @@
 using devops_pr_analyzer.Application.Models;
 using devops_pr_analyzer.Infrastructure.Extensions;
 using devops_pr_analyzer.Infrastructure.Services.AI.Prompts;
+using devops_pr_analyzer.Infrastructure.Services.Git;
 using devops_pr_analyzer.shared.Models;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -58,7 +59,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
     }
 
     // <inheritdoc/>
-    public async Task<CodeOwnerModel?> GetCodeOwnersAsync(
+    public async Task<CodeOwnersResult?> GetCodeOwnersAsync(
         string codeOwnerFileContent,
         List<string> changedFilePaths,
         CancellationToken cancellationToken = default)
@@ -99,7 +100,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
             return null;
         }
 
-        var result = JsonSerializer.Deserialize<CodeOwnerModel>(response.Content, JsonExtensions.JsonSerializerOptions);
+        var result = JsonSerializer.Deserialize<CodeOwnersResult>(response.Content, JsonExtensions.JsonSerializerOptions);
         if (result is null)
             return null;
 
@@ -136,7 +137,6 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
 
         return response.Content ?? "No summary generated.";
     }
-
 
     // <inheritdoc/>
     public async Task<List<InlineSuggestion>> GenerateInlineSuggestionsAsync(

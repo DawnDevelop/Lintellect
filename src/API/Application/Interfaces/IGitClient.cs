@@ -1,4 +1,5 @@
-﻿using Microsoft.TeamFoundation.SourceControl.WebApi;
+﻿using devops_pr_analyzer.Application.Models;
+using Microsoft.TeamFoundation.SourceControl.WebApi;
 
 namespace devops_pr_analyzer.Application.Interfaces;
 
@@ -117,12 +118,12 @@ public interface IGitClient
     /// </summary>
     /// <param name="projectName">The name of the project containing the pull request.</param>
     /// <param name="pullRequestId">The unique identifier of the pull request to which reviewers will be added.</param>
-    /// <param name="reviewer">A list of user identifiers representing the code owners to be added as reviewers.</param>
+    /// <param name="codeOwners">A list of code owner objects representing the code owners to be added as reviewers.</param>
     /// <param name="repositoryName">The name of the repository containing the pull request. If null, the default repository for the project is used.</param>
     /// <returns>A task that represents the asynchronous operation of adding code owners as reviewers to the pull request.</returns>
     Task AddCodeOwnersToPr(
         string projectName,
         int pullRequestId,
-        List<string> reviewer,
+        CodeOwnersResult codeOwners,
         string? repositoryName = null);
 }

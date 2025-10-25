@@ -1,4 +1,5 @@
 ﻿using devops_pr_analyzer.Application.Interfaces;
+using devops_pr_analyzer.Application.Models;
 using devops_pr_analyzer.Infrastructure.Extensions;
 using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
@@ -549,14 +550,14 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
     public async Task AddCodeOwnersToPr(
         string projectName,
         int pullRequestId,
-        List<string> reviewer,
+        CodeOwnersResult codeOwners,
         string? repositoryName = null)
     {
         var pullRequest = await GetPullRequestAsync(projectName, repositoryName!, pullRequestId);
 
-        var ids = await GetUserIdsFromEmailsAsync(reviewer);
+        var resolvedCodeOwners = await ResolveCodeOwnersAsync(codeOwners.CodeOwners);
 
-        if (ids.Count == 0)
+        if (resolvedCodeOwners.Count == 0)
         {
             // No valid users found, skip adding reviewers
             return;
@@ -565,12 +566,11 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
         // Get existing reviewers to avoid duplicates
         var existingReviewerIds = pullRequest.Reviewers?.Select(r => r.Id).ToHashSet() ?? [];
 
-        var reviewersToAdd = ids
-            .Where(id => !existingReviewerIds.Contains(id.ToString()))
+        var reviewersToAdd = resolvedCodeOwners
+            .Where(x => !string.IsNullOrEmpty(x.AzureDevOpsId) && !existingReviewerIds.Contains(x.AzureDevOpsId))
             .Select(x => new IdentityRefWithVote
             {
-                
-                Id = x.ToString(),
+                Id = x.AzureDevOpsId!,
                 IsRequired = true
             })
             .ToList();
@@ -581,18 +581,90 @@ public class AzureDevopsClientService(string devopsPat, Uri orgUri) : IGitClient
             var gitClient = await GetHttpGitClient();
 
             var result = await gitClient.CreatePullRequestReviewersAsync(
-                [.. reviewersToAdd], 
-                projectName, 
-                repositoryName, 
+                [.. reviewersToAdd],
+                projectName,
+                repositoryName,
                 pullRequestId);
         }
     }
 
-    private async Task<List<Guid>> GetUserIdsFromEmailsAsync(List<string> emails)
-    {
-        var projectClient = await GetIdentityGitClient();
-        var identities = await projectClient.ReadIdentitiesAsync(IdentitySearchFilter.General, string.Join(",", emails));
-        return [.. identities.Select(x => x.Id)];
-    }
 
+    /// <summary>
+    /// Resolves Azure DevOps identities (users and teams) from CODEOWNERS entries.
+    /// </summary>
+    /// <param name="projectName">The Azure DevOps project name.</param>
+    /// <param name="codeOwners">List of code owner entries to resolve.</param>
+    /// <returns>List of resolved identities with Azure DevOps IDs.</returns>
+    public async Task<List<ResolvedCodeOwner>> ResolveCodeOwnersAsync(List<CodeOwner> codeOwners)
+    {
+        var identityClient = await GetIdentityGitClient();
+        var resolvedOwners = new List<ResolvedCodeOwner>();
+
+        foreach (var owner in codeOwners)
+        {
+            var resolvedOwner = new ResolvedCodeOwner
+            {
+                Name = owner.Name,
+                Type = owner.Type,
+                Email = owner.Email,
+                DisplayName = owner.DisplayName
+            };
+
+            // Try to resolve the identity in Azure DevOps
+            var identities = await identityClient.ReadIdentitiesAsync(
+                IdentitySearchFilter.General,
+                owner.Name);
+
+            if (identities.Any())
+            {
+                var identity = identities.First();
+                resolvedOwner.AzureDevOpsId = identity.Id.ToString();
+                resolvedOwner.DisplayName = identity.DisplayName ?? identity.Id.ToString();
+
+                // Determine if it's a team or user based on identity properties
+                if (identity.IsContainer == true)
+                {
+                    resolvedOwner.Type = CodeOwnerType.Team;
+                }
+                else
+                {
+                    resolvedOwner.Type = CodeOwnerType.User;
+                }
+            }
+            else
+            {
+                // If not found, try to resolve as email
+                if (!string.IsNullOrEmpty(owner.Email))
+                {
+                    var emailIdentities = await identityClient.ReadIdentitiesAsync(
+                        IdentitySearchFilter.General,
+                        owner.Email);
+
+                    if (emailIdentities.Any())
+                    {
+                        var identity = emailIdentities.First();
+                        resolvedOwner.AzureDevOpsId = identity.Id.ToString();
+                        resolvedOwner.DisplayName = identity.DisplayName ?? identity.Id.ToString();
+                        resolvedOwner.Type = CodeOwnerType.User;
+                    }
+                }
+            }
+
+            resolvedOwners.Add(resolvedOwner);
+        }
+
+        return resolvedOwners;
+    }
+}
+
+/// <summary>
+/// Represents a resolved code owner with Azure DevOps identity information.
+/// </summary>
+public class ResolvedCodeOwner
+{
+    public string Name { get; set; } = string.Empty;
+    public CodeOwnerType Type { get; set; }
+    public string? Email { get; set; }
+    public string? AzureDevOpsId { get; set; }
+    public string? DisplayName { get; set; }
 }

@@ -136,7 +136,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
             : null;
     }
 
-    private async Task<CodeOwnerModel?> CreateCodeOwnerTaskIfEnabled(
+    private async Task<CodeOwnersResult?> CreateCodeOwnerTaskIfEnabled(
         IAnalyzerService analyzer,
         AnalysisRequest analysisRequest,
         List<string> changedFilePaths,
@@ -178,11 +178,11 @@ public sealed class ProcessAnalysisJobCommandHandler(
         }
 
         // Add code owners
-        if (analysisRequest.EnableCodeOwners && results.CodeOwners != null)
+        if (analysisRequest.EnableCodeOwners && results.CodeOwners?.CodeOwners.Count > 0)
         {
             await prService.AddCodeOwnersToPullRequest(
                 analysisRequest,
-                [.. results.CodeOwners.Entries.SelectMany(x => x.Owners)]);
+                results.CodeOwners);
         }
     }
 
@@ -278,5 +278,5 @@ internal sealed record AnalysisResults
     public string Summary { get; init; } = string.Empty;
     public string DetailedAnalysis { get; init; } = string.Empty;
     public List<InlineSuggestion> InlineSuggestions { get; init; } = [];
-    public CodeOwnerModel? CodeOwners { get; init; }
+    public CodeOwnersResult? CodeOwners { get; init; }
 }

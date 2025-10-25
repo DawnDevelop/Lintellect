@@ -51,5 +51,5 @@ public interface IAnalyzerService
     /// <param name="changedFilePaths">List of file paths that were changed in the pull request.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>JSON-formatted string containing parsed code ownership information, or null if analysis fails.</returns>
-    Task<CodeOwnerModel?> GetCodeOwnersAsync(string codeOwnerFileContent, List<string> changedFilePaths, CancellationToken cancellationToken = default);
+    Task<CodeOwnersResult?> GetCodeOwnersAsync(string codeOwnerFileContent, List<string> changedFilePaths, CancellationToken cancellationToken = default);
 }

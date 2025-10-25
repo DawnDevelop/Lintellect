@@ -113,7 +113,7 @@ internal sealed class ClaudeAnalyzerService(ClaudeAnalyzerOptions options) : IAn
     /// <summary>
     /// Analyzes CODEOWNERS file content and extracts structured code ownership information.
     /// </summary>
-    public async Task<CodeOwnerModel?> GetCodeOwnersAsync(string codeOwnerFileContent, List<string> changedFilePaths, CancellationToken cancellationToken = default)
+    public async Task<CodeOwnersResult?> GetCodeOwnersAsync(string codeOwnerFileContent, List<string> changedFilePaths, CancellationToken cancellationToken = default)
     {
         try
         {

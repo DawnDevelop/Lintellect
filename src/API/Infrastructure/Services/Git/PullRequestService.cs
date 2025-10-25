@@ -1,4 +1,5 @@
 using devops_pr_analyzer.Application.Interfaces;
+using devops_pr_analyzer.Application.Models;
 using devops_pr_analyzer.shared.Models;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
 
@@ -211,14 +212,14 @@ public sealed class PullRequestService(IGitClientResolver clientResolver)
     /// correspond to a valid user in the repository.</param>
     public async Task AddCodeOwnersToPullRequest(
         AnalysisRequest analysisResult,
-        List<string> userEmails)
+        CodeOwnersResult codeOwners)
     {
         var gitClient = _clientResolver.GetClient(analysisResult);
 
         await gitClient.AddCodeOwnersToPr(
             analysisResult.GitInfo!.ProjectName!,
             analysisResult.GitInfo.PullRequestId,
-            userEmails,
+            codeOwners,
             analysisResult.GitInfo.RepositoryName
         );
     }

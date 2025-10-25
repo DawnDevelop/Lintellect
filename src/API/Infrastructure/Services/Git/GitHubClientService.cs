@@ -1,4 +1,5 @@
 using devops_pr_analyzer.Application.Interfaces;
+using devops_pr_analyzer.Application.Models;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
 using Microsoft.VisualStudio.Services.WebApi;
 using Octokit;
@@ -16,7 +17,7 @@ public sealed class GitHubClientService : IGitClient
     public GitHubClientService(string token, ILogger<GitHubClientService> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        
+
         var productHeader = new ProductHeaderValue("DevOps-PR-Analyzer");
         _client = new GitHubClient(productHeader)
         {
@@ -34,7 +35,7 @@ public sealed class GitHubClientService : IGitClient
     {
         try
         {
-            _logger.LogInformation("Retrieving GitHub PR #{PullRequestId} diffs for {Owner}/{Repo}", 
+            _logger.LogInformation("Retrieving GitHub PR #{PullRequestId} diffs for {Owner}/{Repo}",
                 pullRequestId, projectName, repositoryName);
 
             var pr = await _client.PullRequest.Get(projectName, repositoryName, pullRequestId);
@@ -54,7 +55,7 @@ public sealed class GitHubClientService : IGitClient
                 }
             }
 
-            _logger.LogInformation("Retrieved {FileCount} file diffs for GitHub PR #{PullRequestId}", 
+            _logger.LogInformation("Retrieved {FileCount} file diffs for GitHub PR #{PullRequestId}",
                 diffs.Count, pullRequestId);
 
             return diffs;
@@ -73,7 +74,7 @@ public sealed class GitHubClientService : IGitClient
     {
         try
         {
-            _logger.LogInformation("Retrieving full GitHub PR #{PullRequestId} diffs for {Owner}/{Repo}", 
+            _logger.LogInformation("Retrieving full GitHub PR #{PullRequestId} diffs for {Owner}/{Repo}",
                 pullRequestId, projectName, repositoryName);
 
             var files = await _client.PullRequest.Files(projectName, repositoryName, pullRequestId);
@@ -105,7 +106,7 @@ public sealed class GitHubClientService : IGitClient
         try
         {
             var pr = await _client.PullRequest.Get(projectName, repositoryName, pullRequestId);
-            
+
             // Convert GitHub PR to Azure DevOps format for compatibility
             return new GitPullRequest
             {
@@ -143,7 +144,7 @@ public sealed class GitHubClientService : IGitClient
         try
         {
             var branch = branchName ?? "main";
-            
+
             foreach (var path in possiblePaths)
             {
                 try
@@ -165,7 +166,7 @@ public sealed class GitHubClientService : IGitClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to retrieve file from GitHub repository {Owner}/{Repo}", 
+            _logger.LogError(ex, "Failed to retrieve file from GitHub repository {Owner}/{Repo}",
                 projectName, repositoryName);
             throw;
         }
@@ -180,9 +181,9 @@ public sealed class GitHubClientService : IGitClient
         try
         {
             var issueComment = await _client.Issue.Comment.Create(
-                projectName, 
-                repositoryName, 
-                pullRequestId, 
+                projectName,
+                repositoryName,
+                pullRequestId,
                 comment);
 
             // Convert to Azure DevOps format for compatibility
@@ -254,7 +255,7 @@ public sealed class GitHubClientService : IGitClient
             else
             {
                 // Create a general comment
-                return await CreateCommentAsync(projectName, repositoryName, pullRequestId, 
+                return await CreateCommentAsync(projectName, repositoryName, pullRequestId,
                     $"{context}\n\n```\n{codeChange}\n```");
             }
         }
@@ -323,7 +324,7 @@ public sealed class GitHubClientService : IGitClient
 
         // Skip common build artifacts
         var fileName = Path.GetFileName(file.FileName).ToLowerInvariant();
-        return fileName.EndsWith(".min.js") || 
+        return fileName.EndsWith(".min.js") ||
                fileName.EndsWith(".min.css") ||
                fileName.Contains("node_modules") ||
                fileName.Contains("bin/") ||
@@ -338,11 +339,11 @@ public sealed class GitHubClientService : IGitClient
             {
                 // For new files, limit the content
                 var content = await _client.Repository.Content.GetAllContentsByRef(
-                    file.FileName.Split('/')[0], 
-                    file.FileName.Split('/')[1], 
-                    file.FileName, 
+                    file.FileName.Split('/')[0],
+                    file.FileName.Split('/')[1],
+                    file.FileName,
                     file.Sha);
-                
+
                 var lines = content[0].Content.Split('\n');
                 var limitedLines = lines.Take(maxNewFileLines);
                 return string.Join('\n', limitedLines);
@@ -363,11 +364,11 @@ public sealed class GitHubClientService : IGitClient
             if (file.Status == "added")
             {
                 var content = await _client.Repository.Content.GetAllContentsByRef(
-                    file.FileName.Split('/')[0], 
-                    file.FileName.Split('/')[1], 
-                    file.FileName, 
+                    file.FileName.Split('/')[0],
+                    file.FileName.Split('/')[1],
+                    file.FileName,
                     file.Sha);
-                
+
                 return content[0].Content;
             }
 
@@ -379,7 +380,7 @@ public sealed class GitHubClientService : IGitClient
         }
     }
 
-    public Task AddCodeOwnersToPr(string projectName, int pullRequestId, List<string> reviewer, string? repositoryName = null)
+    public Task AddCodeOwnersToPr(string projectName, int pullRequestId, CodeOwnersResult codeOwners, string? repositoryName = null)
     {
         throw new NotImplementedException();
     }
