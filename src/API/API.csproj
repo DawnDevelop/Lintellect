@@ -13,25 +13,46 @@
 
 	<ItemGroup>
 		<PackageReference Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
+		<PackageReference Include="FluentValidation" Version="12.0.0" />
+		<PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.0.0" />
+		<PackageReference Include="MediatR" Version="13.0.0" />
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0-rc.2.25502.107" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0-rc.2.25502.107" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0-rc.2.25502.107">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 		<PackageReference Include="Microsoft.SemanticKernel" Version="1.66.0" />
 		<PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" Version="1.66.0" />
 		<PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.66.0" />
-		<PackageReference Include="Microsoft.TeamFoundationServer.Client" Version="20.260.0-preview" />
-		<PackageReference Include="Microsoft.TeamFoundationServer.ExtendedClient" Version="20.260.0-preview" />
-		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
-		<PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="20.260.0-preview" />
+		<PackageReference Include="Microsoft.TeamFoundationServer.Client" Version="20.261.0-preview" />
+		<PackageReference Include="Microsoft.TeamFoundationServer.ExtendedClient" Version="20.261.0-preview" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0-rc.2" />
+		<PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.5.2" />
+		<PackageReference Include="Octokit" Version="14.0.0" />
+		<PackageReference Include="Anthropic.SDK" Version="5.8.0" />
 		<PackageReference Include="Scalar.AspNetCore" Version="2.9.0" />
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.0-rc.2.25502.107" />
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
+		<PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="20.261.0-preview" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="Services\AI\Prompts\Templates\*.md" />
+		<EmbeddedResource Include="Infrastructure\Services\AI\Prompts\Templates\*.md" />
+		<EmbeddedResource Include="Infrastructure\Services\AI\Prompts\Templates\CSharp\*.md" />
+		<EmbeddedResource Include="Infrastructure\Services\AI\Prompts\Templates\JavaScript\*.md" />
+		<EmbeddedResource Include="Infrastructure\Services\AI\Prompts\Templates\Python\*.md" />
+		<EmbeddedResource Include="Infrastructure\Services\AI\Prompts\Templates\TypeScript\*.md" />
+		<EmbeddedResource Include="Infrastructure\Services\AI\Prompts\Templates\Java\*.md" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
 	  <ProjectReference Include="..\Shared\Shared.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Infrastructure\Persistence\Migrations\" />
 	</ItemGroup>
 
 </Project>

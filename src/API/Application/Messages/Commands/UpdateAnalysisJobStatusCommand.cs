@@ -1,0 +1,39 @@
+using devops_pr_analyzer.Application.Common.Interfaces;
+using devops_pr_analyzer.Domain.Enums;
+using MediatR;
+
+namespace devops_pr_analyzer.Application.Messages.Commands;
+
+/// <summary>
+/// Command to update analysis job status following CleanArchitecture pattern.
+/// </summary>
+public sealed record UpdateAnalysisJobStatusCommand(
+    Guid JobId,
+    AnalysisStatus Status,
+    DateTimeOffset? StartedAt = null,
+    DateTimeOffset? CompletedAt = null,
+    string? ErrorMessage = null) : IRequest;
+
+/// <summary>
+/// Handler for UpdateAnalysisJobStatusCommand following CleanArchitecture pattern.
+/// </summary>
+public sealed class UpdateAnalysisJobStatusCommandHandler(IApplicationDbContext context) : IRequestHandler<UpdateAnalysisJobStatusCommand>
+{
+    public async Task Handle(UpdateAnalysisJobStatusCommand request, CancellationToken cancellationToken)
+    {
+        var job = await context.AnalysisJobs.FindAsync([request.JobId], cancellationToken: cancellationToken);
+        if (job == null)
+            return;
+
+        if (request.Status == AnalysisStatus.Running && job.Status == AnalysisStatus.Pending)
+        {
+            job.Start();
+        }
+        else if (request.Status == AnalysisStatus.Failed && !string.IsNullOrEmpty(request.ErrorMessage))
+        {
+            job.Fail(request.ErrorMessage);
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
+}

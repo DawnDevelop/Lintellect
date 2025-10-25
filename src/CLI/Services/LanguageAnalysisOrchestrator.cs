@@ -7,7 +7,7 @@ namespace devops_pr_analyzer.cli.Services;
 internal class LanguageAnalysisOrchestrator(EProgrammingLanguage language)
 {
 
-    public async Task<AnalysisResult> RunAsync(string path)
+    public async Task<AnalysisRequest> RunAsync(string path)
     {
         Console.WriteLine($"Initializing {language} analyzer...");
         
@@ -24,7 +24,7 @@ internal class LanguageAnalysisOrchestrator(EProgrammingLanguage language)
         }
 
         Console.WriteLine($"Git Info Extracted:");
-        Console.WriteLine($"  Pull Request: {gitInfo.Identifier}");
+        Console.WriteLine($"  Pull Request: {gitInfo.PullRequestId}");
         Console.WriteLine($"  Commit: {gitInfo.CommitId}");
         Console.WriteLine($"  Repository: {gitInfo.RepositoryName}");
 
@@ -35,6 +35,16 @@ internal class LanguageAnalysisOrchestrator(EProgrammingLanguage language)
     private readonly ICodeAnalyzer codeAnalyzer = language switch
     {
         EProgrammingLanguage.CSharp => new Analyzers.Csharp.CSharpAnalyzer(),
+        EProgrammingLanguage.Unknown => throw new NotImplementedException(),
+        EProgrammingLanguage.Python => throw new NotImplementedException(),
+        EProgrammingLanguage.Java => throw new NotImplementedException(),
+        EProgrammingLanguage.JavaScript => throw new NotImplementedException(),
+        EProgrammingLanguage.TypeScript => throw new NotImplementedException(),
+        EProgrammingLanguage.Go => throw new NotImplementedException(),
+        EProgrammingLanguage.Ruby => throw new NotImplementedException(),
+        EProgrammingLanguage.PHP => throw new NotImplementedException(),
+        EProgrammingLanguage.Swift => throw new NotImplementedException(),
+        EProgrammingLanguage.Kotlin => throw new NotImplementedException(),
         _ => throw new NotSupportedException($"No analyzer for {language}")
     };
 }

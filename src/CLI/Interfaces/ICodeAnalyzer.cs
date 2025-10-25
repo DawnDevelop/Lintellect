@@ -6,5 +6,5 @@ namespace devops_pr_analyzer.cli.Interfaces;
 internal interface ICodeAnalyzer
 {
     EProgrammingLanguage Language { get; }
-    Task<shared.Models.AnalysisResult> AnalyzeAsync(string solutionPath);
+    Task<shared.Models.AnalysisRequest> AnalyzeAsync(string solutionPath);
 }

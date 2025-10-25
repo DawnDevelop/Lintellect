@@ -2,6 +2,7 @@
 using System.CommandLine;
 using devops_pr_analyzer.cli.Services;
 using devops_pr_analyzer.shared.Models;
+using Microsoft.Extensions.Options;
 
 namespace devops_pr_analyzer.cli.Commands;
 
@@ -55,10 +56,42 @@ internal class StaticAnalysisCommand : Command
             DefaultValueFactory = _ => EProgrammingLanguage.CSharp
         };
 
+        var exclusions = new Option<string[]>("--exclude")
+        {
+            Description = "File/folder patterns to exclude from analysis (e.g., '**/bin/**', '**/obj/**')",
+            AllowMultipleArgumentsPerToken = true
+        };
+
+        var enableSummaryComment = new Option<bool>("--EnableSummaryComment")
+        {
+            DefaultValueFactory = _ => true
+        };
+
+        var enableInlineSuggestions = new Option<bool>("--EnableInlineSuggestions")
+        {
+            DefaultValueFactory = _ => true
+        };
+
+        var enableDescriptionSummary = new Option<bool>("--EnableDescriptionSummary")
+        {
+            DefaultValueFactory = _ => true
+        };
+
+        var enableCodeOwners = new Option<bool>("--EnableCodeOwners")
+        {
+            DefaultValueFactory = _ => false
+        };
+
         Options.Add(solution);
         Options.Add(serviceUrl);
         Options.Add(apiKey);
         Options.Add(language);
+        Options.Add(exclusions);
+
+        Options.Add(enableSummaryComment);
+        Options.Add(enableInlineSuggestions);
+        Options.Add(enableDescriptionSummary);
+        Options.Add(enableCodeOwners);
 
         SetAction(async (parseResult) =>
         {
@@ -69,16 +102,23 @@ internal class StaticAnalysisCommand : Command
             var path = parseResult.GetValue(solution)!;
             var serviceUrlValue = parseResult.GetValue(serviceUrl);
             var apiKeyValue = parseResult.GetValue(apiKey);
+            var exclusionPatterns = parseResult.GetValue(exclusions) ?? [];
 
             Console.WriteLine($"Configuration:");
             Console.WriteLine($"  Solution Path: {path}");
             Console.WriteLine($"  Language: {languageOptionResult}");
             Console.WriteLine($"  API URL: {serviceUrlValue}");
             Console.WriteLine($"  API Key: {(string.IsNullOrEmpty(apiKeyValue) ? "Not provided" : "***")}");
+            Console.WriteLine($"  Exclusions: {(exclusionPatterns.Length > 0 ? string.Join(", ", exclusionPatterns) : "None")}");
             Console.WriteLine();
 
             var orchestrator = new LanguageAnalysisOrchestrator(languageOptionResult);
             var analysisResult = await orchestrator.RunAsync(path).ConfigureAwait(false);
+            analysisResult.EnableDescriptionSummary = parseResult.GetValue(enableDescriptionSummary);
+            analysisResult.EnableInlineSuggestions = parseResult.GetValue(enableInlineSuggestions);
+            analysisResult.EnableSummaryComment = parseResult.GetValue(enableSummaryComment);
+            analysisResult.FileExclusions = exclusionPatterns.ToList();
+            analysisResult.EnableCodeOwners = parseResult.GetValue(enableCodeOwners);
 
             Console.WriteLine();
             Console.WriteLine($"Analysis completed: {analysisResult.Findings.Count} finding(s) detected");
@@ -98,12 +138,12 @@ internal class StaticAnalysisCommand : Command
             }
             else
             {
-                Console.WriteLine("Posting results to API...");
+                Console.WriteLine("Starting AI analysis via API...");
                 using var client = new AnalyzerApiClientService(new Uri(serviceUrlValue), apiKeyValue);
-                await client.PostAnalysisResultAsync(analysisResult).ConfigureAwait(false);
-                Console.WriteLine("✓ Results successfully posted to API");
+                await client.StartAnalysisAsync(analysisResult).ConfigureAwait(false);
+                Console.WriteLine("✓ AI analysis started successfully");
             }
-            
+
             Console.WriteLine();
             Console.WriteLine("========================================");
             Console.WriteLine("Analysis pipeline completed successfully");

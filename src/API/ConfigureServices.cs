@@ -2,14 +2,21 @@
 using Azure.Core;
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
-using devops_pr_analyzer.Interfaces;
-using devops_pr_analyzer.Models;
-using devops_pr_analyzer.Services;
-using devops_pr_analyzer.Services.AI;
-using devops_pr_analyzer.Services.Git;
+using devops_pr_analyzer.Application.Common.Behaviors;
+using devops_pr_analyzer.Application.Common.Interfaces;
+using devops_pr_analyzer.Application.Interfaces;
+using devops_pr_analyzer.Application.Models;
+using devops_pr_analyzer.Infrastructure.Persistence;
+using devops_pr_analyzer.Infrastructure.Services;
+using devops_pr_analyzer.Infrastructure.Services.AI;
+using devops_pr_analyzer.Infrastructure.Services.Git;
 using devops_pr_analyzer.shared.Models;
+using FluentValidation;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Aspire.Npgsql.EntityFrameworkCore.PostgreSQL;
 
 namespace devops_pr_analyzer;
 
@@ -17,30 +24,33 @@ public static class ConfigureServices
 {
     public static IServiceCollection AddGitClients(this IServiceCollection services, IConfiguration configuration)
     {
+        // Only register Azure DevOps if configured
+        var devopsPat = configuration.GetValue<string>("DevopsPAT");
+        var orgUrl = configuration.GetValue<string>("AzureDevOpsOrgUrl");
 
-        services.AddKeyedScoped<IGitClient, AzureDevopsClientService>(
-            EGitProvider.AzureDevops,
-            (sp, key) =>
-            {
-                
-                var pat = configuration.GetValue<string>("DevopsPAT")
-                    ?? throw new InvalidOperationException("DevopsPAT configuration is missing");
-                var orgUrl = configuration.GetValue<string>("AzureDevOpsOrgUrl")
-                    ?? throw new InvalidOperationException("AzureDevOpsOrgUrl configuration is missing");
+        if (!string.IsNullOrWhiteSpace(devopsPat) && !string.IsNullOrWhiteSpace(orgUrl))
+        {
+            services.AddKeyedScoped<IGitClient, AzureDevopsClientService>(
+                EGitProvider.AzureDevops,
+                (sp, key) =>
+                {
+                    var logger = sp.GetRequiredService<ILogger<AzureDevopsClientService>>();
+                    return new AzureDevopsClientService(devopsPat, new Uri(orgUrl));
+                });
+        }
 
-
-                return new AzureDevopsClientService(pat, new Uri(orgUrl));
-            });
-
-        // Register GitHub client when implemented
-        // services.AddKeyedScoped<IGitClient, GitHubClientService>(
-        //     EGitProvider.GitHub,
-        //     (sp, key) =>
-        //     {
-        //         var token = configuration.GetValue<string>("GitHubToken")
-        //             ?? throw new InvalidOperationException("GitHubToken configuration is missing");
-        //         return new GitHubClientService(token);
-        //     });
+        // Only register GitHub if configured
+        var githubToken = configuration.GetValue<string>("GitHubToken");
+        if (!string.IsNullOrWhiteSpace(githubToken))
+        {
+            services.AddKeyedScoped<IGitClient, GitHubClientService>(
+                EGitProvider.GitHub,
+                (sp, key) =>
+                {
+                    var logger = sp.GetRequiredService<ILogger<GitHubClientService>>();
+                    return new GitHubClientService(githubToken, logger);
+                });
+        }
 
         // Register the resolver that picks the right client based on AnalysisResult
         services.AddScoped<IGitClientResolver, GitClientResolver>();
@@ -57,65 +67,82 @@ public static class ConfigureServices
         Action<ClaudeAnalyzerOptions>? configureClaudeOptions = null,
         Action<SemanticAnalyzerOptions>? configureSemanticOptions = null)
     {
-        // Configure Claude Analyzer
-        services.Configure<ClaudeAnalyzerOptions>(options =>
+        // Only register Claude if configured
+        var claudeApiKey = configuration.GetValue<string>("ClaudeApiKey") ??
+                          configuration.GetSection("ClaudeAnalyzer:ApiKey").Value;
+
+        if (!string.IsNullOrWhiteSpace(claudeApiKey))
         {
-            configuration.GetSection("ClaudeAnalyzer").Bind(options);   
-            configureClaudeOptions?.Invoke(options);
-
-            // Fallback to root level config
-            options.ApiKey ??= configuration.GetValue<string>("ClaudeApiKey");
-        });
-
-        services.AddKeyedScoped<IAnalyzerService, ClaudeAnalyzerService>(
-            EAnalyzers.Claude,
-            (sp, key) =>
+            services.Configure<ClaudeAnalyzerOptions>(options =>
             {
-                var options = sp.GetRequiredService<IOptions<ClaudeAnalyzerOptions>>().Value;
-                
-                if (string.IsNullOrWhiteSpace(options.ApiKey))
-                {
-                    throw new InvalidOperationException(
-                        "ClaudeApiKey is required. Configure it via ClaudeAnalyzer:ApiKey or ClaudeApiKey in configuration.");
-                }
-
-                return new ClaudeAnalyzerService(options);
+                configuration.GetSection("ClaudeAnalyzer").Bind(options);
+                configureClaudeOptions?.Invoke(options);
+                options.ApiKey ??= claudeApiKey;
             });
 
-        // Configure Semantic (AIFoundry) Analyzer
-        services.Configure<SemanticAnalyzerOptions>(options =>
-        {
-            // Bind from configuration
-            configuration.GetSection("SemanticAnalyzer").Bind(options);
-            
-            // Apply custom configuration
-            configureSemanticOptions?.Invoke(options);
-            
-            // Fallback to root level config for backwards compatibility
-            options.ApiKey ??= configuration.GetValue<string>("SemanticApiKey");
-            options.Endpoint ??= configuration.GetValue<string>("SemanticEndpoint");
-        });
-
-        services.AddKeyedScoped<IAnalyzerService, SemanticAnalyzerService>(
-            EAnalyzers.AIFoundry,
-            (sp, key) =>
-            {
-                var options = sp.GetRequiredService<IOptions<SemanticAnalyzerOptions>>().Value;
-                
-                if (string.IsNullOrWhiteSpace(options.ApiKey))
+            services.AddKeyedScoped<IAnalyzerService, ClaudeAnalyzerService>(
+                EAnalyzers.Claude,
+                (sp, key) =>
                 {
-                    throw new InvalidOperationException(
-                        "SemanticApiKey is required. Configure it via SemanticAnalyzer:ApiKey or SemanticApiKey in configuration.");
-                }
+                    var options = sp.GetRequiredService<IOptions<ClaudeAnalyzerOptions>>().Value;
+                    return new ClaudeAnalyzerService(options);
+                });
+        }
 
-                return new SemanticAnalyzerService(options);
+        // Only register Semantic (AIFoundry) if configured
+        var semanticApiKey = configuration.GetValue<string>("SemanticApiKey") ??
+                            configuration.GetSection("SemanticAnalyzer:ApiKey").Value;
+        var semanticEndpoint = configuration.GetValue<string>("SemanticEndpoint") ??
+                              configuration.GetSection("SemanticAnalyzer:Endpoint").Value;
+
+        if (!string.IsNullOrWhiteSpace(semanticApiKey) || !string.IsNullOrWhiteSpace(semanticEndpoint))
+        {
+            services.Configure<SemanticAnalyzerOptions>(options =>
+            {
+                configuration.GetSection("SemanticAnalyzer").Bind(options);
+                configureSemanticOptions?.Invoke(options);
+                options.ApiKey ??= semanticApiKey;
+                options.Endpoint ??= semanticEndpoint;
             });
+
+            services.AddKeyedScoped<IAnalyzerService, SemanticAnalyzerService>(
+                EAnalyzers.AIFoundry,
+                (sp, key) =>
+                {
+                    var options = sp.GetRequiredService<IOptions<SemanticAnalyzerOptions>>().Value;
+                    return new SemanticAnalyzerService(options);
+                });
+        }
 
         // Register the resolver that picks the right analyzer based on configuration
         services.AddScoped<IAnalyzerServiceResolver, AnalyzerServiceResolver>();
 
-        // Register the orchestrator that coordinates Git and AI services
-        services.AddScoped<PullRequestAnalysisOrchestrator>();
+        return services;
+    }
+
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    {
+        // Add MediatR
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssembly(typeof(ConfigureServices).Assembly);
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        });
+
+        // Add FluentValidation
+        services.AddValidatorsFromAssembly(typeof(ConfigureServices).Assembly);
+
+        return services;
+    }
+
+    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
+    {
+        // Register DbContext interface (DbContext is registered by Aspire)
+        services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+
+        // Register background services
+        services.AddSingleton<AnalysisJobQueue>();
+        services.AddHostedService<AnalysisBackgroundService>();
 
         return services;
     }

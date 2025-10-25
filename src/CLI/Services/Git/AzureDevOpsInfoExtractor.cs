@@ -1,9 +1,5 @@
-﻿using devops_pr_analyzer.cli.Extensions;
-using devops_pr_analyzer.cli.Interfaces;
+﻿using devops_pr_analyzer.cli.Interfaces;
 using devops_pr_analyzer.shared.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace devops_pr_analyzer.cli.Services.Git;
 
@@ -21,12 +17,23 @@ internal sealed class AzureDevOpsInfoExtractor : IGitInfoExtractor
             return null;
 
         // Determine build type
-        if (!string.IsNullOrWhiteSpace(pullRequestId))
+        if (!int.TryParse(pullRequestId, out var result))
         {
-            return new GitInfo(pullRequestId, commitId, repositoryName, EGitInfoType.PullRequest);
+            return new GitInfo(result, commitId, repositoryName, EGitInfoType.PullRequest);
+        }
+        else
+        {
+            Console.WriteLine("No Pull Request detected in the current build environment.");
         }
 
-        var buildId = Env("BUILD_BUILDID") ?? "unknown";
+        var buildId = Env("BUILD_BUILDID");
+
+        if(!int.TryParse(buildId, out var parsedBuildId))
+        {
+            parsedBuildId = -1;
+            Console.WriteLine("Warning: Unable to parse BUILD_BUILDID environment variable.");
+        }
+
         var type = buildReason switch
         {
             "IndividualCI" => EGitInfoType.CIBuild,
@@ -34,7 +41,7 @@ internal sealed class AzureDevOpsInfoExtractor : IGitInfoExtractor
             _ => EGitInfoType.Unknown
         };
 
-        return new GitInfo(buildId, commitId, repositoryName, type, ProjectName: projectName);
+        return new GitInfo(parsedBuildId, commitId, repositoryName, type, ProjectName: projectName);
     }
 
     private static string? Env(string k) => Environment.GetEnvironmentVariable(k);

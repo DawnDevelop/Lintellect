@@ -10,9 +10,10 @@ namespace devops_pr_analyzer.cli.Services;
 
 internal class AnalyzerApiClientService(Uri baseUrl, string apiKey) : IDisposable
 {
-    private static Uri AnalysisResultEndpoint => new ("api/analysis/result", UriKind.Relative);
+    private static Uri StartAnalysisEndpoint => new("api/analysis/start", UriKind.Relative);
 
-    private readonly HttpClient _httpClient = new() {
+    private readonly HttpClient _httpClient = new()
+    {
         BaseAddress = baseUrl,
         DefaultRequestHeaders =
         {
@@ -20,9 +21,15 @@ internal class AnalyzerApiClientService(Uri baseUrl, string apiKey) : IDisposabl
         }
     };
 
-    public async Task<HttpResponseMessage> PostAnalysisResultAsync(AnalysisResult result)
+    public async Task<HttpResponseMessage> StartAnalysisAsync(
+        AnalysisRequest result)
     {
-        var jsonContent = JsonSerializer.Serialize(result);
+        var request = new
+        {
+            AnalysisResult = result
+        };
+
+        var jsonContent = JsonSerializer.Serialize(request);
 
         using var content = new StringContent(
             jsonContent,
@@ -30,7 +37,7 @@ internal class AnalyzerApiClientService(Uri baseUrl, string apiKey) : IDisposabl
             "application/json"
         );
 
-        var response = await _httpClient.PostAsync(AnalysisResultEndpoint, content)
+        var response = await _httpClient.PostAsync(StartAnalysisEndpoint, content)
             .ConfigureAwait(false);
 
         response.EnsureSuccessStatusCode();

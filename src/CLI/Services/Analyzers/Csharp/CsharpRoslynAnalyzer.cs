@@ -1,12 +1,10 @@
 ﻿using devops_pr_analyzer.cli.Interfaces;
-using devops_pr_analyzer.Extensions;
 using devops_pr_analyzer.shared.Models;
 using Microsoft.Build.Locator;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.MSBuild;
 using System.Collections.Immutable;
-using System.IO.Compression;
 using System.Reflection;
 
 namespace devops_pr_analyzer.cli.Services.Analyzers.Csharp;
@@ -15,7 +13,7 @@ internal class CSharpAnalyzer : ICodeAnalyzer
 {
     public EProgrammingLanguage Language => EProgrammingLanguage.CSharp;
 
-    public async Task<shared.Models.AnalysisResult> AnalyzeAsync(string solutionPath)
+    public async Task<shared.Models.AnalysisRequest> AnalyzeAsync(string solutionPath)
     {
         if (!File.Exists(solutionPath))
             throw new FileNotFoundException($"Solution file not found at path: {solutionPath}");
@@ -66,9 +64,9 @@ internal class CSharpAnalyzer : ICodeAnalyzer
             }
         }
 
-        return new shared.Models.AnalysisResult
+        return new AnalysisRequest
         {
-            Language = Language.ToString(),
+            Language = Language,
             Findings = findings
         };
     }

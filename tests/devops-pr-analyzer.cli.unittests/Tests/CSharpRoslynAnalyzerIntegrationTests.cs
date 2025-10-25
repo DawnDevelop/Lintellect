@@ -9,7 +9,7 @@ public class CSharpRoslynAnalyzerIntegrationTests
 {
     private CSharpAnalyzer _analyzer = null!;
     private string _simpleRepoSolutionPath = null!;
-    private AnalysisResult _cachedAnalysisResult = null!;
+    private AnalysisRequest _cachedAnalysisResult = null!;
 
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
@@ -43,7 +43,7 @@ public class CSharpRoslynAnalyzerIntegrationTests
     {
         // Assert
         _cachedAnalysisResult.Should().NotBeNull();
-        _cachedAnalysisResult.Language.Should().Be("CSharp");
+        _cachedAnalysisResult.Language.Should().Be(EProgrammingLanguage.CSharp);
         _cachedAnalysisResult.Findings.Should().NotBeNull();
     }
 

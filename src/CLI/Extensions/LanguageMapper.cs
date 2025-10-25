@@ -1,6 +1,6 @@
 ﻿using devops_pr_analyzer.shared.Models;
 
-namespace devops_pr_analyzer.Extensions;
+namespace devops_pr_analyzer.cli.Extensions;
 
 internal static class LanguageMapper
 {

@@ -1,10 +1,14 @@
 using devops_pr_analyzer.Apis.Authorization;
-using devops_pr_analyzer.Models;
-using devops_pr_analyzer.Services;
-using devops_pr_analyzer.Services.Git;
+using devops_pr_analyzer.Apis.Models;
+using devops_pr_analyzer.Application.Messages.Commands;
+using devops_pr_analyzer.Application.Messages.Queries;
+using devops_pr_analyzer.Infrastructure.Services;
+using devops_pr_analyzer.Infrastructure.Services.Git;
 using devops_pr_analyzer.shared.Models;
+using MediatR;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace devops_pr_analyzer.Apis;
 
@@ -16,123 +20,127 @@ public static class AnalysisApi
             .WithTags("Analysis")
             .AddEndpointFilter<ApiKeyEndpointFilter>();
 
-        api.MapPost("/result", PostAnalysisResult)
-            .WithName("PostAnalysisResult")
-            .WithSummary("Submit analysis result")
-            .WithDescription("Submit the result of a static analysis run and get compact diffs for AI analysis.");
+        api.MapPost("/start", StartAnalysisFromCli)
+            .WithName("StartAnalysisFromCli")
+            .WithSummary("Start AI analysis from CLI results")
+            .WithDescription("Submit static analysis results from CLI to start background AI analysis.");
 
-        api.MapPost("/analyze", AnalyzePullRequest)
-            .WithName("AnalyzePullRequest")
-            .WithSummary("Analyze pull request with AI")
-            .WithDescription("Perform complete AI-powered analysis of a pull request including diffs and findings.");
+        api.MapPost("/analyze", SubmitAnalysis)
+            .WithName("SubmitAnalysis")
+            .WithSummary("Submit analysis job")
+            .WithDescription("Submit a new analysis job for background processing.");
 
-        api.MapPost("/analyze/summary", GenerateSummary)
-            .WithName("GeneratePRSummary")
-            .WithSummary("Generate PR summary")
-            .WithDescription("Generate a quick summary of the pull request for fast feedback.");
+        api.MapGet("/status/{jobId:guid}", GetAnalysisStatus)
+            .WithName("GetAnalysisStatus")
+            .WithSummary("Get analysis job status")
+            .WithDescription("Get the status and results of an analysis job.");
+
+        api.MapGet("/history", GetAnalysisHistory)
+            .WithName("GetAnalysisHistory")
+            .WithSummary("Get analysis history")
+            .WithDescription("Get the history of analysis jobs with optional filtering.");
 
         return app;
     }
 
-    private static async Task<Ok<Dictionary<string, string>>> PostAnalysisResult(
-        [FromServices] PullRequestService diffService,
-        AnalysisResult analysisResult)
-    {
-        // Get compact diffs optimized for token usage
-        // The service automatically selects the right Git provider (Azure DevOps, GitHub, etc.)
-        var compactDiffs = await diffService.GetCompactDiffsAsync(
-            analysisResult,
-            contextLines: 3,           // Lines of context around each change
-            maxNewFileLines: 50,       // Max lines to show for new/deleted files
-            maxLinesPerFile: 1000     // Max total lines per file diff
-        );
-
-        return TypedResults.Ok(compactDiffs);
-    }
-
-    private static async Task<Ok<PullRequestAnalysisReportModel>> AnalyzePullRequest(
-        [FromServices] PullRequestAnalysisOrchestrator orchestrator,
-        [FromBody] AnalyzePullRequestRequest request,
+    private static async Task<Accepted<SubmitAnalysisResponse>> StartAnalysisFromCli(
+        [FromServices] IMediator mediator,
+        [FromServices] AnalysisJobQueue jobQueue,
+        [FromBody] StartAnalysisFromCliRequest request,
         CancellationToken cancellationToken)
     {
-        var options = AnalysisOptions.Comprehensive;
 
-        var report = await orchestrator.AnalyzeAsync(
-            request.AnalysisResult,
-            request.Analyzer,
-            options,
+        // Submit the analysis job for background processing
+        var jobId = await mediator.Send(new SubmitAnalysisCommand(
+            request.AnalysisResult),
             cancellationToken);
 
-        return TypedResults.Ok(report);
+        return TypedResults.Accepted($"/api/analysis/status/{jobId}", new SubmitAnalysisResponse(jobId,
+            "Pending",
+            "AI analysis started successfully from CLI static analysis"));
     }
 
-    private static async Task<Ok<PullRequestSummaryResponse>> GenerateSummary(
-        [FromServices] PullRequestAnalysisOrchestrator orchestrator,
-        [FromBody] AnalyzePullRequestRequest request,
+    private static async Task<Accepted<SubmitAnalysisResponse>> SubmitAnalysis(
+        [FromServices] IMediator mediator,
+        [FromServices] AnalysisJobQueue jobQueue,
+        [FromBody] SubmitAnalysisRequest request,
         CancellationToken cancellationToken)
     {
-        var options = AnalysisOptions.Default;
 
-        var summary = await orchestrator.GenerateQuickSummaryAsync(
-            request.AnalysisResult,
-            request.Analyzer,
-            options,
-            cancellationToken);
+        var jobId = await mediator.Send(new SubmitAnalysisCommand(
+            request.CliAnalysisResult), cancellationToken);
 
-        return TypedResults.Ok(new PullRequestSummaryResponse
+        return TypedResults.Accepted($"/api/analysis/status/{jobId}", new SubmitAnalysisResponse(jobId,
+            "Pending",
+            "Analysis job submitted successfully"));
+    }
+
+    private static async Task<Results<Ok<AnalysisJobStatusResponse>, NotFound>> GetAnalysisStatus(
+        [FromServices] IMediator mediator,
+        Guid jobId,
+        CancellationToken cancellationToken)
+    {
+        var job = await mediator.Send(new GetAnalysisStatusQuery(jobId), cancellationToken);
+
+        if (job == null)
         {
-            Summary = summary,
-            Analyzer = request.Analyzer.ToString(),
-            GeneratedAt = DateTimeOffset.UtcNow
-        });
+            return TypedResults.NotFound();
+        }
+
+        // Get CLI analysis result from JsonDocument
+        var analysisResult = job.AnalysisRequest?.Deserialize<AnalysisRequest>();
+
+        return TypedResults.Ok(new AnalysisJobStatusResponse(
+            job.Id,
+            job.Status.ToString(),
+            analysisResult?.GitInfo?.ProjectName ?? "Unknown",
+            analysisResult?.GitInfo?.RepositoryName ?? "Unknown",
+            analysisResult?.GitInfo?.PullRequestId ?? 0,
+            job.Created,
+            job.StartedAt,
+            job.CompletedAt,
+            job.ErrorMessage,
+            analysisResult,
+            job.Summary,
+            job.DetailedAnalysis,
+            job.InlineSuggestions,
+            job.AnalyzerUsed
+        ));
     }
-}
 
-/// <summary>
-/// Request to analyze a pull request with AI.
-/// </summary>
-public sealed record AnalyzePullRequestRequest
-{
-    /// <summary>
-    /// The analysis result from static code analyzers.
-    /// </summary>
-    public required AnalysisResult AnalysisResult { get; init; }
+    private static async Task<Ok<IEnumerable<AnalysisJobStatusResponse>>> GetAnalysisHistory(
+        [FromServices] IMediator mediator,
+        [FromQuery] int skip = 0,
+        [FromQuery] int take = 50,
+        [FromQuery] string? projectName = null,
+        [FromQuery] string? repositoryName = null,
+        CancellationToken cancellationToken = default)
+    {
+        var jobs = await mediator.Send(new GetAnalysisHistoryQuery(skip, take, projectName, repositoryName), cancellationToken);
 
-    /// <summary>
-    /// The AI analyzer to use.
-    /// </summary>
-    public EAnalyzers Analyzer { get; init; } = EAnalyzers.AIFoundry;
+        var response = jobs.Select(job =>
+        {
+            // Get CLI analysis result from JsonDocument
+            var analysisResult = job.AnalysisRequest?.Deserialize<AnalysisRequest>(); ;
 
-    /// <summary>
-    /// Use compact mode for token optimization (smaller diffs, only files with findings).
-    /// </summary>
-    public bool UseCompactMode { get; init; } = false;
+            return new AnalysisJobStatusResponse(
+                job.Id,
+                job.Status.ToString(),
+                analysisResult?.GitInfo?.ProjectName ?? "Unknown",
+                analysisResult?.GitInfo?.RepositoryName ?? "Unknown",
+                analysisResult?.GitInfo?.PullRequestId ?? 0,
+                job.Created,
+                job.StartedAt,
+                job.CompletedAt,
+                job.ErrorMessage,
+                analysisResult,
+                job.Summary,
+                job.DetailedAnalysis,
+                job.InlineSuggestions,
+                job.AnalyzerUsed
+            );
+        });
 
-    /// <summary>
-    /// Use comprehensive mode for detailed analysis (larger diffs, all files).
-    /// </summary>
-    public bool UseComprehensiveMode { get; init; } = false;
-
-    public bool EnableCodeOwners { get; init; } = false;
-}
-
-/// <summary>
-/// Response containing a PR summary.
-/// </summary>
-public sealed record PullRequestSummaryResponse
-{
-    /// <summary>
-    /// The generated summary.
-    /// </summary>
-    public required string Summary { get; init; }
-
-    /// <summary>
-    /// The analyzer that generated the summary.
-    /// </summary>
-    public required string Analyzer { get; init; }
-
-    /// <summary>
-    /// When the summary was generated.
-    /// </summary>
-    public required DateTimeOffset GeneratedAt { get; init; }
+        return TypedResults.Ok(response);
+    }
 }

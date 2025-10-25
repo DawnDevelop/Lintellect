@@ -15,8 +15,8 @@ internal sealed class GitHubInfoExtractor : IGitInfoExtractor
         var commitId = Env("GITHUB_SHA");
         var repositoryName = Env("GITHUB_REPOSITORY");
 
-        if (string.IsNullOrWhiteSpace(gitHubRef) || 
-            string.IsNullOrWhiteSpace(commitId) || 
+        if (string.IsNullOrWhiteSpace(gitHubRef) ||
+            string.IsNullOrWhiteSpace(commitId) ||
             string.IsNullOrWhiteSpace(repositoryName))
         {
             return null;
@@ -29,7 +29,7 @@ internal sealed class GitHubInfoExtractor : IGitInfoExtractor
             return null;
         }
 
-        return new GitInfo(pullRequestId, commitId, repositoryName);
+        return new GitInfo(int.Parse(pullRequestId), commitId, repositoryName);
     }
 
     private static string? ExtractPullRequestNumber(string gitHubRef)
