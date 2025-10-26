@@ -23,11 +23,14 @@ internal class TestHelpers
         var assemblyDir = Path.GetDirectoryName(assemblyLocation)!;
 
         // Navigate up to find the test project root (contains .csproj)
-        var current = new DirectoryInfo(assemblyDir);
+        DirectoryInfo? current = new(assemblyDir);
         while (current != null)
         {
             if (Directory.GetFiles(current.FullName, "*.csproj").Length > 0)
+            {
                 return current.FullName;
+            }
+
             current = current.Parent;
         }
 
@@ -47,7 +50,9 @@ internal class TestHelpers
         {
             // .slnx files might be XML based, verify it's readable
             if (!File.Exists(solutionPath))
+            {
                 throw new FileNotFoundException($"Solution file not found: {solutionPath}");
+            }
         }
     }
 
@@ -69,7 +74,7 @@ internal class TestHelpers
         }
 
         var fixturesDir = Path.Combine(outputDir, "Fixtures");
-        Directory.CreateDirectory(fixturesDir);
+        _ = Directory.CreateDirectory(fixturesDir);
 
         // Extract the zip file to a temp location first
         var repoName = Path.GetFileNameWithoutExtension(zipFileName);
@@ -112,6 +117,40 @@ internal class TestHelpers
         {
             // Multiple items at root, just rename the temp folder
             Directory.Move(tempExtractPath, finalExtractPath);
+        }
+    }
+
+    /// <summary>
+    /// Sets environment variables for testing and returns a disposable cleanup object
+    /// </summary>
+    public static IDisposable SetEnvironmentVariables(Dictionary<string, string?> variables)
+    {
+        Dictionary<string, string?> originalValues = [];
+
+        foreach (var kvp in variables)
+        {
+            originalValues[kvp.Key] = Environment.GetEnvironmentVariable(kvp.Key);
+            Environment.SetEnvironmentVariable(kvp.Key, kvp.Value);
+        }
+
+        return new EnvironmentVariableCleanup(originalValues);
+    }
+
+    private class EnvironmentVariableCleanup : IDisposable
+    {
+        private readonly Dictionary<string, string?> _originalValues;
+
+        public EnvironmentVariableCleanup(Dictionary<string, string?> originalValues)
+        {
+            _originalValues = originalValues;
+        }
+
+        public void Dispose()
+        {
+            foreach (var kvp in _originalValues)
+            {
+                Environment.SetEnvironmentVariable(kvp.Key, kvp.Value);
+            }
         }
     }
 }
