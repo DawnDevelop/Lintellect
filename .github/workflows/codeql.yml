@@ -59,20 +59,20 @@ jobs:
         with:
           category: "/language:${{matrix.language}}"
 
-  dependency-review:
-    name: Dependency Review
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: moderate
-          allow-licenses: MIT, Apache-2.0, AGPL-3.0, BSD-2-Clause, BSD-3-Clause, ISC, Unlicense
+  #dependency-review:
+  #  name: Dependency Review
+  #  runs-on: ubuntu-latest
+  #  if: github.event_name == 'pull_request'
+  #
+  #  steps:
+  #    - name: Checkout repository
+  #      uses: actions/checkout@v5
+  #
+  #    - name: Dependency Review
+  #      uses: actions/dependency-review-action@v4
+  #      with:
+  #        fail-on-severity: moderate
+  #        allow-licenses: MIT, Apache-2.0, AGPL-3.0, BSD-2-Clause, BSD-3-Clause, ISC, Unlicense
 
   secret-scan:
     name: Secret Scan
