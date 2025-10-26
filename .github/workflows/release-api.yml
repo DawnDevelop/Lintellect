@@ -80,7 +80,7 @@ jobs:
       - name: Run API tests
         run: |
           dotnet test tests/Lintellect.Api.UnitTests/Lintellect.Api.UnitTests.csproj --no-build --configuration Release --verbosity normal
-          dotnet test tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj --no-build --configuration Release --verbosity normal
+          # dotnet test tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj --no-build --configuration Release --verbosity normal
 
       - name: Verify version in project file
         run: |

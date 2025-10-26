@@ -1,4 +1,3 @@
-using Lintellect.Api.Domain.Enums;
 using Mediator;
 
 namespace Lintellect.Api.functionaltests.Queries;

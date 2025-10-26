@@ -4,7 +4,6 @@ using Lintellect.Shared.Models;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
 using Microsoft.VisualStudio.Services.WebApi;
 using Octokit;
-using System.Net.Http;
 
 namespace Lintellect.Api.Infrastructure.Services.Git.GitHub;
 
@@ -48,7 +47,9 @@ public sealed class GitHubClientService : IGitClient
             foreach (var file in files)
             {
                 if (ShouldSkipFile(file, maxLinesPerFile))
+                {
                     continue;
+                }
 
                 var diff = await GetFileDiffAsync(file, contextLines, maxNewFileLines);
                 if (!string.IsNullOrWhiteSpace(diff))
@@ -318,11 +319,15 @@ public sealed class GitHubClientService : IGitClient
     {
         // Skip binary files
         if (file.Status == "added" && file.Changes == 0)
+        {
             return true;
+        }
 
         // Skip files that are too large
         if (file.Changes > maxLinesPerFile)
+        {
             return true;
+        }
 
         // Skip common build artifacts
         var fileName = Path.GetFileName(file.FileName).ToLowerInvariant();

@@ -1,10 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
+
+using static Lintellect.Api.functionaltests.Testing;
 
 namespace Lintellect.Api.functionaltests;
-
-using static Testing;
 
 [TestFixture]
 public abstract class BaseTestFixture

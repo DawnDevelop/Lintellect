@@ -1,5 +1,4 @@
 using Lintellect.Api.Application.Common.Exceptions;
-using Lintellect.Api.Domain.Enums;
 using Mediator;
 
 namespace Lintellect.Api.functionaltests.Commands;
@@ -39,7 +38,11 @@ public class SubmitAnalysisCommandTests : Testing
         var mediator = await GetService<IMediator>();
 
         // Act & Assert
-        var act = async () => await mediator.Send(command);
-        await Should.ThrowAsync<ValidationException>(act);
+        async Task<Guid> act()
+        {
+            return await mediator.Send(command);
+        }
+
+        await Should.ThrowAsync<ValidationException>((Func<Task<Guid>>)act);
     }
 }

@@ -23,10 +23,7 @@ internal sealed class PromptTemplateService
     {
         var template = LoadTemplate(templateName);
 
-        if (variables is null || variables.Count == 0)
-            return template;
-
-        return ReplaceVariables(template, variables);
+        return variables is null || variables.Count == 0 ? template : ReplaceVariables(template, variables);
     }
 
     /// <summary>
@@ -42,10 +39,7 @@ internal sealed class PromptTemplateService
 
         var template = LoadLanguageTemplate(templateName, language);
 
-        if (variables is null || variables.Count == 0)
-            return template;
-
-        return ReplaceVariables(template, variables);
+        return variables is null || variables.Count == 0 ? template : ReplaceVariables(template, variables);
     }
 
     /// <summary>

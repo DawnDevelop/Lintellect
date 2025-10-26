@@ -1,7 +1,5 @@
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
-using Lintellect.Shared.Models;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Lintellect.Api.Infrastructure.Services.AI;
 

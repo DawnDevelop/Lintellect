@@ -1,8 +1,8 @@
+using System.Text.Json;
 using Lintellect.Api.Domain.Common;
 using Lintellect.Api.Domain.Enums;
 using Lintellect.Api.Domain.Events;
 using Lintellect.Shared.Models;
-using System.Text.Json;
 
 namespace Lintellect.Api.Domain.Entities;
 
@@ -38,7 +38,9 @@ public sealed class AnalysisJob : BaseAuditableEntity
     public void Start()
     {
         if (Status != AnalysisStatus.Pending)
+        {
             throw new InvalidOperationException($"Cannot start job in {Status} status");
+        }
 
         Status = AnalysisStatus.Running;
         StartedAt = DateTimeOffset.UtcNow;
@@ -49,7 +51,9 @@ public sealed class AnalysisJob : BaseAuditableEntity
     public void Complete(string summary, string detailedAnalysis, string? inlineSuggestions, string analyzerUsed)
     {
         if (Status != AnalysisStatus.Running)
+        {
             throw new InvalidOperationException($"Cannot complete job in {Status} status");
+        }
 
         Status = AnalysisStatus.Completed;
         CompletedAt = DateTimeOffset.UtcNow;
@@ -63,8 +67,10 @@ public sealed class AnalysisJob : BaseAuditableEntity
 
     public void Fail(string errorMessage)
     {
-        if (Status != AnalysisStatus.Running && Status != AnalysisStatus.Pending)
+        if (Status is not AnalysisStatus.Running and not AnalysisStatus.Pending)
+        {
             throw new InvalidOperationException($"Cannot fail job in {Status} status");
+        }
 
         Status = AnalysisStatus.Failed;
         CompletedAt = DateTimeOffset.UtcNow;

@@ -1,6 +1,3 @@
-using Lintellect.Api.Domain.Enums;
-using Lintellect.Shared.Models;
-
 namespace Lintellect.Api.UnitTests.Builders;
 
 /// <summary>

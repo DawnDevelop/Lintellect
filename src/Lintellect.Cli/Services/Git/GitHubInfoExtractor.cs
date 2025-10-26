@@ -1,9 +1,5 @@
-using Lintellect.Cli.Extensions;
 using Lintellect.Cli.Interfaces;
 using Lintellect.Shared.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Lintellect.Cli.Services.Git;
 
@@ -24,12 +20,11 @@ internal sealed class GitHubInfoExtractor : IGitInfoExtractor
 
         // Extract PR number from GITHUB_REF (format: refs/pull/{pr_number}/merge)
         var pullRequestId = ExtractPullRequestNumber(gitHubRef);
-        if (string.IsNullOrWhiteSpace(pullRequestId))
+        if (string.IsNullOrWhiteSpace(pullRequestId) || !int.TryParse(pullRequestId, out var parsedPullRequestId))
         {
             return null;
         }
-
-        return new GitInfo(int.Parse(pullRequestId), commitId, repositoryName);
+        return new GitInfo(parsedPullRequestId, commitId, repositoryName);
     }
 
     private static string? ExtractPullRequestNumber(string gitHubRef)
@@ -46,5 +41,8 @@ internal sealed class GitHubInfoExtractor : IGitInfoExtractor
         return null;
     }
 
-    private static string? Env(string k) => Environment.GetEnvironmentVariable(k);
+    private static string? Env(string k)
+    {
+        return Environment.GetEnvironmentVariable(k);
+    }
 }

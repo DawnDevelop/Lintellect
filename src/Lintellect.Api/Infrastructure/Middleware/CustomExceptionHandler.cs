@@ -1,9 +1,6 @@
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Diagnostics;
-using System.Net;
 using Lintellect.Api.Application.Common.Exceptions;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Lintellect.Api.Infrastructure.Middleware;
 
@@ -25,7 +22,7 @@ public class CustomExceptionHandler : IExceptionHandler
     {
         var exceptionType = exception.GetType();
 
-        if (_exceptionHandlers.TryGetValue(exceptionType, out Func<HttpContext, Exception, Task>? value))
+        if (_exceptionHandlers.TryGetValue(exceptionType, out var value))
         {
             await value.Invoke(httpContext, exception);
             return true;

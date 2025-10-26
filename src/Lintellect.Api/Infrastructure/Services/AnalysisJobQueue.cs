@@ -1,5 +1,5 @@
-using Lintellect.Api.Domain.Entities;
 using System.Threading.Channels;
+using Lintellect.Api.Domain.Entities;
 
 namespace Lintellect.Api.Infrastructure.Services;
 

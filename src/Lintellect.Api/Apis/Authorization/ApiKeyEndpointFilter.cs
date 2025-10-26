@@ -13,19 +13,16 @@ public class ApiKeyEndpointFilter(
         EndpointFilterDelegate next)
     {
         var httpContext = context.HttpContext;
-        
+
         if (!httpContext.Request.Headers.TryGetValue(ApiKeyHeaderName, out var extractedApiKey))
         {
             return TypedResults.Unauthorized();
         }
 
         var configuredApiKey = options.Value.ApiKey;
-        
-        if (string.IsNullOrEmpty(configuredApiKey) || configuredApiKey != extractedApiKey)
-        {
-            return TypedResults.Unauthorized();
-        }
 
-        return await next(context);
+        return string.IsNullOrEmpty(configuredApiKey) || configuredApiKey != extractedApiKey
+            ? TypedResults.Unauthorized()
+            : await next(context);
     }
 }

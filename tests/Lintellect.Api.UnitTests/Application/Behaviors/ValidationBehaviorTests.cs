@@ -1,7 +1,7 @@
 using FluentValidation;
 using FluentValidation.Results;
-using Microsoft.Extensions.Logging;
 using Lintellect.Api.Application.Common.Behaviors;
+using Microsoft.Extensions.Logging;
 
 namespace Lintellect.Api.UnitTests.Application.Behaviors;
 
@@ -9,17 +9,17 @@ namespace Lintellect.Api.UnitTests.Application.Behaviors;
 public class ValidationBehaviorTests
 {
     private List<IValidator<TestRequest>> _validators = null!;
-    private Mock<ILogger<TestRequest>> _mockLogger = null!;
+    private ILogger<TestRequest> _mockLogger = null!;
     private ValidationBehavior<TestRequest, TestResponse> _behavior = null!;
 
     [SetUp]
     public void SetUp()
     {
         _validators = [];
-        _mockLogger = new Mock<ILogger<TestRequest>>();
+        _mockLogger = Substitute.For<ILogger<TestRequest>>();
         _behavior = new ValidationBehavior<TestRequest, TestResponse>(
             _validators,
-            _mockLogger.Object);
+            _mockLogger);
     }
 
     [Test]
@@ -33,11 +33,11 @@ public class ValidationBehaviorTests
 
         _validators.Clear();
 
-        MessageHandlerDelegate<TestRequest, TestResponse> next = (req, ct) =>
+        ValueTask<TestResponse> next(TestRequest req, CancellationToken ct)
         {
             nextCalled = true;
             return ValueTask.FromResult(expectedResponse);
-        };
+        }
 
         // Act
         var result = await _behavior.Handle(request, next, cancellationToken);
@@ -56,18 +56,18 @@ public class ValidationBehaviorTests
         var nextCalled = false;
         var expectedResponse = new TestResponse { Result = "success" };
 
-        var validator = new Mock<IValidator<TestRequest>>();
-        validator.Setup(v => v.ValidateAsync(It.IsAny<ValidationContext<TestRequest>>(), cancellationToken))
-            .ReturnsAsync(new ValidationResult());
+        var validator = Substitute.For<IValidator<TestRequest>>();
+        validator.ValidateAsync(Arg.Any<ValidationContext<TestRequest>>(), cancellationToken)
+            .Returns(new ValidationResult());
 
         _validators.Clear();
-        _validators.Add(validator.Object);
+        _validators.Add(validator);
 
-        MessageHandlerDelegate<TestRequest, TestResponse> next = (req, ct) =>
+        ValueTask<TestResponse> next(TestRequest req, CancellationToken ct)
         {
             nextCalled = true;
             return ValueTask.FromResult(expectedResponse);
-        };
+        }
 
         // Act
         var result = await _behavior.Handle(request, next, cancellationToken);
@@ -85,25 +85,29 @@ public class ValidationBehaviorTests
         var cancellationToken = CancellationToken.None;
         var nextCalled = false;
 
-        var validator = new Mock<IValidator<TestRequest>>();
+        var validator = Substitute.For<IValidator<TestRequest>>();
         var validationResult = new ValidationResult();
         validationResult.Errors.Add(new ValidationFailure("Value", "Value is required"));
 
-        validator.Setup(v => v.ValidateAsync(It.IsAny<ValidationContext<TestRequest>>(), cancellationToken))
-            .ReturnsAsync(validationResult);
+        validator.ValidateAsync(Arg.Any<ValidationContext<TestRequest>>(), cancellationToken)
+            .Returns(validationResult);
 
         _validators.Clear();
-        _validators.Add(validator.Object);
+        _validators.Add(validator);
 
-        MessageHandlerDelegate<TestRequest, TestResponse> next = (req, ct) =>
+        ValueTask<TestResponse> next(TestRequest req, CancellationToken ct)
         {
             nextCalled = true;
             return ValueTask.FromResult(new TestResponse());
-        };
+        }
 
         // Act & Assert
-        var act = async () => await _behavior.Handle(request, next, cancellationToken);
-        await Should.ThrowAsync<Api.Application.Common.Exceptions.ValidationException>(act);
+        async Task<TestResponse> act()
+        {
+            return await _behavior.Handle(request, next, cancellationToken);
+        }
+
+        await Should.ThrowAsync<Api.Application.Common.Exceptions.ValidationException>((Func<Task<TestResponse>>)act);
         nextCalled.ShouldBeFalse();
     }
 
@@ -114,27 +118,29 @@ public class ValidationBehaviorTests
         var request = new TestRequest { Value = "test" };
         var cancellationToken = CancellationToken.None;
 
-        var validator1 = new Mock<IValidator<TestRequest>>();
-        var validator2 = new Mock<IValidator<TestRequest>>();
+        var validator1 = Substitute.For<IValidator<TestRequest>>();
+        var validator2 = Substitute.For<IValidator<TestRequest>>();
 
-        validator1.Setup(v => v.ValidateAsync(It.IsAny<ValidationContext<TestRequest>>(), cancellationToken))
-            .ReturnsAsync(new ValidationResult());
-        validator2.Setup(v => v.ValidateAsync(It.IsAny<ValidationContext<TestRequest>>(), cancellationToken))
-            .ReturnsAsync(new ValidationResult());
+        validator1.ValidateAsync(Arg.Any<ValidationContext<TestRequest>>(), cancellationToken)
+            .Returns(new ValidationResult());
+        validator2.ValidateAsync(Arg.Any<ValidationContext<TestRequest>>(), cancellationToken)
+            .Returns(new ValidationResult());
 
         _validators.Clear();
-        _validators.Add(validator1.Object);
-        _validators.Add(validator2.Object);
+        _validators.Add(validator1);
+        _validators.Add(validator2);
 
-        MessageHandlerDelegate<TestRequest, TestResponse> next = (req, ct) =>
-            ValueTask.FromResult(new TestResponse());
+        static ValueTask<TestResponse> next(TestRequest req, CancellationToken ct)
+        {
+            return ValueTask.FromResult(new TestResponse());
+        }
 
         // Act
         await _behavior.Handle(request, next, cancellationToken);
 
         // Assert
-        validator1.Verify(v => v.ValidateAsync(It.IsAny<ValidationContext<TestRequest>>(), cancellationToken), Times.Once);
-        validator2.Verify(v => v.ValidateAsync(It.IsAny<ValidationContext<TestRequest>>(), cancellationToken), Times.Once);
+        await validator1.Received(1).ValidateAsync(Arg.Any<ValidationContext<TestRequest>>(), cancellationToken);
+        await validator2.Received(1).ValidateAsync(Arg.Any<ValidationContext<TestRequest>>(), cancellationToken);
     }
 }
 

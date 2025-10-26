@@ -1,5 +1,4 @@
 using Lintellect.Api.Application.Common.Interfaces;
-using Lintellect.Shared.Models;
 using Mediator;
 
 namespace Lintellect.Api.Application.Messages.Commands;
@@ -22,7 +21,7 @@ public sealed class CompleteAnalysisJobCommandHandler(IApplicationDbContext cont
     public async ValueTask<Unit> Handle(CompleteAnalysisJobCommand request, CancellationToken cancellationToken)
     {
         var job = await context.AnalysisJobs.FindAsync(request.JobId, cancellationToken);
-        if(job is not null)
+        if (job is not null)
         {
             job.Complete(
                 request.Summary,
@@ -32,7 +31,7 @@ public sealed class CompleteAnalysisJobCommandHandler(IApplicationDbContext cont
 
             await context.SaveChangesAsync(cancellationToken);
         }
-        
+
 
         return default;
     }

@@ -1,5 +1,5 @@
-using Lintellect.Cli.Commands;
 using System.CommandLine;
+using Lintellect.Cli.Commands;
 
 Console.WriteLine("========================================");
 Console.WriteLine("DevOps PR Analyzer CLI");

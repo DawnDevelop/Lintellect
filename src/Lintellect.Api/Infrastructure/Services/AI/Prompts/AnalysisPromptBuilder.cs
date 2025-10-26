@@ -1,5 +1,5 @@
-using Lintellect.Shared.Models;
 using System.Text;
+using Lintellect.Shared.Models;
 
 namespace Lintellect.Api.Infrastructure.Services.AI.Prompts;
 
@@ -49,23 +49,23 @@ internal sealed class AnalysisPromptBuilder
     public string BuildSummaryPrompt(AnalysisRequest analysisResult, Dictionary<string, string> diffs)
     {
         var builder = new StringBuilder();
-        
+
         builder.AppendLine("Generate a concise PR summary for the following:");
         builder.AppendLine();
-        
+
         if (analysisResult.GitInfo is not null)
         {
             builder.AppendLine($"**PR**: #{analysisResult.GitInfo.PullRequestId} in {analysisResult.GitInfo.RepositoryName}");
         }
-        
+
         var errors = analysisResult.Findings.Count(f => f.Severity.Equals("Error", StringComparison.OrdinalIgnoreCase));
         var warnings = analysisResult.Findings.Count(f => f.Severity.Equals("Warning", StringComparison.OrdinalIgnoreCase));
-        
+
         builder.AppendLine($"**Language**: {analysisResult.Language}");
         builder.AppendLine($"**Findings**: {errors} errors, {warnings} warnings");
         builder.AppendLine($"**Files Changed**: {diffs.Count}");
         builder.AppendLine();
-        
+
         if (errors > 0)
         {
             builder.AppendLine("**Critical Issues**:");
@@ -86,7 +86,7 @@ internal sealed class AnalysisPromptBuilder
                 builder.AppendLine($"- {file}");
             }
         }
-        
+
         return builder.ToString();
     }
 
@@ -100,7 +100,7 @@ internal sealed class AnalysisPromptBuilder
         var builder = new StringBuilder();
         builder.AppendLine("## Static Analysis Results");
         builder.AppendLine($"- **Language**: {analysisResult.Language}");
-        
+
         var errors = analysisResult.Findings.Where(f => f.Severity.Equals("Error", StringComparison.OrdinalIgnoreCase)).ToList();
         var warnings = analysisResult.Findings.Where(f => f.Severity.Equals("Warning", StringComparison.OrdinalIgnoreCase)).ToList();
         var info = analysisResult.Findings.Where(f => f.Severity.Equals("Info", StringComparison.OrdinalIgnoreCase)).ToList();
@@ -113,8 +113,8 @@ internal sealed class AnalysisPromptBuilder
 
         AppendFindingsByCategory(builder, "?? Errors (Must Fix)", errors, includeCodeBlock: true);
         AppendFindingsByCategory(builder, "?? Warnings (Should Fix)", warnings.Take(25).ToList(), includeCodeBlock: false, warnings.Count);
-        
-        if (info.Count > 0 && info.Count <= 15)
+
+        if (info.Count is > 0 and <= 15)
         {
             AppendFindingsByCategory(builder, "?? Informational Messages", info, includeCodeBlock: false);
         }
@@ -123,21 +123,23 @@ internal sealed class AnalysisPromptBuilder
     }
 
     private static void AppendFindingsByCategory(
-        StringBuilder builder, 
-        string title, 
-        List<AnalyzerFindings> findings, 
-        bool includeCodeBlock, 
+        StringBuilder builder,
+        string title,
+        List<AnalyzerFindings> findings,
+        bool includeCodeBlock,
         int? totalCount = null)
     {
         if (findings.Count == 0)
+        {
             return;
+        }
 
         builder.AppendLine($"### {title}");
-        
+
         foreach (var finding in findings)
         {
             builder.AppendLine($"- **{finding.RuleId}** at `{finding.FilePath}:{finding.Line}`");
-            
+
             if (includeCodeBlock)
             {
                 builder.AppendLine("  ```");
@@ -154,7 +156,7 @@ internal sealed class AnalysisPromptBuilder
         {
             builder.AppendLine($"- ... and {totalCount.Value - findings.Count} more {title.ToLowerInvariant()}");
         }
-        
+
         builder.AppendLine();
     }
 
@@ -177,12 +179,12 @@ internal sealed class AnalysisPromptBuilder
         {
             builder.AppendLine($"### ?? `{filePath}`");
             builder.AppendLine("```diff");
-            
+
             var diffLines = diff.Split('\n');
-            var truncatedDiff = diffLines.Length > 100 
+            var truncatedDiff = diffLines.Length > 100
                 ? string.Join('\n', diffLines.Take(100)) + "\n... (truncated)"
                 : diff;
-            
+
             builder.AppendLine(truncatedDiff);
             builder.AppendLine("```");
             builder.AppendLine();
@@ -229,7 +231,9 @@ internal sealed class AnalysisPromptBuilder
     private static string BuildCodeChangesForReview(Dictionary<string, string> diffs)
     {
         if (diffs.Count == 0)
+        {
             return string.Empty;
+        }
 
         var builder = new StringBuilder();
         builder.AppendLine("## Code Changes to Review (Priority: Review Every Line):");
@@ -264,12 +268,12 @@ internal sealed class AnalysisPromptBuilder
         {
             builder.AppendLine($"### File: `{filePath}`");
             builder.AppendLine("```diff");
-            
+
             var diffLines = diff.Split('\n');
-            var truncatedDiff = diffLines.Length > 100 
+            var truncatedDiff = diffLines.Length > 100
                 ? string.Join('\n', diffLines.Take(100)) + "\n... (truncated)"
                 : diff;
-            
+
             builder.AppendLine(truncatedDiff);
             builder.AppendLine("```");
             builder.AppendLine();
@@ -300,7 +304,7 @@ internal sealed class AnalysisPromptBuilder
         foreach (var (filePath, findings) in findingsByFile)
         {
             builder.AppendLine($"### File: `{filePath}`");
-            
+
             foreach (var finding in findings.OrderBy(f => f.Line))
             {
                 builder.AppendLine($"- **Line {finding.Line}** - [{finding.Severity}] {finding.RuleId}");

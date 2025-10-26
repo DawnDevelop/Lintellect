@@ -14,12 +14,14 @@ internal sealed class AzureDevOpsInfoExtractor : IGitInfoExtractor
         var projectName = Env("SYSTEM_TEAMPROJECT");
 
         if (string.IsNullOrWhiteSpace(commitId) || string.IsNullOrWhiteSpace(repositoryName))
+        {
             return null;
+        }
 
         // Determine build type
-        if (!int.TryParse(pullRequestId, out var result))
+        if (int.TryParse(pullRequestId, out var parsedPullRequestId))
         {
-            return new GitInfo(result, commitId, repositoryName, EGitInfoType.PullRequest);
+            return new GitInfo(parsedPullRequestId, commitId, repositoryName, EGitInfoType.PullRequest, ProjectName: projectName);
         }
         else
         {
@@ -28,7 +30,7 @@ internal sealed class AzureDevOpsInfoExtractor : IGitInfoExtractor
 
         var buildId = Env("BUILD_BUILDID");
 
-        if(!int.TryParse(buildId, out var parsedBuildId))
+        if (!int.TryParse(buildId, out var parsedBuildId))
         {
             parsedBuildId = -1;
             Console.WriteLine("Warning: Unable to parse BUILD_BUILDID environment variable.");
@@ -44,7 +46,9 @@ internal sealed class AzureDevOpsInfoExtractor : IGitInfoExtractor
         return new GitInfo(parsedBuildId, commitId, repositoryName, type, ProjectName: projectName);
     }
 
-    private static string? Env(string k) => Environment.GetEnvironmentVariable(k);
-
+    private static string? Env(string k)
+    {
+        return Environment.GetEnvironmentVariable(k);
+    }
 }
 

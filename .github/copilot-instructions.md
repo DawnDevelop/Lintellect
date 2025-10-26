@@ -24,7 +24,7 @@ This is a **multi-project .NET 10.0 solution** for AI-powered static code analys
 ### Test Projects
 
 - **Lintellect.Api.FunctionalTests**: Functional tests using Testcontainers, Respawn, and Shouldly
-- **Lintellect.Api.UnitTests**: Unit tests using NUnit, Moq, and Shouldly
+- **Lintellect.Api.UnitTests**: Unit tests using NUnit, NSubstitute, and Shouldly
 - **Lintellect.Cli.UnitTests**: Unit tests for the CLI project using NUnit and Shouldly
 
 ## Technology Stack
@@ -39,7 +39,7 @@ This is a **multi-project .NET 10.0 solution** for AI-powered static code analys
   - **CLI**: System.CommandLine for command-line interface
   - **API**: ASP.NET Core with minimal APIs and controllers
   - **Orchestration**: .NET Aspire for local development
-  - **Testing**: NUnit, Shouldly, Moq, Testcontainers, Respawn
+  - **Testing**: NUnit, Shouldly, NSubstitute, Testcontainers, Respawn
   - **Validation**: FluentValidation
   - **CQRS**: Mediator pattern with source generators
   - **Git Integration**: Octokit (GitHub), Microsoft.TeamFoundationServer.Client (Azure DevOps)
@@ -104,7 +104,7 @@ This is a **multi-project .NET 10.0 solution** for AI-powered static code analys
 
 - **Test Framework**: NUnit 4.4.0
 - **Assertion Libraries**: Shouldly
-- **Mocking**: Moq for unit tests
+- **Mocking**: NSubstitute for unit tests
 - **Integration Testing**: Testcontainers for PostgreSQL
 - **Database Reset**: Respawn for cleaning test data
 - **Test Data**: Bogus for generating test data

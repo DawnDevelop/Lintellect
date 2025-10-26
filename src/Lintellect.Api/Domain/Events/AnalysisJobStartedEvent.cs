@@ -12,4 +12,4 @@ public sealed class AnalysisJobStartedEvent : BaseEvent
         JobId = jobId;
     }
 }
- 
+

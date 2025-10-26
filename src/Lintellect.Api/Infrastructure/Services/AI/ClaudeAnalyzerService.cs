@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Anthropic.SDK;
 using Anthropic.SDK.Messaging;
 using Lintellect.Api.Application.Interfaces;
@@ -5,10 +6,6 @@ using Lintellect.Api.Application.Models;
 using Lintellect.Api.Infrastructure.Services.AI.Prompts;
 using Lintellect.Shared.Models;
 using Polly;
-using Polly.Extensions.Http;
-using System.Net.Http.Json;
-using System.Text.Json;
-using System.Threading;
 
 namespace Lintellect.Api.Infrastructure.Services.AI;
 
@@ -35,10 +32,7 @@ internal sealed class ClaudeAnalyzerService : IAnalyzerService
             .WaitAndRetryAsync(
                 retryCount: 3,
                 sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                onRetry: (outcome, timespan, retryCount, context) =>
-                {
-                    Console.WriteLine($"Claude API retry {retryCount} in {timespan} seconds due to: {outcome?.Message}");
-                });
+                onRetry: (outcome, timespan, retryCount, context) => Console.WriteLine($"Claude API retry {retryCount} in {timespan} seconds due to: {outcome?.Message}"));
     }
 
     /// <summary>

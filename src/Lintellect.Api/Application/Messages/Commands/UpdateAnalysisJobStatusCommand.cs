@@ -23,7 +23,9 @@ public sealed class UpdateAnalysisJobStatusCommandHandler(IApplicationDbContext 
     {
         var job = await context.AnalysisJobs.FindAsync([request.JobId], cancellationToken: cancellationToken);
         if (job is null)
+        {
             return default;
+        }
 
         if (request.Status == AnalysisStatus.Running && job.Status == AnalysisStatus.Pending)
         {

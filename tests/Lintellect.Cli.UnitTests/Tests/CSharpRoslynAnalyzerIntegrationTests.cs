@@ -39,13 +39,6 @@ public class CSharpRoslynAnalyzerIntegrationTests
     }
 
     [Test]
-    public async Task AnalyzeAsync_WithValidSolution_ShouldReturnAnalysisResult()
-    {
-        // Assert
-        _cachedFindingsResult.ShouldNotBeNull();
-    }
-
-    [Test]
     public async Task AnalyzeAsync_WithSimpleRepo_ShouldDetectObsoleteMethodUsage()
     {
         // The SimpleRepo contains: call to [Obsolete] OldMethod() // triggers CS0618
@@ -66,17 +59,13 @@ public class CSharpRoslynAnalyzerIntegrationTests
     public async Task AnalyzeAsync_ShouldIncludeProperFilePathsInFindings()
     {
 
-        // Assert
-        if (_cachedFindingsResult.Any())
+        foreach (var finding in _cachedFindingsResult)
         {
-            foreach (var finding in _cachedFindingsResult)
-            {
-                finding.FilePath.ShouldNotBeNullOrEmpty();
-                finding.Line.ShouldBeGreaterThan(0, "Line numbers should be 1-based");
-                finding.RuleId.ShouldNotBeNullOrEmpty();
-                finding.Message.ShouldNotBeNullOrEmpty();
-                finding.Severity.ShouldNotBeNullOrEmpty();
-            }
+            finding.FilePath.ShouldNotBeNullOrEmpty();
+            finding.Line.ShouldBeGreaterThan(0, "Line numbers should be 1-based");
+            finding.RuleId.ShouldNotBeNullOrEmpty();
+            finding.Message.ShouldNotBeNullOrEmpty();
+            finding.Severity.ShouldNotBeNullOrEmpty();
         }
     }
 

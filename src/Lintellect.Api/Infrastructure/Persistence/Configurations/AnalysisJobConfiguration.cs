@@ -1,7 +1,6 @@
 using Lintellect.Api.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using System.Text.Json;
 
 namespace Lintellect.Api.Infrastructure.Persistence.Configurations;
 

@@ -34,8 +34,8 @@ internal class LanguageAnalysisOrchestrator(EProgrammingLanguage language)
         Console.WriteLine($"  Commit: {gitInfo.CommitId}");
         Console.WriteLine($"  Repository: {gitInfo.RepositoryName}");
 
-        return new AnalysisRequest() 
-        { 
+        return new AnalysisRequest()
+        {
             GitInfo = gitInfo,
             Language = language,
             Findings = analyzerFindings

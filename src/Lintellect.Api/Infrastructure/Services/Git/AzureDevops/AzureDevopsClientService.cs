@@ -1,24 +1,16 @@
+using System.Text;
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
 using Lintellect.Api.Infrastructure.Extensions;
 using Lintellect.Shared.Models;
 using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
-using Microsoft.VisualStudio.Services.Account.Client;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.Identity;
 using Microsoft.VisualStudio.Services.Identity.Client;
 using Microsoft.VisualStudio.Services.OAuth;
 using Microsoft.VisualStudio.Services.Security.Client;
-using Microsoft.VisualStudio.Services.Tokens.TokenAdmin.Client;
 using Microsoft.VisualStudio.Services.WebApi;
-using Microsoft.VisualStudio.Services.WebApi.HttpClients;
-using Octokit;
-using System.IO;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
 
 namespace Lintellect.Api.Infrastructure.Services.Git.AzureDevops;
 
@@ -50,13 +42,25 @@ public class AzureDevopsClientService : IGitClient
         _securityClient = new Lazy<Task<SecurityHttpClient>>(() => _connection.GetClientAsync<SecurityHttpClient>());
     }
 
-    public Task<GitHttpClient> GetHttpGitClient() => _gitClient.Value;
+    public Task<GitHttpClient> GetHttpGitClient()
+    {
+        return _gitClient.Value;
+    }
 
-    public Task<ProjectHttpClient> GetProjectGitClient() => _projectClient.Value;
+    public Task<ProjectHttpClient> GetProjectGitClient()
+    {
+        return _projectClient.Value;
+    }
 
-    public Task<IdentityHttpClient> GetIdentityGitClient() => _identityClient.Value;
+    public Task<IdentityHttpClient> GetIdentityGitClient()
+    {
+        return _identityClient.Value;
+    }
 
-    public Task<SecurityHttpClient> GetSecurityClient() => _securityClient.Value;
+    public Task<SecurityHttpClient> GetSecurityClient()
+    {
+        return _securityClient.Value;
+    }
 
     /// <inheritdoc />
     public async Task<GitPullRequest> GetPullRequestAsync(string projectName, string repositoryName, int pullRequestId)
@@ -247,7 +251,9 @@ public class AzureDevopsClientService : IGitClient
     /// Retrieves the actual text content of a file as a string from a commit.
     /// </summary>
     public async Task<string?> GetFileTextAsync(string projectName, string repositoryName, string filePath, string commitId)
-        => await GetFileTextAsync(projectName, repositoryName, filePath, commitId, useCommitId: true);
+    {
+        return await GetFileTextAsync(projectName, repositoryName, filePath, commitId, useCommitId: true);
+    }
 
     /// <summary>
     /// Retrieves the unified diff format for a specific file change in a pull request.
@@ -302,7 +308,9 @@ public class AzureDevopsClientService : IGitClient
         foreach (var change in commitDiffs.Changes)
         {
             if (change.Item?.Path is null)
+            {
                 continue;
+            }
 
             var filePath = change.Item.Path;
 
@@ -311,7 +319,9 @@ public class AzureDevopsClientService : IGitClient
             var targetCommitId = commitDiffs.TargetCommit;
 
             if (baseCommitId is null || targetCommitId is null)
+            {
                 continue;
+            }
 
             var diff = await GetFileDiffAsync(projectName, repositoryName, filePath, baseCommitId, targetCommitId);
 
@@ -366,13 +376,17 @@ public class AzureDevopsClientService : IGitClient
         var targetCommitId = commitDiffs.TargetCommit;
 
         if (baseCommitId is null || targetCommitId is null)
+        {
             return compactDiffs;
+        }
 
         // Get compact diffs for each changed file
         foreach (var change in commitDiffs.Changes)
         {
             if (change.Item?.Path is null)
+            {
                 continue;
+            }
 
             var filePath = change.Item.Path;
             var compactDiff = await GetFileCompactDiffAsync(
@@ -602,57 +616,52 @@ public class AzureDevopsClientService : IGitClient
 
             // Test required permissions based on enabled features
             // Code read permission (always required)
-            var codeReadResult = await TestPermissionAsync(async () =>
-            {
-                await gitClient.GetRepositoriesAsync(project);
-            });
-            results.Add(new CheckPermissionResult(codeReadResult.Success, codeReadResult.Success ? null : $"Code Read: {codeReadResult.Reason}"));
+            var (success, reason) = await TestPermissionAsync(async () => await gitClient.GetRepositoriesAsync(project));
+            results.Add(new CheckPermissionResult(success, success ? null : $"Code Read: {reason}"));
 
             // Code write permission (required for inline suggestions)
             if (analysisRequest.EnableInlineSuggestions)
             {
-                var codeWriteResult = await TestPermissionAsync(async () =>
-                {
+                var (Success, Reason) = await TestPermissionAsync(async () =>
                     // Test by attempting to create a push (will fail validation but tests write scope)
-                    await gitClient.CreatePushAsync(new GitPush(), project, repoName);
-                });
-                results.Add(new CheckPermissionResult(codeWriteResult.Success, codeWriteResult.Success ? null : $"Code Write: {codeWriteResult.Reason}"));
+                    await gitClient.CreatePushAsync(new GitPush(), project, repoName));
+                results.Add(new CheckPermissionResult(Success, Success ? null : $"Code Write: {Reason}"));
             }
 
             // Pull request comment permission (required for summary comments and inline suggestions)
             if (analysisRequest.EnableSummaryComment || analysisRequest.EnableInlineSuggestions)
             {
-                var prCommentResult = await TestPermissionAsync(async () =>
+                var (Success, Reason) = await TestPermissionAsync(async () =>
                 {
                     // Test by attempting to create a comment thread (will fail validation but tests comment scope)
                     var badThread = new GitPullRequestCommentThread();
                     await gitClient.CreateThreadAsync(badThread, project, repoName, pullRequestId);
                 });
-                results.Add(new CheckPermissionResult(prCommentResult.Success, prCommentResult.Success ? null : $"Pull Request Comments: {prCommentResult.Reason}"));
+                results.Add(new CheckPermissionResult(Success, Success ? null : $"Pull Request Comments: {Reason}"));
             }
 
             // Pull request edit permission (required for description updates)
             if (analysisRequest.EnableDescriptionSummary)
             {
-                var prEditResult = await TestPermissionAsync(async () =>
+                var (Success, Reason) = await TestPermissionAsync(async () =>
                 {
                     // Test by attempting to update PR (will fail validation but tests edit scope)
                     var invalidUpdate = new GitPullRequest { Title = "" };
                     await gitClient.UpdatePullRequestAsync(invalidUpdate, project, repoName, pullRequestId);
                 });
-                results.Add(new CheckPermissionResult(prEditResult.Success, prEditResult.Success ? null : $"Pull Request Edit: {prEditResult.Reason}"));
+                results.Add(new CheckPermissionResult(Success, Success ? null : $"Pull Request Edit: {Reason}"));
             }
 
             // Identity read permission (required for code owners)
             if (analysisRequest.EnableAzureDevopsCodeOwners)
             {
-                var identityReadResult = await TestPermissionAsync(async () =>
+                var (Success, Reason) = await TestPermissionAsync(async () =>
                 {
                     var identityClient = await GetIdentityGitClient();
                     var ids = await identityClient.ReadIdentitiesAsync(IdentitySearchFilter.General, "me");
                     _ = ids.Count;
                 });
-                results.Add(new CheckPermissionResult(identityReadResult.Success, identityReadResult.Success ? null : $"Identity Read: {identityReadResult.Reason}"));
+                results.Add(new CheckPermissionResult(Success, Success ? null : $"Identity Read: {Reason}"));
             }
 
             return results;
@@ -766,14 +775,7 @@ public class AzureDevopsClientService : IGitClient
                 resolvedOwner.DisplayName = identity.DisplayName ?? identity.Id.ToString();
 
                 // Determine if it's a team or user based on identity properties
-                if (identity.IsContainer == true)
-                {
-                    resolvedOwner.Type = CodeOwnerType.Team;
-                }
-                else
-                {
-                    resolvedOwner.Type = CodeOwnerType.User;
-                }
+                resolvedOwner.Type = identity.IsContainer == true ? CodeOwnerType.Team : CodeOwnerType.User;
             }
             else
             {

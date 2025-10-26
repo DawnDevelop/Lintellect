@@ -1,23 +1,21 @@
 using FluentValidation.TestHelper;
 using Lintellect.Api.Application.Interfaces;
-using Lintellect.Api.Application.Messages.Commands;
-using Lintellect.Api.Application.Models;
 
 namespace Lintellect.Api.UnitTests.Application.Validators;
 
 [TestFixture]
 public class SubmitAnalysisCommandValidatorTests
 {
-    private Mock<IGitClientFactory> _mockGitClientFactory = null!;
-    private Mock<IGitClient> _mockGitClient = null!;
+    private IGitClientFactory _mockGitClientFactory = null!;
+    private IGitClient _mockGitClient = null!;
     private SubmitAnalysisCommandValidator _validator = null!;
 
     [SetUp]
     public void SetUp()
     {
-        _mockGitClientFactory = new Mock<IGitClientFactory>();
-        _mockGitClient = new Mock<IGitClient>();
-        _validator = new SubmitAnalysisCommandValidator(_mockGitClientFactory.Object);
+        _mockGitClientFactory = Substitute.For<IGitClientFactory>();
+        _mockGitClient = Substitute.For<IGitClient>();
+        _validator = new SubmitAnalysisCommandValidator(_mockGitClientFactory);
     }
 
     [Test]
@@ -27,11 +25,11 @@ public class SubmitAnalysisCommandValidatorTests
         var request = AnalysisRequestBuilder.ValidRequest();
         var command = new SubmitAnalysisCommand(request);
 
-        _mockGitClientFactory.Setup(f => f.CreateClient(It.IsAny<AnalysisRequest>()))
-            .Returns(_mockGitClient.Object);
+        _mockGitClientFactory.CreateClient(Arg.Any<AnalysisRequest>())
+            .Returns(_mockGitClient);
 
-        _mockGitClient.Setup(c => c.HasSufficientPermissionsAsync(It.IsAny<AnalysisRequest>()))
-            .ReturnsAsync([new(true)]);
+        _mockGitClient.HasSufficientPermissionsAsync(Arg.Any<AnalysisRequest>())
+            .Returns([new(true)]);
 
         // Act
         var result = await _validator.TestValidateAsync(command);
@@ -128,8 +126,8 @@ public class SubmitAnalysisCommandValidatorTests
         request.AzureDevOpsOrgUrl = null;
         var command = new SubmitAnalysisCommand(request);
 
-        _mockGitClientFactory.Setup(f => f.CreateClient(It.IsAny<AnalysisRequest>()))
-            .Returns(_mockGitClient.Object);
+        _mockGitClientFactory.CreateClient(Arg.Any<AnalysisRequest>())
+            .Returns(_mockGitClient);
 
         // Act
         var result = await _validator.TestValidateAsync(command);
@@ -150,11 +148,11 @@ public class SubmitAnalysisCommandValidatorTests
         request.EnableAzureDevopsCodeOwners = false;
         var command = new SubmitAnalysisCommand(request);
 
-        _mockGitClientFactory.Setup(f => f.CreateClient(It.IsAny<AnalysisRequest>()))
-            .Returns(_mockGitClient.Object);
+        _mockGitClientFactory.CreateClient(Arg.Any<AnalysisRequest>())
+            .Returns(_mockGitClient);
 
-        _mockGitClient.Setup(c => c.HasSufficientPermissionsAsync(It.IsAny<AnalysisRequest>()))
-            .ReturnsAsync(new List<CheckPermissionResult> { new(true) });
+        _mockGitClient.HasSufficientPermissionsAsync(Arg.Any<AnalysisRequest>())
+            .Returns([new(true)]);
 
         // Act
         var result = await _validator.TestValidateAsync(command);

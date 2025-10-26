@@ -1,5 +1,3 @@
-using Lintellect.Api.Apis.Models;
-
 namespace Lintellect.Api.functionaltests;
 
 [TestFixture]

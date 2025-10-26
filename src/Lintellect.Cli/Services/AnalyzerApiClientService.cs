@@ -1,29 +1,35 @@
-using Lintellect.Shared.Models;
-using System;
-using System.Collections.Generic;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Lintellect.Shared.Models;
 
 namespace Lintellect.Cli.Services;
 
-internal class AnalyzerApiClientService(Uri baseUrl, string apiKey) : IDisposable
+internal class AnalyzerApiClientService : IDisposable
 {
     private static Uri StartAnalysisEndpoint => new("api/analysis/start", UriKind.Relative);
 
-    private readonly HttpClient _httpClient = new()
+    private readonly HttpClient _httpClient;
+
+    public AnalyzerApiClientService(Uri baseUrl, string apiKey)
     {
-        BaseAddress = baseUrl,
-        DefaultRequestHeaders =
+        ArgumentNullException.ThrowIfNull(baseUrl);
+        ArgumentNullException.ThrowIfNull(apiKey);
+
+        _httpClient = new HttpClient()
         {
-            { "Api-Key", apiKey }
-        }
-    };
+            BaseAddress = baseUrl,
+            DefaultRequestHeaders =
+            {
+                { "Api-Key", apiKey }
+            }
+        };
+    }
 
     public async Task<HttpResponseMessage> StartAnalysisAsync(
         AnalysisRequest result)
     {
+        ArgumentNullException.ThrowIfNull(result);
+
         var request = new
         {
             AnalysisResult = result
@@ -31,7 +37,7 @@ internal class AnalyzerApiClientService(Uri baseUrl, string apiKey) : IDisposabl
 
         var jsonContent = JsonSerializer.Serialize(request);
 
-        using var content = new StringContent(
+        using StringContent content = new(
             jsonContent,
             Encoding.UTF8,
             "application/json"
@@ -40,7 +46,7 @@ internal class AnalyzerApiClientService(Uri baseUrl, string apiKey) : IDisposabl
         var response = await _httpClient.PostAsync(StartAnalysisEndpoint, content)
             .ConfigureAwait(false);
 
-        response.EnsureSuccessStatusCode();
+        _ = response.EnsureSuccessStatusCode();
         return response;
     }
 

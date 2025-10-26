@@ -1,17 +1,14 @@
-using Aspire.Npgsql.EntityFrameworkCore.PostgreSQL;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Scalar.AspNetCore;
-using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Lintellect.Api;
-using Lintellect.Api.Infrastructure.Persistence;
 using Lintellect.Api.Apis;
+using Lintellect.Api.Apis.Authorization;
 using Lintellect.Api.Apis.Infrastructure;
 using Lintellect.Api.Apis.Options;
-using Lintellect.Api.Apis.Authorization;
+using Lintellect.Api.Infrastructure.Persistence;
 using Lintellect.ServiceDefaults;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
@@ -29,11 +26,8 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddLogging(x => x.AddConsole());
 
 // Register API Key configuration
-builder.Services.Configure<AuthorizationOptions>(x =>
-{
-    x.ApiKey = builder.Configuration.GetValue<string>("ApiKey")
-        ?? throw new InvalidOperationException("API Key configuration is missing.");
-});
+builder.Services.Configure<AuthorizationOptions>(x => x.ApiKey = builder.Configuration.GetValue<string>("ApiKey")
+        ?? throw new InvalidOperationException("API Key configuration is missing."));
 
 // Register the endpoint filter
 builder.Services.AddSingleton<ApiKeyEndpointFilter>();

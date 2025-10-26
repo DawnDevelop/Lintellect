@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using System.IO;
 using System.IO.Compression;
 
 namespace Lintellect.Cli.UnitTests;
@@ -26,16 +21,19 @@ internal class TestHelpers
         var assembly = typeof(TestHelpers).Assembly;
         var assemblyLocation = assembly.Location;
         var assemblyDir = Path.GetDirectoryName(assemblyLocation)!;
-        
+
         // Navigate up to find the test project root (contains .csproj)
-        var current = new DirectoryInfo(assemblyDir);
+        DirectoryInfo? current = new(assemblyDir);
         while (current != null)
         {
             if (Directory.GetFiles(current.FullName, "*.csproj").Length > 0)
+            {
                 return current.FullName;
+            }
+
             current = current.Parent;
         }
-        
+
         throw new InvalidOperationException("Could not find test project directory");
     }
 
@@ -52,7 +50,9 @@ internal class TestHelpers
         {
             // .slnx files might be XML based, verify it's readable
             if (!File.Exists(solutionPath))
+            {
                 throw new FileNotFoundException($"Solution file not found: {solutionPath}");
+            }
         }
     }
 
@@ -65,16 +65,16 @@ internal class TestHelpers
         var assembly = typeof(TestHelpers).Assembly;
         var assemblyLocation = assembly.Location;
         var outputDir = Path.GetDirectoryName(assemblyLocation)!;
-        
+
         var zipPath = Path.Combine(outputDir, "SampleRepos", zipFileName);
-        
+
         if (!File.Exists(zipPath))
         {
             throw new FileNotFoundException($"Zip file not found: {zipPath}");
         }
 
         var fixturesDir = Path.Combine(outputDir, "Fixtures");
-        Directory.CreateDirectory(fixturesDir);
+        _ = Directory.CreateDirectory(fixturesDir);
 
         // Extract the zip file to a temp location first
         var repoName = Path.GetFileNameWithoutExtension(zipFileName);
@@ -100,7 +100,7 @@ internal class TestHelpers
         {
             var innerFolder = extractedItems[0];
             var innerFolderName = Path.GetFileName(innerFolder);
-            
+
             // If the zip has a nested folder (e.g., SimpleRepo/SimpleRepo/...), move contents up
             if (innerFolderName.Equals(repoName, StringComparison.OrdinalIgnoreCase))
             {
@@ -117,6 +117,79 @@ internal class TestHelpers
         {
             // Multiple items at root, just rename the temp folder
             Directory.Move(tempExtractPath, finalExtractPath);
+        }
+    }
+
+    /// <summary>
+    /// Sets environment variables for testing and returns a disposable cleanup object
+    /// </summary>
+    public static IDisposable SetEnvironmentVariables(Dictionary<string, string?> variables)
+    {
+        Dictionary<string, string?> originalValues = [];
+
+        // Clear GitHub Actions variables that might interfere with tests
+        var gitHubVariables = new[]
+        {
+            "GITHUB_ACTIONS",
+            "GITHUB_REF",
+            "GITHUB_SHA",
+            "GITHUB_REPOSITORY",
+            "GITHUB_WORKFLOW",
+            "GITHUB_RUN_ID",
+            "GITHUB_RUN_NUMBER",
+            "GITHUB_ACTOR",
+            "GITHUB_EVENT_NAME",
+            "GITHUB_WORKSPACE"
+        };
+
+        // Clear Azure DevOps variables that might interfere with tests
+        var azureDevOpsVariables = new[]
+        {
+            "SYSTEM_TEAMFOUNDATIONCOLLECTIONURI",
+            "SYSTEM_PULLREQUEST_PULLREQUESTID",
+            "BUILD_SOURCEVERSION",
+            "BUILD_REPOSITORY_NAME",
+            "BUILD_REASON",
+            "BUILD_BUILDID",
+            "SYSTEM_TEAMPROJECT"
+        };
+
+        // Store original values for all variables we might modify
+        foreach (var varName in gitHubVariables.Concat(azureDevOpsVariables))
+        {
+            originalValues[varName] = Environment.GetEnvironmentVariable(varName);
+        }
+
+        // Clear all CI/CD variables first
+        foreach (var varName in gitHubVariables.Concat(azureDevOpsVariables))
+        {
+            Environment.SetEnvironmentVariable(varName, null);
+        }
+
+        // Set the test variables
+        foreach (var kvp in variables)
+        {
+            Environment.SetEnvironmentVariable(kvp.Key, kvp.Value);
+        }
+
+        return new EnvironmentVariableCleanup(originalValues);
+    }
+
+    private class EnvironmentVariableCleanup : IDisposable
+    {
+        private readonly Dictionary<string, string?> _originalValues;
+
+        public EnvironmentVariableCleanup(Dictionary<string, string?> originalValues)
+        {
+            _originalValues = originalValues;
+        }
+
+        public void Dispose()
+        {
+            foreach (var kvp in _originalValues)
+            {
+                Environment.SetEnvironmentVariable(kvp.Key, kvp.Value);
+            }
         }
     }
 }

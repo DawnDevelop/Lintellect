@@ -1,11 +1,11 @@
+using System.Collections.Immutable;
+using System.Reflection;
 using Lintellect.Cli.Interfaces;
 using Lintellect.Shared.Models;
 using Microsoft.Build.Locator;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.MSBuild;
-using System.Collections.Immutable;
-using System.Reflection;
 
 namespace Lintellect.Cli.Services.Analyzers.Csharp;
 
@@ -16,30 +16,37 @@ internal class CSharpAnalyzer : ICodeAnalyzer
     public async Task<List<AnalyzerFindings>> AnalyzeAsync(string solutionPath)
     {
         if (!File.Exists(solutionPath))
+        {
             throw new FileNotFoundException($"Solution file not found at path: {solutionPath}");
+        }
 
         // 1. Extract repository archive to temp directory
         if (!MSBuildLocator.IsRegistered)
+        {
             MSBuildLocator.RegisterDefaults();
+        }
 
         using var workspace = MSBuildWorkspace.Create();
         workspace.RegisterWorkspaceFailedHandler(e => Console.WriteLine($"[MSBuild] {e.Diagnostic.Message}"));
 
         var solution = await workspace.OpenSolutionAsync(solutionPath).ConfigureAwait(false);
 
-        //var analyzers = LoadMicrosoftAnalyzers();
 
         var findings = new List<AnalyzerFindings>();
 
         foreach (var project in solution.Projects)
         {
-            var analyzers = project.AnalyzerReferences
-                .SelectMany(r => r.GetAnalyzers(LanguageNames.CSharp))
-                .ToImmutableArray();
+            var analyzers = LoadExternalAnalyzers();
+            if (!analyzers.Any())
+            {
+                analyzers = [.. project.AnalyzerReferences.SelectMany(r => r.GetAnalyzers(LanguageNames.CSharp))];
+            }
 
             var compilation = await project.GetCompilationAsync().ConfigureAwait(false);
             if (compilation == null)
+            {
                 continue;
+            }
 
             // include compiler diagnostics
             var diagnostics = compilation.GetDiagnostics();
@@ -72,18 +79,20 @@ internal class CSharpAnalyzer : ICodeAnalyzer
         return diagnostics.Where(d => d.Location.IsInSource &&
                         (d.Severity == DiagnosticSeverity.Warning
                         || d.Severity == DiagnosticSeverity.Error
-                        || d.Severity == DiagnosticSeverity.Info) 
+                        || d.Severity == DiagnosticSeverity.Info)
                         && !d.Location.SourceTree.FilePath.Contains("/obj/", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static ImmutableArray<DiagnosticAnalyzer> LoadMicrosoftAnalyzers()
+    private static ImmutableArray<DiagnosticAnalyzer> LoadExternalAnalyzers()
     {
         // Look for NetAnalyzers shipped with your application
         var baseDir = AppContext.BaseDirectory;
         var analyzerDir = Path.Combine(baseDir, "analyzers", "dotnet", "cs");
 
         if (!Directory.Exists(analyzerDir))
+        {
             return [];
+        }
 
         var loader = new AnalyzerAssemblyLoader();
         var dlls = Directory.GetFiles(analyzerDir, "*.dll", SearchOption.AllDirectories);
@@ -98,6 +107,13 @@ internal sealed class AnalyzerAssemblyLoader : IAnalyzerAssemblyLoader
 {
     private readonly HashSet<string> _deps = [];
 
-    public void AddDependencyLocation(string fullPath) => _deps.Add(fullPath);
-    public Assembly LoadFromPath(string fullPath) => Assembly.LoadFrom(fullPath);
+    public void AddDependencyLocation(string fullPath)
+    {
+        _deps.Add(fullPath);
+    }
+
+    public Assembly LoadFromPath(string fullPath)
+    {
+        return Assembly.LoadFrom(fullPath);
+    }
 }

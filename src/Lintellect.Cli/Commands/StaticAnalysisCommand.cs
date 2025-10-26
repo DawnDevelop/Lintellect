@@ -1,8 +1,6 @@
-using System;
 using System.CommandLine;
 using Lintellect.Cli.Services;
 using Lintellect.Shared.Models;
-using Microsoft.Extensions.Options;
 
 namespace Lintellect.Cli.Commands;
 

@@ -7,10 +7,10 @@ namespace Lintellect.Api.Application.Interfaces;
 /// </summary>
 public interface IGitClientFactory
 {
-  /// <summary>
-  /// Creates a Git client based on the provider and credentials in the analysis request.
-  /// </summary>
-  /// <param name="analysisRequest">The analysis request containing provider and credential information.</param>
-  /// <returns>A configured Git client for the specified provider.</returns>
-  IGitClient CreateClient(AnalysisRequest analysisRequest);
+    /// <summary>
+    /// Creates a Git client based on the provider and credentials in the analysis request.
+    /// </summary>
+    /// <param name="analysisRequest">The analysis request containing provider and credential information.</param>
+    /// <returns>A configured Git client for the specified provider.</returns>
+    IGitClient CreateClient(AnalysisRequest analysisRequest);
 }

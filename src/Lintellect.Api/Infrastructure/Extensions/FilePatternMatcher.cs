@@ -16,15 +16,21 @@ public static class FilePatternMatcher
     public static bool ShouldExclude(string filePath, List<string>? exclusionPatterns)
     {
         if (exclusionPatterns == null || exclusionPatterns.Count == 0)
+        {
             return false;
+        }
 
         foreach (var pattern in exclusionPatterns)
         {
             if (string.IsNullOrWhiteSpace(pattern))
+            {
                 continue;
+            }
 
             if (MatchesPattern(filePath, pattern.Trim()))
+            {
                 return true;
+            }
         }
 
         return false;
@@ -39,7 +45,9 @@ public static class FilePatternMatcher
     public static bool ShouldExclude(string filePath, string? exclusionPatterns)
     {
         if (string.IsNullOrWhiteSpace(exclusionPatterns))
+        {
             return false;
+        }
 
         var patterns = exclusionPatterns.Split(',', StringSplitOptions.RemoveEmptyEntries)
             .Select(p => p.Trim())
@@ -103,10 +111,10 @@ public static class FilePatternMatcher
 
         // Check if any directory in the path matches the pattern
         var pathParts = filePath.Split('/');
-        for (int i = 0; i <= pathParts.Length - parts.Length; i++)
+        for (var i = 0; i <= pathParts.Length - parts.Length; i++)
         {
-            bool matches = true;
-            for (int j = 0; j < dirParts.Length; j++)
+            var matches = true;
+            for (var j = 0; j < dirParts.Length; j++)
             {
                 if (!MatchesWildcardPattern(pathParts[i + j], dirParts[j]))
                 {
@@ -118,7 +126,9 @@ public static class FilePatternMatcher
             {
                 var fileName = pathParts[i + dirParts.Length];
                 if (MatchesWildcardPattern(fileName, lastPart))
+                {
                     return true;
+                }
             }
         }
 
@@ -145,10 +155,14 @@ public static class FilePatternMatcher
     private static bool MatchesWildcardPattern(string input, string pattern)
     {
         if (pattern == "*")
+        {
             return true;
+        }
 
         if (!pattern.Contains("*"))
+        {
             return input == pattern;
+        }
 
         // Convert wildcard pattern to regex
         var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*") + "$";
@@ -163,10 +177,9 @@ public static class FilePatternMatcher
     /// <returns>Filtered list of file paths</returns>
     public static IEnumerable<string> FilterFiles(IEnumerable<string> filePaths, List<string>? exclusionPatterns)
     {
-        if (exclusionPatterns == null || exclusionPatterns.Count == 0)
-            return filePaths;
-
-        return filePaths.Where(filePath => !ShouldExclude(filePath, exclusionPatterns));
+        return exclusionPatterns == null || exclusionPatterns.Count == 0
+            ? filePaths
+            : filePaths.Where(filePath => !ShouldExclude(filePath, exclusionPatterns));
     }
 
     /// <summary>
@@ -177,9 +190,8 @@ public static class FilePatternMatcher
     /// <returns>Filtered list of file paths</returns>
     public static IEnumerable<string> FilterFiles(IEnumerable<string> filePaths, string? exclusionPatterns)
     {
-        if (string.IsNullOrWhiteSpace(exclusionPatterns))
-            return filePaths;
-
-        return filePaths.Where(filePath => !ShouldExclude(filePath, exclusionPatterns));
+        return string.IsNullOrWhiteSpace(exclusionPatterns)
+            ? filePaths
+            : filePaths.Where(filePath => !ShouldExclude(filePath, exclusionPatterns));
     }
 }

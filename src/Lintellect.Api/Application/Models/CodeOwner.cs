@@ -7,11 +7,11 @@ namespace Lintellect.Api.Application.Models;
 /// </summary>
 public class CodeOwner
 {
-  public string Name { get; set; } = string.Empty;
-  public CodeOwnerType Type { get; set; }
-  public string? Email { get; set; }
-  public string? AzureDevOpsId { get; set; }
-  public string? DisplayName { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public CodeOwnerType Type { get; set; }
+    public string? Email { get; set; }
+    public string? AzureDevOpsId { get; set; }
+    public string? DisplayName { get; set; }
 }
 
 public class CodeOwnersResult
@@ -25,7 +25,7 @@ public class CodeOwnersResult
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum CodeOwnerType
 {
-  User,
-  Team,
-  Email
+    User,
+    Team,
+    Email
 }
