@@ -94,8 +94,8 @@ public class CodeQLHelperTests : CodeQLTestBase
     public void TryValidateDatabasePath_WithComplexPath_ShouldHandleCorrectly()
     {
         // Arrange
-        var solutionPath = @"C:\Projects\MyApp\src\MyApp.sln";
-        var expectedSolutionDir = @"C:\Projects\MyApp\src";
+        var solutionPath = Path.Combine("Projects", "MyApp", "src", "MyApp.sln");
+        var expectedSolutionDir = Path.Combine("Projects", "MyApp", "src");
         var expectedDatabasePath = Path.Combine(expectedSolutionDir, "codeql-database");
 
         // Act
