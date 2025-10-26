@@ -198,7 +198,7 @@ public class CodeQLSarifParsingTests : CodeQLTestBase
     }
 
     [Test]
-    public void ParseCodeQLResults_ShouldSkipEmptyFilePaths()
+    public void ParseCodeQLResults_ShouldProcessAllResults()
     {
         // Arrange
         var codeQLResults = new List<CodeQLResult>
@@ -213,8 +213,10 @@ public class CodeQLSarifParsingTests : CodeQLTestBase
 
         // Assert
         findings.ShouldNotBeNull();
-        findings.Count.ShouldBe(1);
+        findings.Count.ShouldBe(3);
         findings[0].RuleId.ShouldBe("CodeQL-valid");
+        findings[1].RuleId.ShouldBe("CodeQL-empty");
+        findings[2].RuleId.ShouldBe("CodeQL-null");
     }
 
     [Test]

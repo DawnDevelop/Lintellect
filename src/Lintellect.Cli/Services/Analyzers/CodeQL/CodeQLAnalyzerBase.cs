@@ -138,12 +138,20 @@ internal abstract class CodeQLAnalyzerBase : ICodeAnalyzer
             {
                 foreach (var result in run.Results)
                 {
+                    var filePath = result.Locations?.FirstOrDefault()?.PhysicalLocation?.ArtifactLocation?.Uri?.Replace("file://", "") ?? "";
+
+                    // Skip results without file paths (these are usually project-level issues)
+                    if (string.IsNullOrEmpty(filePath))
+                    {
+                        continue;
+                    }
+
                     var codeQLResult = new CodeQLResult
                     {
                         RuleId = result.RuleId ?? "unknown",
                         Message = result.Message?.Text ?? "No message",
                         Severity = MapSarifLevelToSeverity(result.Level),
-                        FilePath = result.Locations?.FirstOrDefault()?.PhysicalLocation?.ArtifactLocation?.Uri?.Replace("file://", "") ?? "",
+                        FilePath = filePath,
                         Line = result.Locations?.FirstOrDefault()?.PhysicalLocation?.Region?.StartLine ?? 0,
                         Column = result.Locations?.FirstOrDefault()?.PhysicalLocation?.Region?.StartColumn ?? 0,
                         EndLine = result.Locations?.FirstOrDefault()?.PhysicalLocation?.Region?.EndLine ?? 0,
@@ -168,12 +176,20 @@ internal abstract class CodeQLAnalyzerBase : ICodeAnalyzer
                             if (notification.Level == "warning" || notification.Level == "error" ||
                                 (notification.Level == "none" && notification.Message?.Text?.Contains("Warning") == true))
                             {
+                                var filePath = notification.Locations?.FirstOrDefault()?.PhysicalLocation?.ArtifactLocation?.Uri?.Replace("file://", "") ?? "";
+
+                                // Skip results without file paths (these are usually project-level issues)
+                                if (string.IsNullOrEmpty(filePath))
+                                {
+                                    continue;
+                                }
+
                                 var codeQLResult = new CodeQLResult
                                 {
                                     RuleId = notification.Descriptor?.Id ?? "compiler-warning",
                                     Message = notification.Message?.Text ?? "No message",
                                     Severity = MapSarifLevelToSeverity(notification.Level),
-                                    FilePath = notification.Locations?.FirstOrDefault()?.PhysicalLocation?.ArtifactLocation?.Uri?.Replace("file://", "") ?? "",
+                                    FilePath = filePath,
                                     Line = notification.Locations?.FirstOrDefault()?.PhysicalLocation?.Region?.StartLine ?? 0,
                                     Column = notification.Locations?.FirstOrDefault()?.PhysicalLocation?.Region?.StartColumn ?? 0,
                                     EndLine = notification.Locations?.FirstOrDefault()?.PhysicalLocation?.Region?.EndLine ?? 0,
@@ -209,12 +225,6 @@ internal abstract class CodeQLAnalyzerBase : ICodeAnalyzer
 
         foreach (var result in codeQLResults)
         {
-            // Skip results without file paths (these are usually project-level issues)
-            if (string.IsNullOrEmpty(result.FilePath))
-            {
-                continue;
-            }
-
             findings.Add(new AnalyzerFindings
             {
                 RuleId = $"CodeQL-{result.RuleId}",
