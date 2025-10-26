@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
 using Lintellect.Api.Infrastructure.Extensions;
@@ -5,7 +6,6 @@ using Lintellect.Api.Infrastructure.Services.AI.Prompts;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
-using System.Text.Json;
 
 namespace Lintellect.Api.Infrastructure.Services.AI;
 

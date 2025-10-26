@@ -1,3 +1,6 @@
+global using System.Net;
+global using System.Net.Http.Json;
+global using System.Text.Json;
 global using Lintellect.Api.Apis.Models;
 global using Lintellect.Api.Application.Interfaces;
 global using Lintellect.Api.Application.Messages.Commands;
@@ -10,6 +13,3 @@ global using Microsoft.AspNetCore.Mvc.Testing;
 global using Microsoft.TeamFoundation.SourceControl.WebApi;
 global using NUnit.Framework;
 global using Shouldly;
-global using System.Net;
-global using System.Net.Http.Json;
-global using System.Text.Json;

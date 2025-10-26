@@ -1,10 +1,10 @@
+using System.Text.Json;
 using Lintellect.Api.Application.Messages.Commands;
 using Lintellect.Api.Domain.Entities;
 using Lintellect.Api.Domain.Enums;
 using Lintellect.Api.Infrastructure.Telemetry;
 using Lintellect.Shared.Models;
 using Mediator;
-using System.Text.Json;
 
 namespace Lintellect.Api.Infrastructure.Services;
 

@@ -1,11 +1,11 @@
+using System.Collections.Immutable;
+using System.Reflection;
 using Lintellect.Cli.Interfaces;
 using Lintellect.Shared.Models;
 using Microsoft.Build.Locator;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.MSBuild;
-using System.Collections.Immutable;
-using System.Reflection;
 
 namespace Lintellect.Cli.Services.Analyzers.Csharp;
 
@@ -33,11 +33,11 @@ internal class CSharpAnalyzer : ICodeAnalyzer
         foreach (var project in solution.Projects)
         {
             var analyzers = LoadExternalAnalyzers();
-            if(!analyzers.Any())
+            if (!analyzers.Any())
             {
                 analyzers = [.. project.AnalyzerReferences.SelectMany(r => r.GetAnalyzers(LanguageNames.CSharp))];
             }
-            
+
             var compilation = await project.GetCompilationAsync().ConfigureAwait(false);
             if (compilation == null)
                 continue;

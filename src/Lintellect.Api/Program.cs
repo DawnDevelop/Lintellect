@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Lintellect.Api;
 using Lintellect.Api.Apis;
 using Lintellect.Api.Apis.Authorization;
@@ -8,7 +9,6 @@ using Lintellect.ServiceDefaults;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
-using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();

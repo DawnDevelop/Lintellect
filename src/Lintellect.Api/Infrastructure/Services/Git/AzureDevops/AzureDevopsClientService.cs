@@ -1,3 +1,4 @@
+using System.Text;
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
 using Lintellect.Api.Infrastructure.Extensions;
@@ -10,7 +11,6 @@ using Microsoft.VisualStudio.Services.Identity.Client;
 using Microsoft.VisualStudio.Services.OAuth;
 using Microsoft.VisualStudio.Services.Security.Client;
 using Microsoft.VisualStudio.Services.WebApi;
-using System.Text;
 
 namespace Lintellect.Api.Infrastructure.Services.Git.AzureDevops;
 

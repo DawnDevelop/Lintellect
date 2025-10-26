@@ -1,6 +1,6 @@
-using Lintellect.Shared.Models;
 using System.Text;
 using System.Text.Json;
+using Lintellect.Shared.Models;
 
 namespace Lintellect.Cli.Services;
 

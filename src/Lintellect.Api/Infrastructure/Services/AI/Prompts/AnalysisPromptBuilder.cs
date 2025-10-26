@@ -1,5 +1,5 @@
-using Lintellect.Shared.Models;
 using System.Text;
+using Lintellect.Shared.Models;
 
 namespace Lintellect.Api.Infrastructure.Services.AI.Prompts;
 

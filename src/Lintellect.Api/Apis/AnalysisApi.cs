@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Lintellect.Api.Apis.Models;
 using Lintellect.Api.Application.Messages.Commands;
 using Lintellect.Api.Application.Messages.Queries;
@@ -6,7 +7,6 @@ using Lintellect.Shared.Models;
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
 
 namespace Lintellect.Api.Apis;
 

@@ -1,8 +1,8 @@
+using System.Text.Json;
 using Lintellect.Api.Domain.Common;
 using Lintellect.Api.Domain.Enums;
 using Lintellect.Api.Domain.Events;
 using Lintellect.Shared.Models;
-using System.Text.Json;
 
 namespace Lintellect.Api.Domain.Entities;
 

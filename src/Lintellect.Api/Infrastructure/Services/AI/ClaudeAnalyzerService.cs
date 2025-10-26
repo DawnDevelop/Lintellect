@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Anthropic.SDK;
 using Anthropic.SDK.Messaging;
 using Lintellect.Api.Application.Interfaces;
@@ -5,7 +6,6 @@ using Lintellect.Api.Application.Models;
 using Lintellect.Api.Infrastructure.Services.AI.Prompts;
 using Lintellect.Shared.Models;
 using Polly;
-using System.Text.Json;
 
 namespace Lintellect.Api.Infrastructure.Services.AI;
 
