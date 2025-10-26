@@ -1,6 +1,6 @@
-# Contributing to DevOps PR Analyzer
+# Contributing to Lintellect
 
-Thank you for your interest in contributing to DevOps PR Analyzer! This document provides guidelines for contributing to the project.
+Thank you for your interest in contributing to Lintellect! This document provides guidelines for contributing to the project.
 
 ## Code of Conduct
 
@@ -46,8 +46,8 @@ This project adheres to a code of conduct. By participating, you are expected to
 1. **Fork and Clone**
 
    ```bash
-   git clone https://github.com/your-username/devops-pr-analyzer.git
-   cd devops-pr-analyzer
+   git clone https://github.com/your-username/lintellect.git
+   cd lintellect
    ```
 
 2. **Restore Dependencies**

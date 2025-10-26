@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj" />
+    <Project Path="tests/Lintellect.Api.UnitTests/Lintellect.Api.UnitTests.csproj" />
+    <Project Path="tests/Lintellect.Cli.UnitTests/Lintellect.Cli.UnitTests.csproj" Id="23001e5e-e6a8-4b2e-be18-36aa87a4422f" />
+  </Folder>
+  <Project Path="src/Lintellect.Api/Lintellect.Api.csproj" />
+  <Project Path="src/Lintellect.AppHost/Lintellect.AppHost.csproj" />
+  <Project Path="src/Lintellect.Cli/Lintellect.Cli.csproj" Id="569b8aba-92ec-4c76-af79-16a8c31b70a3" />
+  <Project Path="src/Lintellect.ServiceDefaults/Lintellect.ServiceDefaults.csproj" />
+  <Project Path="src/Lintellect.Shared/Lintellect.Shared.csproj" Id="d60058b2-8423-4f43-baff-8ee764050dda" />
+</Solution>

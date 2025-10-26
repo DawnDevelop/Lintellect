@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <RootNamespace>devops_pr_analyzer.api.functionaltests</RootNamespace>
+    <RootNamespace>Lintellect.Api.FunctionalTests</RootNamespace>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -19,6 +19,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="NUnit3TestAdapter" Version="6.0.0-beta.1" />
+    <PackageReference Include="FluentAssertions" Version="6.12.1" />
     <PackageReference Include="Shouldly" Version="4.2.1" />
     <PackageReference Include="Respawn" Version="6.2.1" />
     <PackageReference Include="Bogus" Version="35.6.4" />
@@ -27,7 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\API\API.csproj" />
+    <ProjectReference Include="..\..\src\Lintellect.Api\Lintellect.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>

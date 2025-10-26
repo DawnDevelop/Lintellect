@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net10.0</TargetFramework>
+		<RootNamespace>Lintellect.Cli</RootNamespace>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<!--<PublishAot>true</PublishAot>-->
+		<InvariantGlobalization>true</InvariantGlobalization>
+		<AnalysisMode>AllEnabledByDefault</AnalysisMode>
+
+		<!-- Package as .NET Tool -->
+		<PackAsTool>true</PackAsTool>
+		<ToolCommandName>Lintellect</ToolCommandName>
+		<PackageOutputPath>./nupkg</PackageOutputPath>
+		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+		<!-- Package Metadata -->
+		<PackageId>Lintellect.Cli</PackageId>
+		<Version>0.0.3</Version>
+		<Authors>DawnDevelop</Authors>
+		<Description>DevOps Pull Request Analyzer CLI - Static code analysis tool for GitHub and Azure DevOps PRs</Description>
+		<PackageTags>devops;pull-request;code-analysis;roslyn;github;azure-devops</PackageTags>
+		<PackageProjectUrl>https://github.com/DawnDevelop/Lintellect</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/DawnDevelop/Lintellect</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<!--<PackageReadmeFile>../README.md</PackageReadmeFile>-->
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Build.Locator" Version="1.10.2" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.0.0-2.final" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.0.0-2.final" />
+		<PackageReference Include="System.CommandLine" Version="2.0.0-rc.2.25502.107" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="Lintellect.Cli.unittests" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="..\..\README.md" Pack="true" PackagePath="\" Condition="Exists('..\..\README.md')" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Lintellect.Shared\Lintellect.Shared.csproj" />
+	</ItemGroup>
+
+</Project>

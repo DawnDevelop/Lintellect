@@ -1,11 +1,11 @@
-# DevOps PR Analyzer
+# Lintellect
 
 [![.NET](https://img.shields.io/badge/.NET-10.0-blue.svg)](https://dotnet.microsoft.com/download)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/your-org/devops-pr-analyzer/actions)
-[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](https://github.com/your-org/devops-pr-analyzer/actions)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/your-org/lintellect/actions)
+[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](https://github.com/your-org/lintellect/actions)
 
-> **AI-powered pull request analysis tool that enhances code review processes with automated suggestions and intelligent insights.**
+> **AI-powered code review assistant that enhances pull request analysis with intelligent insights and automated suggestions.**
 
 ## Features
 
@@ -40,8 +40,8 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/devops-pr-analyzer.git
-cd devops-pr-analyzer
+git clone https://github.com/your-org/lintellect.git
+cd lintellect
 ```
 
 ### 2. Run with .NET Aspire (Recommended)
@@ -93,22 +93,22 @@ The Aspire AppHost will automatically configure the environment. For custom conf
 
 ```bash
 # Build and run
-cd src/API
+cd src/Lintellect.Api
 dotnet run
 
 # Or with Docker
-docker build -t devops-pr-analyzer:latest -f src/API/Dockerfile .
-docker run -p 7000:7000 devops-pr-analyzer:latest
+docker build -t lintellect:latest -f src/Lintellect.Api/Dockerfile .
+docker run -p 7000:7000 lintellect:latest
 ```
 
 ### CLI Tool
 
 ```bash
 # Install globally
-dotnet tool install --global devops-pr-analyzer
+dotnet tool install --global lintellect
 
 # Verify installation
-devops-pr-analyzer --help
+lintellect --help
 ```
 
 ## Usage
@@ -117,17 +117,17 @@ devops-pr-analyzer --help
 
 ```bash
 # Basic analysis
-devops-pr-analyzer analyze --solution ./MyProject.sln
+lintellect analyze --solution ./MyProject.sln
 
 # With API integration
-devops-pr-analyzer analyze \
+lintellect analyze \
   --solution ./MyProject.sln \
   --api-url "https://api.example.com" \
   --api-key "your-api-key" \
   --language CSharp
 
 # With exclusions
-devops-pr-analyzer analyze \
+lintellect analyze \
   --solution ./MyProject.sln \
   --exclude "**/bin/**" "**/obj/**" "**/node_modules/**"
 ```
@@ -174,11 +174,11 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - name: Install DevOps PR Analyzer
-        run: dotnet tool install --global devops-pr-analyzer
+      - name: Install Lintellect
+        run: dotnet tool install --global lintellect
       - name: Analyze PR
         run: |
-          devops-pr-analyzer analyze \
+          lintellect analyze \
             --solution ./MyProject.sln \
             --api-url "${{ secrets.ANALYZER_API_ENDPOINT }}" \
             --api-key "${{ secrets.ANALYZER_API_KEY }}"
@@ -215,7 +215,7 @@ API-Key: your-api-key
 ```json
 {
   "ConnectionStrings": {
-    "postgresdb": "Host=localhost;Database=devops_pr_analyzer;Username=postgres;Password=password"
+    "postgresdb": "Host=localhost;Database=lintellect;Username=postgres;Password=password"
   },
   "ApiKey": "your-secure-api-key"
 }
@@ -302,8 +302,8 @@ API-Key: your-api-key
 1. **Clone and Setup**
 
    ```bash
-   git clone https://github.com/your-org/devops-pr-analyzer.git
-   cd devops-pr-analyzer
+   git clone https://github.com/your-org/lintellect.git
+   cd lintellect
    dotnet restore
    ```
 
@@ -327,10 +327,10 @@ API-Key: your-api-key
    ```bash
    # Database setup (if not using Aspire)
    docker run --name postgres-dev -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres:15
-   createdb devops_pr_analyzer
+   createdb lintellect
 
    # Run migrations
-   cd src/API
+   cd src/Lintellect.Api
    dotnet ef database update
 
    # Start API manually
@@ -347,7 +347,7 @@ dotnet test
 dotnet test --collect:"XPlat Code Coverage"
 
 # Run integration tests
-dotnet test tests/API.IntegrationTests/
+dotnet test tests/Lintellect.Api.FunctionalTests/
 ```
 
 ### Building
@@ -357,10 +357,10 @@ dotnet test tests/API.IntegrationTests/
 dotnet build
 
 # Build specific project
-dotnet build src/API/API.csproj
+dotnet build src/Lintellect.Api/Lintellect.Api.csproj
 
 # Publish for production
-dotnet publish src/API/API.csproj -c Release -o ./publish
+dotnet publish src/Lintellect.Api/Lintellect.Api.csproj -c Release -o ./publish
 ```
 
 ## Contributing
@@ -403,15 +403,15 @@ This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.t
 
 ## Support
 
-- [Documentation](https://github.com/your-org/devops-pr-analyzer/wiki)
-- [Issue Tracker](https://github.com/your-org/devops-pr-analyzer/issues)
-- [Discussions](https://github.com/your-org/devops-pr-analyzer/discussions)
-- [Email Support](mailto:support@example.com)
+- [Documentation](https://github.com/your-org/lintellect/wiki)
+- [Issue Tracker](https://github.com/your-org/lintellect/issues)
+- [Discussions](https://github.com/your-org/lintellect/discussions)
+- [Email Support](mailto:support@lintellect.ai)
 
 ---
 
 <div align="center">
 
-[Star this repo](https://github.com/your-org/devops-pr-analyzer) • [Report Bug](https://github.com/your-org/devops-pr-analyzer/issues) • [Request Feature](https://github.com/your-org/devops-pr-analyzer/issues)
+[Star this repo](https://github.com/your-org/lintellect) • [Report Bug](https://github.com/your-org/lintellect/issues) • [Request Feature](https://github.com/your-org/lintellect/issues)
 
 </div>

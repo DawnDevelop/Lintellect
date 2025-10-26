@@ -1,18 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <RootNamespace>devops_pr_analyzer.api.functionaltests</RootNamespace>
+    <RootNamespace>Lintellect.Api.UnitTests</RootNamespace>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
-    <UseAppHost>false</UseAppHost>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Testcontainers.PostgreSql" Version="4.8.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0-rc.2.25502.107" />
     <PackageReference Include="NUnit" Version="4.4.0" />
     <PackageReference Include="NUnit.Analyzers" Version="4.10.0">
       <PrivateAssets>all</PrivateAssets>
@@ -20,21 +17,20 @@
     </PackageReference>
     <PackageReference Include="NUnit3TestAdapter" Version="6.0.0-beta.1" />
     <PackageReference Include="Shouldly" Version="4.2.1" />
-    <PackageReference Include="Respawn" Version="6.2.1" />
-    <PackageReference Include="Bogus" Version="35.6.4" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.0-rc.2.25502.107" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\API\API.csproj" />
+    <ProjectReference Include="..\..\src\Lintellect.Api\Lintellect.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="NUnit.Framework" />
     <Using Include="Shouldly" />
-    <Using Include="Microsoft.AspNetCore.Mvc.Testing" />
-    <Using Include="System.Net.Http.Json" />
+    <Using Include="Moq" />
   </ItemGroup>
 
 </Project>

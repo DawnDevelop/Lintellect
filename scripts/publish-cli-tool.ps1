@@ -1,24 +1,24 @@
-# Publish devops-pr-analyzer CLI tool to NuGet feed (Azure DevOps or NuGet.org)
+# Publish Lintellect CLI tool to NuGet feed (Azure DevOps or NuGet.org)
 # Usage: .\publish-cli-tool.ps1 -NuGetSource "https://pkgs.dev.azure.com/{organization}/_packaging/{feedName}/nuget/v3/index.json" -ApiKey "your-pat" [-Version "1.0.0"]
 # Or:    .\publish-cli-tool.ps1 -NuGetSource "https://pkgs.dev.azure.com/{organization}/{project}/_packaging/{feedName}/nuget/v3/index.json" -ApiKey "your-pat" [-Version "1.0.0"]
 
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$NuGetSource,
     
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$ApiKey,
     
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [string]$Version = "1.0.0",
     
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [string]$Configuration = "Release"
 )
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "Publishing devops-pr-analyzer CLI tool v$Version" -ForegroundColor Green
+Write-Host "Publishing Lintellect CLI tool v$Version" -ForegroundColor Green
 Write-Host "Target: $NuGetSource" -ForegroundColor Cyan
 
 # Validate NuGet source URL
@@ -53,7 +53,7 @@ if ($isAzureDevOpsFeed) {
 }
 
 # Set the project path
-$projectPath = "src\devops-pr-analyzer.cli\devops-pr-analyzer.cli.csproj"
+$projectPath = "src\Lintellect.Cli\Lintellect.Cli.csproj"
 
 if (-not (Test-Path $projectPath)) {
     Write-Error "Project file not found at: $projectPath"
@@ -69,14 +69,15 @@ if ($Version) {
         $content = $content -replace '<Version>.*?</Version>', "<Version>$Version</Version>"
         Set-Content $projectPath $content -NoNewline
         Write-Host "Version updated successfully" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Warning "No <Version> element found in project file"
     }
 }
 
 # Clean previous packages
 Write-Host "Cleaning previous packages..." -ForegroundColor Yellow
-$packagesPath = "src\devops-pr-analyzer.cli\nupkg"
+$packagesPath = "src\Lintellect.Cli\nupkg"
 if (Test-Path $packagesPath) {
     Remove-Item $packagesPath -Recurse -Force
     Write-Host "Cleaned $packagesPath" -ForegroundColor Green
@@ -141,7 +142,8 @@ if ($isAzureDevOpsFeed) {
     
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "Failed to add NuGet source to config, will try direct push..."
-    } else {
+    }
+    else {
         Write-Host "NuGet source configured successfully" -ForegroundColor Green
     }
 }
@@ -160,7 +162,8 @@ try {
             --api-key "AzureDevOps" `
             --skip-duplicate `
             --interactive
-    } else {
+    }
+    else {
         # For other feeds (like nuget.org), use the API key directly
         dotnet nuget push $package.FullName `
             --source $NuGetSource `
@@ -221,7 +224,7 @@ if ($isAzureDevOpsFeed) {
 if ($isAzureDevOpsFeed) {
     Write-Host "To install the tool globally:" -ForegroundColor Cyan
     Write-Host "  dotnet nuget add source $NuGetSource --name DevOpsFeed --username AzureDevOps --password YOUR_PAT --store-password-in-clear-text" -ForegroundColor White
-    Write-Host "  dotnet tool install -g devops-pr-analyzer.cli --add-source DevOpsFeed" -ForegroundColor White
+    Write-Host "  dotnet tool install -g lintellect.cli --add-source DevOpsFeed" -ForegroundColor White
     Write-Host ""
     Write-Host "Or in Azure DevOps pipeline:" -ForegroundColor Cyan
     Write-Host "  - task: NuGetAuthenticate@1" -ForegroundColor White
@@ -229,19 +232,20 @@ if ($isAzureDevOpsFeed) {
     Write-Host "    inputs:" -ForegroundColor White
     Write-Host "      command: 'custom'" -ForegroundColor White
     Write-Host "      custom: 'tool'" -ForegroundColor White
-    Write-Host "      arguments: 'install devops-pr-analyzer.cli --tool-path ./tools'" -ForegroundColor White
+    Write-Host "      arguments: 'install lintellect.cli --tool-path ./tools'" -ForegroundColor White
     Write-Host ""
     Write-Host "Note: In Azure Pipelines, NuGetAuthenticate@1 task handles authentication automatically" -ForegroundColor Yellow
-} else {
+}
+else {
     Write-Host "To install the tool globally:" -ForegroundColor Cyan
-    Write-Host "  dotnet tool install -g devops-pr-analyzer.cli --add-source $NuGetSource" -ForegroundColor White
+    Write-Host "  dotnet tool install -g lintellect.cli --add-source $NuGetSource" -ForegroundColor White
     Write-Host ""
     Write-Host "Or in a CI/CD pipeline:" -ForegroundColor Cyan
-    Write-Host "  dotnet tool install devops-pr-analyzer.cli --tool-path ./tools --add-source $NuGetSource" -ForegroundColor White
+    Write-Host "  dotnet tool install lintellect.cli --tool-path ./tools --add-source $NuGetSource" -ForegroundColor White
 }
 
 Write-Host ""
 Write-Host "Package details:" -ForegroundColor Cyan
-Write-Host "  Name: devops-pr-analyzer.cli" -ForegroundColor White
+Write-Host "  Name: lintellect.cli" -ForegroundColor White
 Write-Host "  Version: $Version" -ForegroundColor White
-Write-Host "  Command: devops-pr-analyzer" -ForegroundColor White
+Write-Host "  Command: lintellect" -ForegroundColor White
