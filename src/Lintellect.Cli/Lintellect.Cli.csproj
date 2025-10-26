@@ -25,6 +25,7 @@
 		<RepositoryUrl>https://github.com/DawnDevelop/Lintellect</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageVersion>0.0.3</PackageVersion>
 		<!--<PackageReadmeFile>../README.md</PackageReadmeFile>-->
 	</PropertyGroup>
 
