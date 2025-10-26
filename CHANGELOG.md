@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [CLI v0.0.4] - 2025-10-27
+
+### Added
+
+- CodeQL Analyzers
+- More Tests
+
+### Changed
+
+### Fixed
+
+### Security
+
 ### API
 
 - No unreleased API changes
