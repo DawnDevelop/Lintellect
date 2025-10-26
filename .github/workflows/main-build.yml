@@ -171,17 +171,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish CLI
-        run: |
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            dotnet publish src/Lintellect.Cli/Lintellect.Cli.csproj --configuration Release --runtime ${{ matrix.platform }} --self-contained true --output ./publish/cli --force
-          else
-            dotnet publish src/Lintellect.Cli/Lintellect.Cli.csproj \
-              --configuration Release \
-              --runtime ${{ matrix.platform }} \
-              --self-contained true \
-              --output ./publish/cli \
-              --force
-          fi
+        run: dotnet publish src/Lintellect.Cli/Lintellect.Cli.csproj --configuration Release --runtime ${{ matrix.platform }} --self-contained true --output ./publish/cli --force
 
       - name: Create binary archive
         run: |
