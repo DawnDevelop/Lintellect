@@ -291,6 +291,7 @@ API-Key: your-api-key
 - **Polly**: Resilience patterns for external API calls
 - **OpenTelemetry**: Metrics and observability
 - **Testcontainers**: Integration testing with real database
+- **NSubstitute**: Mocking framework for unit tests
 
 ## Development
 

@@ -111,8 +111,11 @@ public class LanguageMapperTests
     [Test]
     public void FromFileName_WithNullFileName_ShouldReturnUnknown()
     {
-        // Act & Assert
-        _ = Should.Throw<ArgumentNullException>(() => LanguageMapper.FromFileName(null!));
+        // Act
+        var result = LanguageMapper.FromFileName(null!);
+
+        // Assert
+        result.ShouldBe(EProgrammingLanguage.Unknown);
     }
 
     [Test]

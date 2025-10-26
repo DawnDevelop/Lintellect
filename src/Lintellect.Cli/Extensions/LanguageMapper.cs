@@ -6,6 +6,11 @@ internal static class LanguageMapper
 {
     public static EProgrammingLanguage FromFileName(string file)
     {
+        if (string.IsNullOrWhiteSpace(file))
+        {
+            return EProgrammingLanguage.Unknown;
+        }
+
         return Path.GetExtension(file).ToLowerInvariant() switch
         {
             ".cs" => EProgrammingLanguage.CSharp,

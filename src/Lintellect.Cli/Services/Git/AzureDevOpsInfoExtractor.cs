@@ -19,9 +19,9 @@ internal sealed class AzureDevOpsInfoExtractor : IGitInfoExtractor
         }
 
         // Determine build type
-        if (!int.TryParse(pullRequestId, out var result))
+        if (int.TryParse(pullRequestId, out var parsedPullRequestId))
         {
-            return new GitInfo(result, commitId, repositoryName, EGitInfoType.PullRequest);
+            return new GitInfo(parsedPullRequestId, commitId, repositoryName, EGitInfoType.PullRequest, ProjectName: projectName);
         }
         else
         {

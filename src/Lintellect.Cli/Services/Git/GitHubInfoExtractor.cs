@@ -20,7 +20,11 @@ internal sealed class GitHubInfoExtractor : IGitInfoExtractor
 
         // Extract PR number from GITHUB_REF (format: refs/pull/{pr_number}/merge)
         var pullRequestId = ExtractPullRequestNumber(gitHubRef);
-        return string.IsNullOrWhiteSpace(pullRequestId) ? null : new GitInfo(int.Parse(pullRequestId), commitId, repositoryName);
+        if (string.IsNullOrWhiteSpace(pullRequestId) || !int.TryParse(pullRequestId, out var parsedPullRequestId))
+        {
+            return null;
+        }
+        return new GitInfo(parsedPullRequestId, commitId, repositoryName);
     }
 
     private static string? ExtractPullRequestNumber(string gitHubRef)

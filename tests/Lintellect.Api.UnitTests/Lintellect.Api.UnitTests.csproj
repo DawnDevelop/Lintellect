@@ -17,7 +17,7 @@
     </PackageReference>
 		<PackageReference Include="NUnit3TestAdapter" />
 		<PackageReference Include="Shouldly" />
-		<PackageReference Include="Moq" />
+		<PackageReference Include="NSubstitute" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" />
 		<PackageReference Include="coverlet.collector" />
@@ -30,7 +30,7 @@
   <ItemGroup>
     <Using Include="NUnit.Framework" />
     <Using Include="Shouldly" />
-    <Using Include="Moq" />
+    <Using Include="NSubstitute" />
   </ItemGroup>
 
 </Project>

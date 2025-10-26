@@ -157,7 +157,7 @@ chore(deps): update Anthropic.SDK to 5.9.0
 ### Unit Tests
 
 - Write unit tests for all business logic
-- Mock external dependencies
+- Use NSubstitute for mocking external dependencies
 - Use Shouldly for readable assertions
 - Aim for high code coverage (80%+)
 - Test edge cases and error conditions
@@ -175,18 +175,26 @@ chore(deps): update Anthropic.SDK to 5.9.0
 [TestFixture]
 public class AnalysisJobTests
 {
+    private IApplicationDbContext _context;
+
     [SetUp]
     public void Setup()
     {
-        // Arrange
+        _context = Substitute.For<IApplicationDbContext>();
     }
 
     [Test]
     public void ProcessJob_WithValidRequest_ReturnsSuccess()
     {
         // Arrange
+        _context.Method().Returns(expectedValue);
+
         // Act
+        var result = sut.Method();
+
         // Assert
+        result.ShouldBe(expectedValue);
+        _context.Received(1).Method();
     }
 }
 ```

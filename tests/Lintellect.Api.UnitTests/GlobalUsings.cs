@@ -7,5 +7,5 @@ global using Lintellect.Api.Infrastructure.Services;
 global using Lintellect.Api.UnitTests.Builders;
 global using Lintellect.Shared.Models;
 global using Mediator;
-global using Moq;
+global using NSubstitute;
 global using NUnit.Framework;

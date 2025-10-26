@@ -141,7 +141,7 @@ updates:
         patterns:
           - "NUnit.*"
           - "Shouldly"
-          - "Moq"
+          - "NSubstitute"
           - "Microsoft.NET.Test.Sdk"
 
   - package-ecosystem: "nuget"
