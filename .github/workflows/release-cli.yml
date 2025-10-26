@@ -160,7 +160,7 @@ jobs:
     needs: [extract-version, build-and-test]
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
         include:
           - os: ubuntu-latest
             platform: linux-x64
@@ -170,10 +170,6 @@ jobs:
             platform: win-x64
             extension: zip
             executable: lintellect.exe
-          - os: macos-latest
-            platform: osx-x64
-            extension: tar.gz
-            executable: lintellect
 
     steps:
       - name: Checkout code
@@ -203,19 +199,13 @@ jobs:
             --self-contained true \
             --output ./publish/cli
 
-      - name: Create binary archive
-        run: |
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            # Create a directory structure for the archive
-            mkdir -p ./lintellect-cli-${{ needs.extract-version.outputs.version }}-${{ matrix.platform }}
-            cp -r ./publish/cli/* ./lintellect-cli-${{ needs.extract-version.outputs.version }}-${{ matrix.platform }}/
-            Compress-Archive -Path "./lintellect-cli-${{ needs.extract-version.outputs.version }}-${{ matrix.platform }}" -DestinationPath "./lintellect-cli-${{ needs.extract-version.outputs.version }}-${{ matrix.platform }}.${{ matrix.extension }}"
-          else
-            # Create a directory structure for the archive
-            mkdir -p ./lintellect-cli-${{ needs.extract-version.outputs.version }}-${{ matrix.platform }}
-            cp -r ./publish/cli/* ./lintellect-cli-${{ needs.extract-version.outputs.version }}-${{ matrix.platform }}/
-            tar -czf "./lintellect-cli-${{ needs.extract-version.outputs.version }}-${{ matrix.platform }}.${{ matrix.extension }}" -C ./lintellect-cli-${{ needs.extract-version.outputs.version }}-${{ matrix.platform }} .
-          fi
+      - name: Create binary archive (Windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path "./publish/cli" -DestinationPath "./lintellect-cli-${{ needs.extract-version.outputs.version }}-${{ matrix.platform }}.${{ matrix.extension }}"
+
+      - name: Create binary archive (Linux)
+        if: runner.os == 'Linux'
+        run: tar -czf "./lintellect-cli-${{ needs.extract-version.outputs.version }}-${{ matrix.platform }}.${{ matrix.extension }}" -C ./publish/cli .
 
       - name: Upload binary
         uses: actions/upload-artifact@v5
@@ -252,7 +242,7 @@ jobs:
           fi
 
           # Create release notes
-          RELEASE_NOTES="## Lintellect CLI v$VERSION\n\n$CLI_SECTION\n\n### Installation\n\n#### NuGet Package\n\n\`\`\`bash\n# Install globally\ndotnet tool install --global lintellect --version $VERSION\n\n# Verify installation\nlintellect --version\n\`\`\`\n\n#### Binary Downloads\n\n- **Linux x64**: \`lintellect-cli-$VERSION-linux-x64.tar.gz\`\n- **Windows x64**: \`lintellect-cli-$VERSION-win-x64.zip\`\n- **macOS x64**: \`lintellect-cli-$VERSION-osx-x64.tar.gz\`\n\n### Usage\n\n\`\`\`bash\n# Basic analysis\nlintellect analyze --solution ./MyProject.sln\n\n# With API integration\nlintellect analyze \\\n  --solution ./MyProject.sln \\\n  --api-url \"https://api.example.com\" \\\n  --api-key \"your-api-key\"\n\`\`\`"
+          RELEASE_NOTES="## Lintellect CLI v$VERSION\n\n$CLI_SECTION\n\n### Installation\n\n#### NuGet Package\n\n\`\`\`bash\n# Install globally\ndotnet tool install --global lintellect --version $VERSION\n\n# Verify installation\nlintellect --version\n\`\`\`\n\n#### Binary Downloads\n\n- **Linux x64**: \`lintellect-cli-$VERSION-linux-x64.tar.gz\`\n- **Windows x64**: \`lintellect-cli-$VERSION-win-x64.zip\`\n\n### Usage\n\n\`\`\`bash\n# Basic analysis\nlintellect analyze --solution ./MyProject.sln\n\n# With API integration\nlintellect analyze \\\n  --solution ./MyProject.sln \\\n  --api-url \"https://api.example.com\" \\\n  --api-key \"your-api-key\"\n\`\`\`"
 
           echo "release-notes<<EOF" >> $GITHUB_OUTPUT
           echo "$RELEASE_NOTES" >> $GITHUB_OUTPUT
@@ -282,7 +272,6 @@ jobs:
           files: |
             ./binaries/lintellect-cli-linux-x64/lintellect-cli-${{ needs.extract-version.outputs.version }}-linux-x64.tar.gz
             ./binaries/lintellect-cli-win-x64/lintellect-cli-${{ needs.extract-version.outputs.version }}-win-x64.zip
-            ./binaries/lintellect-cli-osx-x64/lintellect-cli-${{ needs.extract-version.outputs.version }}-osx-x64.tar.gz
           draft: false
           prerelease: false
         env:
