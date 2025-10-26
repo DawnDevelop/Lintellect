@@ -127,9 +127,48 @@ internal class TestHelpers
     {
         Dictionary<string, string?> originalValues = [];
 
+        // Clear GitHub Actions variables that might interfere with tests
+        var gitHubVariables = new[]
+        {
+            "GITHUB_ACTIONS",
+            "GITHUB_REF",
+            "GITHUB_SHA",
+            "GITHUB_REPOSITORY",
+            "GITHUB_WORKFLOW",
+            "GITHUB_RUN_ID",
+            "GITHUB_RUN_NUMBER",
+            "GITHUB_ACTOR",
+            "GITHUB_EVENT_NAME",
+            "GITHUB_WORKSPACE"
+        };
+
+        // Clear Azure DevOps variables that might interfere with tests
+        var azureDevOpsVariables = new[]
+        {
+            "SYSTEM_TEAMFOUNDATIONCOLLECTIONURI",
+            "SYSTEM_PULLREQUEST_PULLREQUESTID",
+            "BUILD_SOURCEVERSION",
+            "BUILD_REPOSITORY_NAME",
+            "BUILD_REASON",
+            "BUILD_BUILDID",
+            "SYSTEM_TEAMPROJECT"
+        };
+
+        // Store original values for all variables we might modify
+        foreach (var varName in gitHubVariables.Concat(azureDevOpsVariables))
+        {
+            originalValues[varName] = Environment.GetEnvironmentVariable(varName);
+        }
+
+        // Clear all CI/CD variables first
+        foreach (var varName in gitHubVariables.Concat(azureDevOpsVariables))
+        {
+            Environment.SetEnvironmentVariable(varName, null);
+        }
+
+        // Set the test variables
         foreach (var kvp in variables)
         {
-            originalValues[kvp.Key] = Environment.GetEnvironmentVariable(kvp.Key);
             Environment.SetEnvironmentVariable(kvp.Key, kvp.Value);
         }
 
