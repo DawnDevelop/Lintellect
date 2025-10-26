@@ -1,5 +1,4 @@
 using Lintellect.Shared.Extensions;
-using Lintellect.Shared.Models;
 using Shouldly;
 
 namespace Lintellect.Cli.UnitTests.Tests;
@@ -7,11 +6,11 @@ namespace Lintellect.Cli.UnitTests.Tests;
 [TestFixture]
 public class ExclusionPatternTests
 {
-  [Test]
-  public void FilePatternMatcher_ShouldExcludeFilesMatchingPatterns()
-  {
-    // Arrange
-    var filePaths = new List<string>
+    [Test]
+    public void FilePatternMatcher_ShouldExcludeFilesMatchingPatterns()
+    {
+        // Arrange
+        var filePaths = new List<string>
         {
             "src/Program.cs",
             "src/Controllers/HomeController.cs",
@@ -21,75 +20,75 @@ public class ExclusionPatternTests
             "src/Models/User.cs"
         };
 
-    var exclusionPatterns = new List<string>
+        var exclusionPatterns = new List<string>
         {
             "**/bin/**",
             "**/obj/**",
             "**/test*/**"
         };
 
-    // Act
-    var filteredFiles = FilePatternMatcher.FilterFiles(filePaths, exclusionPatterns).ToList();
+        // Act
+        var filteredFiles = FilePatternMatcher.FilterFiles(filePaths, exclusionPatterns).ToList();
 
-    // Assert
-    filteredFiles.ShouldContain("src/Program.cs");
-    filteredFiles.ShouldContain("src/Controllers/HomeController.cs");
-    filteredFiles.ShouldContain("src/Models/User.cs");
+        // Assert
+        filteredFiles.ShouldContain("src/Program.cs");
+        filteredFiles.ShouldContain("src/Controllers/HomeController.cs");
+        filteredFiles.ShouldContain("src/Models/User.cs");
 
-    filteredFiles.ShouldNotContain("bin/Debug/MyApp.exe");
-    filteredFiles.ShouldNotContain("obj/Debug/MyApp.dll");
-    filteredFiles.ShouldNotContain("tests/UnitTests.cs");
+        filteredFiles.ShouldNotContain("bin/Debug/MyApp.exe");
+        filteredFiles.ShouldNotContain("obj/Debug/MyApp.dll");
+        filteredFiles.ShouldNotContain("tests/UnitTests.cs");
 
-    filteredFiles.Count.ShouldBe(3);
-  }
+        filteredFiles.Count.ShouldBe(3);
+    }
 
-  [Test]
-  public void FilePatternMatcher_ShouldHandleEmptyExclusionPatterns()
-  {
-    // Arrange
-    var filePaths = new List<string>
+    [Test]
+    public void FilePatternMatcher_ShouldHandleEmptyExclusionPatterns()
+    {
+        // Arrange
+        var filePaths = new List<string>
         {
             "src/Program.cs",
             "bin/Debug/MyApp.exe"
         };
 
-    var exclusionPatterns = new List<string>();
+        var exclusionPatterns = new List<string>();
 
-    // Act
-    var filteredFiles = FilePatternMatcher.FilterFiles(filePaths, exclusionPatterns).ToList();
+        // Act
+        var filteredFiles = FilePatternMatcher.FilterFiles(filePaths, exclusionPatterns).ToList();
 
-    // Assert
-    filteredFiles.Count.ShouldBe(2);
-    filteredFiles.ShouldContain("src/Program.cs");
-    filteredFiles.ShouldContain("bin/Debug/MyApp.exe");
-  }
+        // Assert
+        filteredFiles.Count.ShouldBe(2);
+        filteredFiles.ShouldContain("src/Program.cs");
+        filteredFiles.ShouldContain("bin/Debug/MyApp.exe");
+    }
 
-  [Test]
-  public void FilePatternMatcher_ShouldHandleNullExclusionPatterns()
-  {
-    // Arrange
-    var filePaths = new List<string>
+    [Test]
+    public void FilePatternMatcher_ShouldHandleNullExclusionPatterns()
+    {
+        // Arrange
+        var filePaths = new List<string>
         {
             "src/Program.cs",
             "bin/Debug/MyApp.exe"
         };
 
-    List<string>? exclusionPatterns = null;
+        List<string>? exclusionPatterns = null;
 
-    // Act
-    var filteredFiles = FilePatternMatcher.FilterFiles(filePaths, exclusionPatterns).ToList();
+        // Act
+        var filteredFiles = FilePatternMatcher.FilterFiles(filePaths, exclusionPatterns).ToList();
 
-    // Assert
-    filteredFiles.Count.ShouldBe(2);
-    filteredFiles.ShouldContain("src/Program.cs");
-    filteredFiles.ShouldContain("bin/Debug/MyApp.exe");
-  }
+        // Assert
+        filteredFiles.Count.ShouldBe(2);
+        filteredFiles.ShouldContain("src/Program.cs");
+        filteredFiles.ShouldContain("bin/Debug/MyApp.exe");
+    }
 
-  [Test]
-  public void FilePatternMatcher_ShouldExcludeSpecificFileExtensions()
-  {
-    // Arrange
-    var filePaths = new List<string>
+    [Test]
+    public void FilePatternMatcher_ShouldExcludeSpecificFileExtensions()
+    {
+        // Arrange
+        var filePaths = new List<string>
         {
             "src/Program.cs",
             "src/App.config",
@@ -98,31 +97,31 @@ public class ExclusionPatternTests
             "src/README.md"
         };
 
-    var exclusionPatterns = new List<string>
+        var exclusionPatterns = new List<string>
         {
             "**/*.config",
             "**/*.json",
             "**/*.md"
         };
 
-    // Act
-    var filteredFiles = FilePatternMatcher.FilterFiles(filePaths, exclusionPatterns).ToList();
+        // Act
+        var filteredFiles = FilePatternMatcher.FilterFiles(filePaths, exclusionPatterns).ToList();
 
-    // Assert
-    filteredFiles.ShouldContain("src/Program.cs");
-    filteredFiles.ShouldNotContain("src/App.config");
-    filteredFiles.ShouldNotContain("src/Web.config");
-    filteredFiles.ShouldNotContain("src/package.json");
-    filteredFiles.ShouldNotContain("src/README.md");
+        // Assert
+        filteredFiles.ShouldContain("src/Program.cs");
+        filteredFiles.ShouldNotContain("src/App.config");
+        filteredFiles.ShouldNotContain("src/Web.config");
+        filteredFiles.ShouldNotContain("src/package.json");
+        filteredFiles.ShouldNotContain("src/README.md");
 
-    filteredFiles.Count.ShouldBe(1);
-  }
+        filteredFiles.Count.ShouldBe(1);
+    }
 
-  [Test]
-  public void FilePatternMatcher_ShouldExcludeDirectoriesWithWildcards()
-  {
-    // Arrange
-    var filePaths = new List<string>
+    [Test]
+    public void FilePatternMatcher_ShouldExcludeDirectoriesWithWildcards()
+    {
+        // Arrange
+        var filePaths = new List<string>
         {
             "src/Program.cs",
             "src/Controllers/HomeController.cs",
@@ -132,32 +131,32 @@ public class ExclusionPatternTests
             "src/Models/User.cs"
         };
 
-    var exclusionPatterns = new List<string>
+        var exclusionPatterns = new List<string>
         {
             "**/wwwroot/**",
             "**/Views/**"
         };
 
-    // Act
-    var filteredFiles = FilePatternMatcher.FilterFiles(filePaths, exclusionPatterns).ToList();
+        // Act
+        var filteredFiles = FilePatternMatcher.FilterFiles(filePaths, exclusionPatterns).ToList();
 
-    // Assert
-    filteredFiles.ShouldContain("src/Program.cs");
-    filteredFiles.ShouldContain("src/Controllers/HomeController.cs");
-    filteredFiles.ShouldContain("src/Models/User.cs");
+        // Assert
+        filteredFiles.ShouldContain("src/Program.cs");
+        filteredFiles.ShouldContain("src/Controllers/HomeController.cs");
+        filteredFiles.ShouldContain("src/Models/User.cs");
 
-    filteredFiles.ShouldNotContain("src/Views/Home/Index.cshtml");
-    filteredFiles.ShouldNotContain("wwwroot/css/site.css");
-    filteredFiles.ShouldNotContain("wwwroot/js/site.js");
+        filteredFiles.ShouldNotContain("src/Views/Home/Index.cshtml");
+        filteredFiles.ShouldNotContain("wwwroot/css/site.css");
+        filteredFiles.ShouldNotContain("wwwroot/js/site.js");
 
-    filteredFiles.Count.ShouldBe(3);
-  }
+        filteredFiles.Count.ShouldBe(3);
+    }
 
-  [Test]
-  public void FilePatternMatcher_ShouldHandleComplexPatterns()
-  {
-    // Arrange
-    var filePaths = new List<string>
+    [Test]
+    public void FilePatternMatcher_ShouldHandleComplexPatterns()
+    {
+        // Arrange
+        var filePaths = new List<string>
         {
             "src/Program.cs",
             "src/Controllers/HomeController.cs",
@@ -168,25 +167,25 @@ public class ExclusionPatternTests
             "tests/IntegrationTests/AdminControllerTests.cs"
         };
 
-    var exclusionPatterns = new List<string>
+        var exclusionPatterns = new List<string>
         {
             "**/test*/**",
             "**/Admin*"
         };
 
-    // Act
-    var filteredFiles = FilePatternMatcher.FilterFiles(filePaths, exclusionPatterns).ToList();
+        // Act
+        var filteredFiles = FilePatternMatcher.FilterFiles(filePaths, exclusionPatterns).ToList();
 
-    // Assert
-    filteredFiles.ShouldContain("src/Program.cs");
-    filteredFiles.ShouldContain("src/Controllers/HomeController.cs");
-    filteredFiles.ShouldContain("src/Services/UserService.cs");
+        // Assert
+        filteredFiles.ShouldContain("src/Program.cs");
+        filteredFiles.ShouldContain("src/Controllers/HomeController.cs");
+        filteredFiles.ShouldContain("src/Services/UserService.cs");
 
-    filteredFiles.ShouldNotContain("src/Controllers/AdminController.cs");
-    filteredFiles.ShouldNotContain("src/Services/AdminService.cs");
-    filteredFiles.ShouldNotContain("tests/UnitTests/UserServiceTests.cs");
-    filteredFiles.ShouldNotContain("tests/IntegrationTests/AdminControllerTests.cs");
+        filteredFiles.ShouldNotContain("src/Controllers/AdminController.cs");
+        filteredFiles.ShouldNotContain("src/Services/AdminService.cs");
+        filteredFiles.ShouldNotContain("tests/UnitTests/UserServiceTests.cs");
+        filteredFiles.ShouldNotContain("tests/IntegrationTests/AdminControllerTests.cs");
 
-    filteredFiles.Count.ShouldBe(3);
-  }
+        filteredFiles.Count.ShouldBe(3);
+    }
 }

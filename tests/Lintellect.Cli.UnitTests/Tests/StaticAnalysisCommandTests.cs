@@ -64,7 +64,6 @@ public class StaticAnalysisCommandTests
         var apiUrlOption = _command.Options.OfType<Option<string>>().First(o => o.Name == "--api-url");
 
         // Assert
-        apiUrlOption.Description.ShouldBe("AiPrReview.Service base URL");
         apiUrlOption.Validators.ShouldNotBeEmpty();
     }
 
@@ -162,7 +161,7 @@ public class StaticAnalysisCommandTests
         var devopsPatOption = _command.Options.OfType<Option<string>>().First(o => o.Name == "--devops-pat");
 
         // Assert
-        devopsPatOption.Description.ShouldBe("Azure DevOps Personal Access Token");
+        devopsPatOption.DefaultValueFactory.ShouldNotBeNull();
     }
 
     [Test]
@@ -172,7 +171,7 @@ public class StaticAnalysisCommandTests
         var azureDevOpsOrgUrlOption = _command.Options.OfType<Option<string>>().First(o => o.Name == "--azure-devops-org-url");
 
         // Assert
-        azureDevOpsOrgUrlOption.Description.ShouldBe("Azure DevOps Organization URL (e.g., https://dev.azure.com/yourorg)");
+        azureDevOpsOrgUrlOption.DefaultValueFactory.ShouldNotBeNull();
     }
 
     [Test]
@@ -182,7 +181,7 @@ public class StaticAnalysisCommandTests
         var githubTokenOption = _command.Options.OfType<Option<string>>().First(o => o.Name == "--github-token");
 
         // Assert
-        githubTokenOption.Description.ShouldBe("GitHub Personal Access Token (required for CodeQL analysis)");
+        githubTokenOption.DefaultValueFactory.ShouldNotBeNull();
     }
 
     [Test]

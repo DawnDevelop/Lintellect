@@ -193,7 +193,7 @@ internal class StaticAnalysisCommand : Command
             Console.WriteLine($"  Info: {analysisResult.Findings.Count(f => f.Severity == "Info")}");
             Console.WriteLine();
 
-            if (apiKeyValue is null || serviceUrlValue is null)
+            if (string.IsNullOrWhiteSpace(apiKeyValue) || string.IsNullOrWhiteSpace(serviceUrlValue))
             {
                 Console.WriteLine("No API credentials provided. Outputting findings to console:");
                 Console.WriteLine();

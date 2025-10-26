@@ -1,8 +1,8 @@
 using System.Text.Json;
 using Lintellect.Cli.Extensions;
 using Lintellect.Cli.Interfaces;
-using Lintellect.Shared.Models;
 using Lintellect.Shared.Extensions;
+using Lintellect.Shared.Models;
 
 namespace Lintellect.Cli.Services.Analyzers.CodeQL;
 
