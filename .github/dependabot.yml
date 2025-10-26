@@ -1,0 +1,233 @@
+version: 2
+updates:
+  # NuGet packages for API
+  - package-ecosystem: "nuget"
+    directory: "/src/Lintellect.Api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "maintainers"
+    assignees:
+      - "maintainers"
+    commit-message:
+      prefix: "deps(api)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "api"
+    groups:
+      microsoft:
+        patterns:
+          - "Microsoft.*"
+      aspnetcore:
+        patterns:
+          - "Microsoft.AspNetCore.*"
+      entityframework:
+        patterns:
+          - "Microsoft.EntityFrameworkCore.*"
+      aspire:
+        patterns:
+          - "Aspire.*"
+
+  # NuGet packages for CLI
+  - package-ecosystem: "nuget"
+    directory: "/src/Lintellect.Cli"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "maintainers"
+    assignees:
+      - "maintainers"
+    commit-message:
+      prefix: "deps(cli)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "cli"
+    groups:
+      microsoft:
+        patterns:
+          - "Microsoft.*"
+      codeanalysis:
+        patterns:
+          - "Microsoft.CodeAnalysis.*"
+      commandline:
+        patterns:
+          - "System.CommandLine.*"
+
+  # NuGet packages for Shared
+  - package-ecosystem: "nuget"
+    directory: "/src/Lintellect.Shared"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "maintainers"
+    assignees:
+      - "maintainers"
+    commit-message:
+      prefix: "deps(shared)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "shared"
+
+  # NuGet packages for ServiceDefaults
+  - package-ecosystem: "nuget"
+    directory: "/src/Lintellect.ServiceDefaults"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "maintainers"
+    assignees:
+      - "maintainers"
+    commit-message:
+      prefix: "deps(service-defaults)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "service-defaults"
+
+  # NuGet packages for AppHost
+  - package-ecosystem: "nuget"
+    directory: "/src/Lintellect.AppHost"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "maintainers"
+    assignees:
+      - "maintainers"
+    commit-message:
+      prefix: "deps(app-host)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "app-host"
+
+  # Test projects
+  - package-ecosystem: "nuget"
+    directory: "/tests/Lintellect.Api.UnitTests"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "maintainers"
+    assignees:
+      - "maintainers"
+    commit-message:
+      prefix: "deps(tests)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "tests"
+    groups:
+      test-frameworks:
+        patterns:
+          - "NUnit.*"
+          - "Shouldly"
+          - "Moq"
+          - "Microsoft.NET.Test.Sdk"
+
+  - package-ecosystem: "nuget"
+    directory: "/tests/Lintellect.Api.FunctionalTests"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "maintainers"
+    assignees:
+      - "maintainers"
+    commit-message:
+      prefix: "deps(tests)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "tests"
+
+  - package-ecosystem: "nuget"
+    directory: "/tests/Lintellect.Cli.UnitTests"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "maintainers"
+    assignees:
+      - "maintainers"
+    commit-message:
+      prefix: "deps(tests)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "tests"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "maintainers"
+    assignees:
+      - "maintainers"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "ci"
+    groups:
+      actions:
+        patterns:
+          - "actions/*"
+      setup-dotnet:
+        patterns:
+          - "actions/setup-dotnet"
+      docker:
+        patterns:
+          - "docker/*"
+      codeql:
+        patterns:
+          - "github/codeql-action/*"
+
+  # Docker base images
+  - package-ecosystem: "docker"
+    directory: "/src/Lintellect.Api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "maintainers"
+    assignees:
+      - "maintainers"
+    commit-message:
+      prefix: "deps(api/docker)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "api"
+      - "docker"

@@ -25,11 +25,50 @@ This project adheres to a code of conduct. By participating, you are expected to
 ### Pull Request Process
 
 1. **Fork Repository**: Fork the repository to your GitHub account
-2. **Create Branch**: Create a feature branch from `main`
+2. **Create Branch**: Create a feature branch from `main` using the naming convention:
+   - `feature/description` - New features
+   - `bugfix/description` - Bug fixes
+   - `docs/description` - Documentation updates
 3. **Make Changes**: Implement your changes following coding standards
 4. **Add Tests**: Include tests for new functionality
-5. **Update Documentation**: Update relevant documentation
-6. **Submit PR**: Create a pull request with a clear description
+5. **Update Documentation**: Update relevant documentation including CHANGELOG.md
+6. **Submit PR**: Create a pull request with a clear description using the provided template
+
+### Git Workflow
+
+Lintellect uses **GitHub Flow** with release branches. See [Git Workflow Documentation](docs/GIT_WORKFLOW.md) for detailed information.
+
+#### Branch Naming Conventions
+
+- **Feature branches**: `feature/add-typescript-analyzer`
+- **Bug fix branches**: `bugfix/fix-api-crash`
+- **Documentation branches**: `docs/update-deployment-guide`
+- **Release branches**: `release/api/v1.2.0`, `release/cli/v2.1.0`
+- **Hotfix branches**: `hotfix/api/security-patch`, `hotfix/cli/memory-leak`
+
+#### Commit Message Convention
+
+Use **Conventional Commits** with component scope:
+
+```bash
+<type>(<component>/<scope>): <subject>
+
+Examples:
+feat(api): add job cancellation endpoint
+fix(cli): resolve crash on invalid solution path
+feat(cli/analyzer): add TypeScript support
+docs(api): update deployment guide
+chore(deps): update Anthropic.SDK to 5.9.0
+```
+
+**Components:**
+
+- `api` - API changes
+- `cli` - CLI changes
+- `shared` - Shared models changes
+- `docs` - Documentation
+- `ci` - CI/CD changes
+- `deps` - Dependencies
 
 ## Development Setup
 
@@ -254,6 +293,11 @@ Fixes #(issue number)
 
 ## Release Process
 
+Lintellect has **two independent components** that are released separately:
+
+- **API** (`Lintellect.Api`) - REST API service with Docker deployment
+- **CLI** (`Lintellect.Cli`) - Command-line tool published to NuGet
+
 ### Version Numbering
 
 We follow [Semantic Versioning](https://semver.org/):
@@ -262,15 +306,42 @@ We follow [Semantic Versioning](https://semver.org/):
 - **MINOR**: New features, backward compatible
 - **PATCH**: Bug fixes, backward compatible
 
-### Release Checklist
+### Release Process
 
-- [ ] All tests pass
-- [ ] Documentation updated
-- [ ] Changelog updated
-- [ ] Version numbers updated
-- [ ] Release notes prepared
-- [ ] Tag created
-- [ ] Release published
+#### API Release
+
+1. Create release branch: `release/api/v1.2.0`
+2. Update version in `src/Lintellect.Api/Lintellect.Api.csproj`
+3. Update CHANGELOG.md with API section
+4. Create PR and merge to main
+5. Create tag: `api/v1.2.0`
+6. Automated release workflow builds Docker images and creates GitHub Release
+
+#### CLI Release
+
+1. Create release branch: `release/cli/v2.1.0`
+2. Update version in `src/Lintellect.Cli/Lintellect.Cli.csproj`
+3. Update CHANGELOG.md with CLI section
+4. Create PR and merge to main
+5. Create tag: `cli/v2.1.0`
+6. Automated release workflow publishes NuGet package and creates GitHub Release
+
+### Helper Scripts
+
+Use the provided scripts to automate releases:
+
+```bash
+# Create API release
+./scripts/create-release-api.sh 1.2.0
+
+# Create CLI release
+./scripts/create-release-cli.sh 2.1.0
+
+# Check version consistency
+./scripts/version-check.sh
+```
+
+See [Git Workflow Documentation](docs/GIT_WORKFLOW.md) for detailed instructions.
 
 ## Community Guidelines
 

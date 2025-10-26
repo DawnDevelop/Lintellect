@@ -2,8 +2,10 @@
 
 [![.NET](https://img.shields.io/badge/.NET-10.0-blue.svg)](https://dotnet.microsoft.com/download)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/your-org/lintellect/actions)
-[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](https://github.com/your-org/lintellect/actions)
+[![CI](https://github.com/your-org/lintellect/workflows/CI/badge.svg)](https://github.com/your-org/lintellect/actions)
+[![CodeQL](https://github.com/your-org/lintellect/workflows/CodeQL%20Analysis/badge.svg)](https://github.com/your-org/lintellect/actions)
+[![API Version](https://img.shields.io/badge/API-v1.0.0-blue.svg)](https://github.com/your-org/lintellect/releases)
+[![CLI Version](https://img.shields.io/badge/CLI-v1.0.0-green.svg)](https://www.nuget.org/packages/lintellect)
 
 > **AI-powered code review assistant that enhances pull request analysis with intelligent insights and automated suggestions.**
 
@@ -26,6 +28,8 @@
 - [Configuration](#configuration)
 - [Architecture](#architecture)
 - [Development](#development)
+- [Git Workflow](#git-workflow)
+- [Release Process](#release-process)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -363,32 +367,58 @@ dotnet build src/Lintellect.Api/Lintellect.Api.csproj
 dotnet publish src/Lintellect.Api/Lintellect.Api.csproj -c Release -o ./publish
 ```
 
+## Git Workflow
+
+Lintellect uses **GitHub Flow** with release branches. See [Git Workflow Documentation](docs/GIT_WORKFLOW.md) for complete details.
+
+### Branch Strategy
+
+- **`main`** - Production-ready code, always stable
+- **`feature/*`** - New features
+- **`bugfix/*`** - Bug fixes
+- **`hotfix/api/*`** or **`hotfix/cli/*`** - Critical fixes
+- **`release/api/v*`** or **`release/cli/v*`** - Release preparation
+
+## Release Process
+
+Lintellect has **two independent releases**:
+
+- **API** - Docker images tagged as `api/v1.2.3`
+- **CLI** - NuGet package tagged as `cli/v2.1.0`
+
+### Quick Release
+
+```bash
+# API Release
+./scripts/create-release-api.sh 1.2.0
+
+# CLI Release
+./scripts/create-release-cli.sh 2.1.0
+```
+
+See [Git Workflow Documentation](docs/GIT_WORKFLOW.md) for detailed release process.
+
+### GitHub Configuration
+
+For setting up the repository on GitHub, see [GitHub Setup Guide](docs/GITHUB_SETUP.md).
+
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-### Development Workflow
+### Quick Start
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Commit your changes using conventional commits
+4. Push to the branch and open a Pull Request
 
 ### Code Standards
 
 - Follow [C# Coding Conventions](https://docs.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions)
-- Use meaningful variable and method names
 - Add XML documentation for public APIs
 - Include unit tests for new functionality
 - Ensure all tests pass before submitting PR
-
-### Issue Reporting
-
-- Use the provided issue templates
-- Include steps to reproduce
-- Specify environment details
-- Add relevant labels
 
 ## License
 

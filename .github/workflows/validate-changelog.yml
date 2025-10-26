@@ -1,0 +1,198 @@
+name: Validate Changelog
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "CHANGELOG.md"
+      - "src/**/*.csproj"
+      - "Directory.Build.props"
+
+jobs:
+  validate-changelog:
+    name: Validate Changelog
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if CHANGELOG.md exists
+        run: |
+          if [ ! -f "CHANGELOG.md" ]; then
+            echo "❌ CHANGELOG.md file not found"
+            exit 1
+          fi
+          echo "✅ CHANGELOG.md file exists"
+
+      - name: Validate CHANGELOG.md format
+        run: |
+          echo "Validating CHANGELOG.md format..."
+
+          # Check if file has proper header
+          if ! grep -q "^# Changelog" CHANGELOG.md; then
+            echo "❌ CHANGELOG.md should start with '# Changelog'"
+            exit 1
+          fi
+
+          # Check for unreleased section
+          if ! grep -q "## \[Unreleased\]" CHANGELOG.md; then
+            echo "❌ CHANGELOG.md should have an [Unreleased] section"
+            exit 1
+          fi
+
+          # Check for proper section headers
+          SECTIONS=$(grep -E "^## \[" CHANGELOG.md | wc -l)
+          if [ "$SECTIONS" -lt 1 ]; then
+            echo "❌ CHANGELOG.md should have at least one version section"
+            exit 1
+          fi
+
+          echo "✅ CHANGELOG.md format is valid"
+
+      - name: Check for API and CLI sections
+        run: |
+          echo "Checking for API and CLI sections..."
+
+          # Check if there are any API sections
+          API_SECTIONS=$(grep -c "## \[API v" CHANGELOG.md || true)
+          CLI_SECTIONS=$(grep -c "## \[CLI v" CHANGELOG.md || true)
+
+          echo "Found $API_SECTIONS API sections and $CLI_SECTIONS CLI sections"
+
+          # This is just informational, not a failure condition
+          if [ "$API_SECTIONS" -eq 0 ] && [ "$CLI_SECTIONS" -eq 0 ]; then
+            echo "ℹ️ No API or CLI sections found in CHANGELOG.md"
+          fi
+
+      - name: Validate version format
+        run: |
+          echo "Validating version format in CHANGELOG.md..."
+
+          # Extract all version numbers from CHANGELOG.md
+          VERSIONS=$(grep -oE "## \[(API|CLI) v[0-9]+\.[0-9]+\.[0-9]+" CHANGELOG.md || true)
+
+          if [ -n "$VERSIONS" ]; then
+            echo "Found versions:"
+            echo "$VERSIONS"
+            
+            # Validate each version follows semantic versioning
+            echo "$VERSIONS" | while read -r line; do
+              if [[ $line =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+                MAJOR="${BASH_REMATCH[1]}"
+                MINOR="${BASH_REMATCH[2]}"
+                PATCH="${BASH_REMATCH[3]}"
+                
+                if [ "$MAJOR" -lt 0 ] || [ "$MINOR" -lt 0 ] || [ "$PATCH" -lt 0 ]; then
+                  echo "❌ Invalid version format: $line"
+                  exit 1
+                fi
+                
+                echo "✅ Valid version: $line"
+              else
+                echo "❌ Invalid version format: $line"
+                exit 1
+              fi
+            done
+          else
+            echo "ℹ️ No version sections found in CHANGELOG.md"
+          fi
+
+      - name: Check for required sections
+        run: |
+          echo "Checking for required sections in unreleased changes..."
+
+          # Get the unreleased section content
+          UNRELEASED_CONTENT=$(awk '/## \[Unreleased\]/,/^## \[/ {if (!/^## \[/) print}' CHANGELOG.md)
+
+          if [ -n "$UNRELEASED_CONTENT" ]; then
+            echo "Unreleased section content:"
+            echo "$UNRELEASED_CONTENT"
+            
+            # Check if there are any changes in unreleased
+            if echo "$UNRELEASED_CONTENT" | grep -qE "### (Added|Changed|Deprecated|Removed|Fixed|Security)"; then
+              echo "✅ Unreleased section contains changes"
+            else
+              echo "ℹ️ Unreleased section is empty or has no categorized changes"
+            fi
+          else
+            echo "ℹ️ No unreleased section found"
+          fi
+
+      - name: Check for breaking changes
+        run: |
+          echo "Checking for breaking changes..."
+
+          # Look for breaking change indicators
+          BREAKING_CHANGES=$(grep -i "breaking" CHANGELOG.md || true)
+
+          if [ -n "$BREAKING_CHANGES" ]; then
+            echo "⚠️ Breaking changes detected:"
+            echo "$BREAKING_CHANGES"
+            echo ""
+            echo "Please ensure breaking changes are properly documented and version numbers reflect the impact."
+          else
+            echo "ℹ️ No breaking changes detected"
+          fi
+
+      - name: Validate date format
+        run: |
+          echo "Validating date format in CHANGELOG.md..."
+
+          # Check for proper date format (YYYY-MM-DD)
+          DATES=$(grep -oE "## \[.*\] - [0-9]{4}-[0-9]{2}-[0-9]{2}" CHANGELOG.md || true)
+
+          if [ -n "$DATES" ]; then
+            echo "Found dates:"
+            echo "$DATES"
+            
+            # Validate each date
+            echo "$DATES" | while read -r line; do
+              if [[ $line =~ -([0-9]{4}-[0-9]{2}-[0-9]{2})$ ]]; then
+                DATE="${BASH_REMATCH[1]}"
+                if date -d "$DATE" >/dev/null 2>&1; then
+                  echo "✅ Valid date: $DATE"
+                else
+                  echo "❌ Invalid date format: $DATE"
+                  exit 1
+                fi
+              fi
+            done
+          else
+            echo "ℹ️ No dated sections found in CHANGELOG.md"
+          fi
+
+      - name: Check for duplicate versions
+        run: |
+          echo "Checking for duplicate versions..."
+
+          # Extract all version numbers
+          VERSIONS=$(grep -oE "## \[(API|CLI) v[0-9]+\.[0-9]+\.[0-9]+" CHANGELOG.md || true)
+
+          if [ -n "$VERSIONS" ]; then
+            # Count occurrences of each version
+            echo "$VERSIONS" | sort | uniq -c | while read -r count version; do
+              if [ "$count" -gt 1 ]; then
+                echo "❌ Duplicate version found: $version (appears $count times)"
+                exit 1
+              else
+                echo "✅ Version $version appears once"
+              fi
+            done
+          else
+            echo "ℹ️ No version sections found"
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Changelog Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ CHANGELOG.md file exists" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Format validation passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Version format validation passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Date format validation passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ No duplicate versions found" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🎉 Changelog validation completed successfully!" >> $GITHUB_STEP_SUMMARY
