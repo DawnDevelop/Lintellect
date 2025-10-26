@@ -52,7 +52,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -102,7 +102,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -124,7 +124,7 @@ jobs:
         run: dotnet pack src/Lintellect.Cli/Lintellect.Cli.csproj --no-build --configuration Release --output ./packages
 
       - name: Upload NuGet package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: nuget-package
           path: ./packages
@@ -137,7 +137,7 @@ jobs:
 
     steps:
       - name: Download NuGet package
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: nuget-package
           path: ./packages
@@ -177,7 +177,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -218,7 +218,7 @@ jobs:
           fi
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lintellect-cli-${{ matrix.platform }}
           path: ./lintellect-cli-${{ needs.extract-version.outputs.version }}-${{ matrix.platform }}.${{ matrix.extension }}
@@ -233,7 +233,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -266,10 +266,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download all binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           path: ./binaries
 
