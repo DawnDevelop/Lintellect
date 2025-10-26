@@ -81,6 +81,9 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
+      - name: Build CLI
+        run: dotnet build src/Lintellect.Cli/Lintellect.Cli.csproj --no-restore --configuration Release
+
       - name: Pack CLI
         run: dotnet pack src/Lintellect.Cli/Lintellect.Cli.csproj --no-build --configuration Release --output ./packages
 
@@ -170,13 +173,21 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
+      - name: Build CLI
+        run: dotnet build src/Lintellect.Cli/Lintellect.Cli.csproj --no-restore --configuration Release
+
       - name: Publish CLI
         run: |
-          dotnet publish src/Lintellect.Cli/Lintellect.Cli.csproj \
-            --configuration Release \
-            --runtime ${{ matrix.platform }} \
-            --self-contained true \
-            --output ./publish/cli
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            dotnet publish src/Lintellect.Cli/Lintellect.Cli.csproj --no-build --configuration Release --runtime ${{ matrix.platform }} --self-contained true --output ./publish/cli
+          else
+            dotnet publish src/Lintellect.Cli/Lintellect.Cli.csproj \
+              --no-build \
+              --configuration Release \
+              --runtime ${{ matrix.platform }} \
+              --self-contained true \
+              --output ./publish/cli
+          fi
 
       - name: Create binary archive
         run: |
