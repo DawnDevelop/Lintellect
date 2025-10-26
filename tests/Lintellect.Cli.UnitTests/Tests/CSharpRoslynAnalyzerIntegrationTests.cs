@@ -9,7 +9,7 @@ public class CSharpRoslynAnalyzerIntegrationTests
 {
     private CSharpAnalyzer _analyzer = null!;
     private string _simpleRepoSolutionPath = null!;
-    private AnalysisRequest _cachedAnalysisResult = null!;
+    private List<AnalyzerFindings> _cachedFindingsResult = null!;
 
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
@@ -22,7 +22,7 @@ public class CSharpRoslynAnalyzerIntegrationTests
         _analyzer = new CSharpAnalyzer();
 
         // build once
-        _cachedAnalysisResult = await _analyzer.AnalyzeAsync(_simpleRepoSolutionPath);
+        _cachedFindingsResult = await _analyzer.AnalyzeAsync(_simpleRepoSolutionPath);
     }
 
     [SetUp]
@@ -42,9 +42,7 @@ public class CSharpRoslynAnalyzerIntegrationTests
     public async Task AnalyzeAsync_WithValidSolution_ShouldReturnAnalysisResult()
     {
         // Assert
-        _cachedAnalysisResult.ShouldNotBeNull();
-        _cachedAnalysisResult.Language.ShouldBe(EProgrammingLanguage.CSharp);
-        _cachedAnalysisResult.Findings.ShouldNotBeNull();
+        _cachedFindingsResult.ShouldNotBeNull();
     }
 
     [Test]
@@ -53,9 +51,9 @@ public class CSharpRoslynAnalyzerIntegrationTests
         // The SimpleRepo contains: call to [Obsolete] OldMethod() // triggers CS0618
 
         // Assert
-        _cachedAnalysisResult.Findings.ShouldNotBeEmpty("SimpleRepo should have at least the CS0618 warning");
+        _cachedFindingsResult.ShouldNotBeEmpty("SimpleRepo should have at least the CS0618 warning");
 
-        var cs0612Finding = _cachedAnalysisResult.Findings.FirstOrDefault(f => f.RuleId == "CS0618");
+        var cs0612Finding = _cachedFindingsResult.FirstOrDefault(f => f.RuleId == "CS0618");
 
         cs0612Finding.ShouldNotBeNull("OldMethod is obsolete and should trigger CS0618");
         cs0612Finding!.FilePath.ShouldEndWith("Program.cs");
@@ -69,9 +67,9 @@ public class CSharpRoslynAnalyzerIntegrationTests
     {
 
         // Assert
-        if (_cachedAnalysisResult.Findings.Any())
+        if (_cachedFindingsResult.Any())
         {
-            foreach (var finding in _cachedAnalysisResult.Findings)
+            foreach (var finding in _cachedFindingsResult)
             {
                 finding.FilePath.ShouldNotBeNullOrEmpty();
                 finding.Line.ShouldBeGreaterThan(0, "Line numbers should be 1-based");
@@ -86,7 +84,7 @@ public class CSharpRoslynAnalyzerIntegrationTests
     public async Task AnalyzeAsync_ResultFindings_ShouldBeReadOnly()
     {
         // Assert
-        _cachedAnalysisResult.Findings.ShouldBeAssignableTo<IReadOnlyCollection<AnalyzerFindings>>();
+        _cachedFindingsResult.ShouldBeAssignableTo<IReadOnlyCollection<AnalyzerFindings>>();
     }
 
     [Test]
@@ -104,8 +102,8 @@ public class CSharpRoslynAnalyzerIntegrationTests
     public async Task AnalyzeAsync_ShouldHandleMultipleProjects()
     {
         // Assert
-        _cachedAnalysisResult.ShouldNotBeNull();
-        _cachedAnalysisResult.Findings.ShouldNotBeNull();
+        _cachedFindingsResult.ShouldNotBeNull();
+        _cachedFindingsResult.ShouldNotBeNull();
         // The analyzer should successfully process all projects in the solution
     }
 
@@ -113,11 +111,11 @@ public class CSharpRoslynAnalyzerIntegrationTests
     public async Task AnalyzeAsync_FindingsShouldHaveCorrectSeverityValues()
     {
         // Assert
-        if (_cachedAnalysisResult.Findings.Any())
+        if (_cachedFindingsResult.Any())
         {
             var validSeverities = new[] { "Hidden", "Info", "Warning", "Error" };
 
-            foreach (var finding in _cachedAnalysisResult.Findings)
+            foreach (var finding in _cachedFindingsResult)
             {
                 finding.Severity.ShouldBeOneOf(validSeverities,
                     $"Severity '{finding.Severity}' for rule {finding.RuleId} should be a valid Roslyn severity");

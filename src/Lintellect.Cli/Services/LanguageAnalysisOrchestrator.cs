@@ -10,17 +10,23 @@ internal class LanguageAnalysisOrchestrator(EProgrammingLanguage language)
     public async Task<AnalysisRequest> RunAsync(string path)
     {
         Console.WriteLine($"Initializing {language} analyzer...");
-        
+
+        if (codeAnalyzer is null)
+        {
+            throw new NotSupportedException($"No analyzer available for {language}");
+        }
+
         Console.WriteLine($"Analyzing solution at: {path}");
-        var result = await codeAnalyzer.AnalyzeAsync(path).ConfigureAwait(false);
-        
+
+        var analyzerFindings = await codeAnalyzer.AnalyzeAsync(path).ConfigureAwait(false);
+
         Console.WriteLine("Extracting Git information...");
         var gitInfo = GitInfoExtractorFactory.Create().ExtractInfo();
-        
-        if(gitInfo is null)
+
+        if (gitInfo is null)
         {
             Console.WriteLine("Warning: Unable to extract Git information. Running in local/standalone mode.");
-            return result;
+            return new();
         }
 
         Console.WriteLine($"Git Info Extracted:");
@@ -28,23 +34,28 @@ internal class LanguageAnalysisOrchestrator(EProgrammingLanguage language)
         Console.WriteLine($"  Commit: {gitInfo.CommitId}");
         Console.WriteLine($"  Repository: {gitInfo.RepositoryName}");
 
-        result.GitInfo = gitInfo;
-        return result;
+        return new AnalysisRequest() 
+        { 
+            GitInfo = gitInfo,
+            Language = language,
+            Findings = analyzerFindings
+        };
     }
 
-    private readonly ICodeAnalyzer codeAnalyzer = language switch
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1859:Use concrete types when possible for improved performance", Justification = "Reserved for later")]
+    private readonly ICodeAnalyzer? codeAnalyzer = language switch
     {
         EProgrammingLanguage.CSharp => new Analyzers.Csharp.CSharpAnalyzer(),
-        EProgrammingLanguage.Unknown => throw new NotImplementedException(),
-        EProgrammingLanguage.Python => throw new NotImplementedException(),
-        EProgrammingLanguage.Java => throw new NotImplementedException(),
-        EProgrammingLanguage.JavaScript => throw new NotImplementedException(),
-        EProgrammingLanguage.TypeScript => throw new NotImplementedException(),
-        EProgrammingLanguage.Go => throw new NotImplementedException(),
-        EProgrammingLanguage.Ruby => throw new NotImplementedException(),
-        EProgrammingLanguage.PHP => throw new NotImplementedException(),
-        EProgrammingLanguage.Swift => throw new NotImplementedException(),
-        EProgrammingLanguage.Kotlin => throw new NotImplementedException(),
+        EProgrammingLanguage.Unknown => null,
+        EProgrammingLanguage.Python => null,
+        EProgrammingLanguage.Java => null,
+        EProgrammingLanguage.JavaScript => null,
+        EProgrammingLanguage.TypeScript => null,
+        EProgrammingLanguage.Go => null,
+        EProgrammingLanguage.Ruby => null,
+        EProgrammingLanguage.PHP => null,
+        EProgrammingLanguage.Swift => null,
+        EProgrammingLanguage.Kotlin => null,
         _ => throw new NotSupportedException($"No analyzer for {language}")
     };
 }

@@ -6,5 +6,5 @@ namespace Lintellect.Cli.Interfaces;
 internal interface ICodeAnalyzer
 {
     EProgrammingLanguage Language { get; }
-    Task<Shared.Models.AnalysisRequest> AnalyzeAsync(string solutionPath);
+    Task<List<AnalyzerFindings>> AnalyzeAsync(string solutionPath);
 }

@@ -6,7 +6,7 @@ global using Lintellect.Api.Application.Messages.Queries;
 global using Lintellect.Api.Application.Models;
 global using Lintellect.Api.Domain.Enums;
 global using Lintellect.Shared.Models;
-global using FluentAssertions;
+global using Shouldly;
 global using Microsoft.AspNetCore.Mvc.Testing;
 global using Microsoft.TeamFoundation.SourceControl.WebApi;
 global using NUnit.Framework;

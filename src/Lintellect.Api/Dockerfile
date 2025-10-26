@@ -12,19 +12,24 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Lintellect/Lintellect.csproj", "Lintellect/"]
-RUN dotnet restore "./Lintellect/Lintellect.csproj"
+COPY ["Directory.Packages.props", "."]
+COPY ["Directory.Build.props", "."]
+COPY ["nuget.config", "."]
+COPY ["src/Lintellect.Api/Lintellect.Api.csproj", "src/Lintellect.Api/"]
+COPY ["src/Lintellect.ServiceDefaults/Lintellect.ServiceDefaults.csproj", "src/Lintellect.ServiceDefaults/"]
+COPY ["src/Lintellect.Shared/Lintellect.Shared.csproj", "src/Lintellect.Shared/"]
+RUN dotnet restore "./src/Lintellect.Api/Lintellect.Api.csproj"
 COPY . .
-WORKDIR "/src/Lintellect"
-RUN dotnet build "./Lintellect.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/src/Lintellect.Api"
+RUN dotnet build "./Lintellect.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Lintellect.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./Lintellect.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Lintellect.dll"]
+ENTRYPOINT ["dotnet", "Lintellect.Api.dll"]

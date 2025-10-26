@@ -9,6 +9,8 @@
 		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
 		<EnableNETAnalyzers>true</EnableNETAnalyzers>
 		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+		<DockerfileContext>..\..</DockerfileContext>
+		<DockerComposeProjectPath>..\..\docker-compose.dcproj</DockerComposeProjectPath>
 	</PropertyGroup>
 
 	<ItemGroup>

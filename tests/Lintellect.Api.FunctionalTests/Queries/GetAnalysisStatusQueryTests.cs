@@ -23,10 +23,10 @@ public class GetAnalysisStatusQueryTests : Testing
         var result = await mediator.Send(query);
 
         // Assert
-        result.Should().NotBeNull();
-        result!.Id.Should().Be(jobId);
-        result.Status.Should().Be(AnalysisStatus.Pending);
-        result.AnalysisRequest.Should().NotBeNull();
+        result.ShouldNotBeNull();
+        result!.Id.ShouldBe(jobId);
+        result.Status.ShouldBe(AnalysisStatus.Pending);
+        result.AnalysisRequest.ShouldNotBeNull();
     }
 
     [Test]
@@ -41,6 +41,6 @@ public class GetAnalysisStatusQueryTests : Testing
         var result = await mediator.Send(query);
 
         // Assert
-        result.Should().BeNull();
+        result.ShouldBeNull();
     }
 }

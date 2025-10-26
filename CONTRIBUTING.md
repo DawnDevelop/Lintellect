@@ -119,7 +119,7 @@ This project adheres to a code of conduct. By participating, you are expected to
 
 - Write unit tests for all business logic
 - Mock external dependencies
-- Use FluentAssertions for readable assertions
+- Use Shouldly for readable assertions
 - Aim for high code coverage (80%+)
 - Test edge cases and error conditions
 

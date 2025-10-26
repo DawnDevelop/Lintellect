@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using Mediator;
 
 namespace Lintellect.Api.functionaltests.Queries;
@@ -17,8 +17,8 @@ public class GetAnalysisHistoryQueryTests : Testing
         var result = await mediator.Send(query);
 
         // Assert
-        result.Should().NotBeNull();
-        result.Should().BeEmpty();
+        result.ShouldNotBeNull();
+        result.ShouldBeEmpty();
     }
 
     [Test]
@@ -38,9 +38,9 @@ public class GetAnalysisHistoryQueryTests : Testing
         var result = await mediator.Send(query);
 
         // Assert
-        result.Should().NotBeNull();
-        result.Should().NotBeEmpty();
-        result.Should().Contain(job => job.Id == jobId);
+        result.ShouldNotBeNull();
+        result.ShouldNotBeEmpty();
+        result.ShouldContain(job => job.Id == jobId);
     }
 
     [Test]
@@ -60,8 +60,8 @@ public class GetAnalysisHistoryQueryTests : Testing
         var result = await mediator.Send(query);
 
         // Assert
-        result.Should().NotBeNull();
-        result.Should().HaveCount(1);
+        result.ShouldNotBeNull();
+        result.ShouldHaveSingleItem();
     }
 
     [Test]
@@ -81,19 +81,17 @@ public class GetAnalysisHistoryQueryTests : Testing
         var result = await mediator.Send(query);
 
         // Assert
-        result.Should().NotBeNull();
-        result.Should().NotBeEmpty();
+        result.ShouldNotBeNull();
+        result.ShouldNotBeEmpty();
 
-
-
-        result.Should().AllSatisfy(job =>
+        foreach (var job in result)
         {
             var analysisRequest = JsonSerializer.Deserialize<AnalysisRequest>(job.AnalysisRequest!);
-            analysisRequest.Should().NotBeNull();
+            analysisRequest.ShouldNotBeNull();
 
-            analysisRequest.GitInfo.Should().NotBeNull();
-            analysisRequest.GitInfo.ProjectName.Should().Be("TestProject");
-            analysisRequest.GitInfo.RepositoryName.Should().Be("TestRepo");
-        });
+            analysisRequest.GitInfo.ShouldNotBeNull();
+            analysisRequest.GitInfo.ProjectName.ShouldBe("TestProject");
+            analysisRequest.GitInfo.RepositoryName.ShouldBe("TestRepo");
+        }
     }
 }

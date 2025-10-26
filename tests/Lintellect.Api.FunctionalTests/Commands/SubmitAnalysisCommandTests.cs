@@ -19,15 +19,15 @@ public class SubmitAnalysisCommandTests : Testing
         var jobId = await mediator.Send(command);
 
         // Assert
-        jobId.Should().NotBeEmpty();
+        jobId.ShouldNotBe(Guid.Empty);
 
         // Verify job was created in database
         using var context = await GetDbContext();
         var job = await context.AnalysisJobs.FindAsync(jobId);
 
-        job.Should().NotBeNull();
-        job!.Status.Should().Be(AnalysisStatus.Pending);
-        job.AnalysisRequest.Should().NotBeNull();
+        job.ShouldNotBeNull();
+        job!.Status.ShouldBe(AnalysisStatus.Pending);
+        job.AnalysisRequest.ShouldNotBeNull();
     }
 
     [Test]
@@ -40,6 +40,6 @@ public class SubmitAnalysisCommandTests : Testing
 
         // Act & Assert
         var act = async () => await mediator.Send(command);
-        await act.Should().ThrowAsync<ValidationException>();
+        await Should.ThrowAsync<ValidationException>(act);
     }
 }

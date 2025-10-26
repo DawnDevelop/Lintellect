@@ -13,7 +13,7 @@ internal class CSharpAnalyzer : ICodeAnalyzer
 {
     public EProgrammingLanguage Language => EProgrammingLanguage.CSharp;
 
-    public async Task<Shared.Models.AnalysisRequest> AnalyzeAsync(string solutionPath)
+    public async Task<List<AnalyzerFindings>> AnalyzeAsync(string solutionPath)
     {
         if (!File.Exists(solutionPath))
             throw new FileNotFoundException($"Solution file not found at path: {solutionPath}");
@@ -64,11 +64,7 @@ internal class CSharpAnalyzer : ICodeAnalyzer
             }
         }
 
-        return new AnalysisRequest
-        {
-            Language = Language,
-            Findings = findings
-        };
+        return findings;
     }
 
     private static IEnumerable<Diagnostic> GetFilteredDiagnostics(ImmutableArray<Diagnostic> diagnostics)

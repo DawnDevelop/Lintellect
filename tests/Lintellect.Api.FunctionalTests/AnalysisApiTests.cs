@@ -16,13 +16,13 @@ public class AnalysisApiTests : Testing
         var response = await Client.SubmitAnalysisAsync(command);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        response.StatusCode.ShouldBe(HttpStatusCode.Accepted);
 
         var result = await response.Content.ReadAsJsonAsync<SubmitAnalysisResponse>();
-        result.Should().NotBeNull();
-        result!.JobId.Should().NotBeEmpty();
-        result.Status.Should().Be("Pending");
-        result.Message.Should().Be("Analysis job submitted successfully");
+        result.ShouldNotBeNull();
+        result!.JobId.ShouldNotBe(Guid.Empty);
+        result.Status.ShouldBe("Pending");
+        result.Message.ShouldBe("Analysis job submitted successfully");
     }
 
     [Test]
@@ -36,7 +36,7 @@ public class AnalysisApiTests : Testing
         var response = await Client.SubmitAnalysisAsync(command);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -48,7 +48,7 @@ public class AnalysisApiTests : Testing
 
         // Submit a job first
         var submitResponse = await Client.SubmitAnalysisAsync(command);
-        submitResponse.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        submitResponse.StatusCode.ShouldBe(HttpStatusCode.Accepted);
 
         var submitResult = await submitResponse.Content.ReadAsJsonAsync<SubmitAnalysisResponse>();
         var jobId = submitResult!.JobId;
@@ -57,15 +57,15 @@ public class AnalysisApiTests : Testing
         var response = await Client.GetAnalysisStatusAsync(jobId);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var result = await response.Content.ReadAsJsonAsync<AnalysisJobStatusResponse>();
-        result.Should().NotBeNull();
-        result!.JobId.Should().Be(jobId);
-        result.Status.Should().Be("Pending");
-        result.ProjectName.Should().Be("TestProject");
-        result.RepositoryName.Should().Be("TestRepo");
-        result.PullRequestId.Should().Be(123);
+        result.ShouldNotBeNull();
+        result!.JobId.ShouldBe(jobId);
+        result.Status.ShouldBe("Pending");
+        result.ProjectName.ShouldBe("TestProject");
+        result.RepositoryName.ShouldBe("TestRepo");
+        result.PullRequestId.ShouldBe(123);
     }
 
     [Test]
@@ -78,7 +78,7 @@ public class AnalysisApiTests : Testing
         var response = await Client.GetAnalysisStatusAsync(nonExistentJobId);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
     [Test]
@@ -90,17 +90,17 @@ public class AnalysisApiTests : Testing
 
         // Submit a job
         var submitResponse = await Client.SubmitAnalysisAsync(command);
-        submitResponse.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        submitResponse.StatusCode.ShouldBe(HttpStatusCode.Accepted);
 
         // Act
         var response = await Client.GetAnalysisHistoryAsync();
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var result = await response.Content.ReadAsJsonAsync<IEnumerable<AnalysisJobStatusResponse>>();
-        result.Should().NotBeNull();
-        result!.Should().NotBeEmpty();
+        result.ShouldNotBeNull();
+        result!.ShouldNotBeEmpty();
     }
 
     [Test]
@@ -112,7 +112,7 @@ public class AnalysisApiTests : Testing
 
         // Submit a job
         var submitResponse = await Client.SubmitAnalysisAsync(command);
-        submitResponse.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        submitResponse.StatusCode.ShouldBe(HttpStatusCode.Accepted);
 
         // Act
         var response = await Client.GetAnalysisHistoryAsync(
@@ -122,17 +122,17 @@ public class AnalysisApiTests : Testing
             repositoryName: "TestRepo");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var result = await response.Content.ReadAsJsonAsync<IEnumerable<AnalysisJobStatusResponse>>();
-        result.Should().NotBeNull();
-        result!.Should().NotBeEmpty();
+        result.ShouldNotBeNull();
+        result!.ShouldNotBeEmpty();
 
         // Verify filtering
-        result.Should().AllSatisfy(job =>
+        foreach (var job in result)
         {
-            job.ProjectName.Should().Be("TestProject");
-            job.RepositoryName.Should().Be("TestRepo");
-        });
+            job.ProjectName.ShouldBe("TestProject");
+            job.RepositoryName.ShouldBe("TestRepo");
+        }
     }
 }

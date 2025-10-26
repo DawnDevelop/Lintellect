@@ -35,13 +35,13 @@ public class CompleteAnalysisJobCommandTests : Testing
         using var context = await GetDbContext();
         var job = await context.AnalysisJobs.FindAsync(jobId);
 
-        job.Should().NotBeNull();
-        job!.Status.Should().Be(AnalysisStatus.Completed);
-        job.Summary.Should().Be("Test summary");
-        job.DetailedAnalysis.Should().Be("Test detailed analysis");
-        job.InlineSuggestions.Should().Be("Test inline suggestions");
-        job.AnalyzerUsed.Should().Be("MockAnalyzer");
-        job.CompletedAt.Should().NotBeNull();
+        job.ShouldNotBeNull();
+        job!.Status.ShouldBe(AnalysisStatus.Completed);
+        job.Summary.ShouldBe("Test summary");
+        job.DetailedAnalysis.ShouldBe("Test detailed analysis");
+        job.InlineSuggestions.ShouldBe("Test inline suggestions");
+        job.AnalyzerUsed.ShouldBe("MockAnalyzer");
+        job.CompletedAt.ShouldNotBeNull();
     }
 
     [Test]
@@ -60,6 +60,6 @@ public class CompleteAnalysisJobCommandTests : Testing
 
         // Act & Assert
         var act = async () => await mediator.Send(completeCommand);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await Should.ThrowAsync<InvalidOperationException>(act);
     }
 }
