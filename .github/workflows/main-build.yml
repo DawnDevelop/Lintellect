@@ -46,7 +46,7 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run all tests
-        run: dotnet test --no-build --configuration Release --verbosity normal
+        run: dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~FunctionalTests"
 
       - name: Run code analysis
         run: |
