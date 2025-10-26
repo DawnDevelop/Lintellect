@@ -21,10 +21,6 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        component: [api, cli, shared]
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -47,29 +43,17 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Build ${{ matrix.component }}
-        run: |
-          if [ "${{ matrix.component }}" = "api" ]; then
-            dotnet build src/Lintellect.Api/Lintellect.Api.csproj --no-restore --configuration Release
-          elif [ "${{ matrix.component }}" = "cli" ]; then
-            dotnet build src/Lintellect.Cli/Lintellect.Cli.csproj --no-restore --configuration Release
-          elif [ "${{ matrix.component }}" = "shared" ]; then
-            dotnet build src/Lintellect.Shared/Lintellect.Shared.csproj --no-restore --configuration Release
-          fi
+      - name: Build solution
+        run: dotnet build --no-restore --configuration Release
 
-      - name: Run unit tests for ${{ matrix.component }}
-        run: |
-          if [ "${{ matrix.component }}" = "api" ]; then
-            dotnet test tests/Lintellect.Api.UnitTests/Lintellect.Api.UnitTests.csproj --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --logger trx --results-directory ./TestResults
-          elif [ "${{ matrix.component }}" = "cli" ]; then
-            dotnet test tests/Lintellect.Cli.UnitTests/Lintellect.Cli.UnitTests.csproj --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --logger trx --results-directory ./TestResults
-          fi
+      - name: Run unit tests
+        run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --logger trx --results-directory ./TestResults
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: test-results-${{ matrix.component }}
+          name: test-results
           path: ./TestResults
           retention-days: 30
 
