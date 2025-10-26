@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Lintellect.Cli": {
+      "commandName": "Project",
+      "commandLineArgs": "codeql --solution .\\repo\\Sample.slnx --github-token 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"
+    }
+  }
+}

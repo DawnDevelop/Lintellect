@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Lintellect.Api.Infrastructure.Extensions;
+namespace Lintellect.Shared.Extensions;
 
 /// <summary>
 /// Utility for matching file paths against exclusion patterns.

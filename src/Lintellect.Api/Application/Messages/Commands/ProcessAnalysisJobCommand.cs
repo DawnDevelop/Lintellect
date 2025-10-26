@@ -1,8 +1,8 @@
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
-using Lintellect.Api.Infrastructure.Extensions;
 using Lintellect.Api.Infrastructure.Services.Git;
 using Lintellect.Shared.Models;
+using Lintellect.Shared.Extensions;
 using Mediator;
 
 namespace Lintellect.Api.Application.Messages.Commands;

@@ -1,5 +1,15 @@
 trigger: none # Trigger on every pull request by setting build validation inside the options
 
+# Environment Variables Required:
+# - LINTELLECT_API_URL: Your Lintellect API endpoint URL
+# - LINTELLECT_API_KEY: Your Lintellect API key
+# - GITHUB_TOKEN: GitHub Personal Access Token (REQUIRED - CodeQL is enabled by default)
+#
+# Optional Environment Variables:
+# - AZURE_DEVOPS_PAT: Azure DevOps Personal Access Token (for Azure DevOps integration)
+# - ENDPOINT_URL_SYSTEMVSSCONNECTION: Azure DevOps Organization URL (auto-provided by Azure Pipelines)
+# - LINTELLECT_API_URL and LINTELLECT_API_KEY can be provided via command line arguments instead
+
 pool:
   vmImage: "ubuntu-latest"
 
@@ -24,14 +34,114 @@ stages:
             inputs:
               command: "custom"
               custom: "tool"
-              arguments: "install --global devops-pr-analyzer"
+              arguments: "install --global Lintellect"
 
+          # Example 1: Basic C# Analysis with AI Features (CodeQL enabled by default)
           - task: DotNetCoreCLI@2
-            displayName: "Analyze Pull Request"
+            displayName: "Basic C# Analysis"
             inputs:
               command: "custom"
-              custom: "devops-pr-analyzer"
-              arguments: 'analyze --Language "csharp" --EnableSummaryComment --EnableInlineSuggestions --EnableAzureDevopsCodeOwners'
+              custom: "Lintellect"
+              arguments: 'analyze --language "csharp" --enable-summary-comment --enable-inline-suggestions --enable-description-summary'
             env:
-              DEVOPS_PR_AI_API_ENDPOINT: $(AI_API_ENDPOINT) # Can be left empty if using claude
-              DEVOPS_PR_AI_API_KEY: $(AI_API_KEY)
+              LINTELLECT_API_URL: $(LINTELLECT_API_URL)
+              LINTELLECT_API_KEY: $(LINTELLECT_API_KEY)
+              GITHUB_TOKEN: $(GITHUB_TOKEN)
+
+          # Example 2: C# Analysis with Explicit CodeQL (redundant but shows the option)
+          - task: DotNetCoreCLI@2
+            displayName: "C# Analysis with Explicit CodeQL"
+            inputs:
+              command: "custom"
+              custom: "Lintellect"
+              arguments: 'analyze --language "csharp" --enable-codeql --github-token "$(GITHUB_TOKEN)" --enable-summary-comment --enable-inline-suggestions'
+            env:
+              LINTELLECT_API_URL: $(LINTELLECT_API_URL)
+              LINTELLECT_API_KEY: $(LINTELLECT_API_KEY)
+              GITHUB_TOKEN: $(GITHUB_TOKEN)
+
+          # Example 3: C# Analysis WITHOUT CodeQL (AI features only)
+          - task: DotNetCoreCLI@2
+            displayName: "C# Analysis without CodeQL"
+            inputs:
+              command: "custom"
+              custom: "Lintellect"
+              arguments: 'analyze --language "csharp" --enable-codeql false --enable-summary-comment --enable-inline-suggestions --enable-description-summary'
+            env:
+              LINTELLECT_API_URL: $(LINTELLECT_API_URL)
+              LINTELLECT_API_KEY: $(LINTELLECT_API_KEY)
+              # Note: GITHUB_TOKEN not required when CodeQL is disabled
+
+          # Example 4: Multi-Language Analysis with Exclusions
+          - task: DotNetCoreCLI@2
+            displayName: "Multi-Language Analysis with File Exclusions"
+            inputs:
+              command: "custom"
+              custom: "Lintellect"
+              arguments: 'analyze --language "csharp" --exclude "**/bin/**" --exclude "**/obj/**" --exclude "**/test/**" --exclude "**/Generated/**" --enable-summary-comment --enable-inline-suggestions --enable-azure-devops-code-owners'
+            env:
+              LINTELLECT_API_URL: $(LINTELLECT_API_URL)
+              LINTELLECT_API_KEY: $(LINTELLECT_API_KEY)
+              GITHUB_TOKEN: $(GITHUB_TOKEN)
+              AZURE_DEVOPS_PAT: $(AZURE_DEVOPS_PAT)
+              ENDPOINT_URL_SYSTEMVSSCONNECTION: $(ENDPOINT_URL_SYSTEMVSSCONNECTION)
+
+          # Example 4: Python Analysis with CodeQL
+          - task: DotNetCoreCLI@2
+            displayName: "Python Analysis with CodeQL"
+            inputs:
+              command: "custom"
+              custom: "Lintellect"
+              arguments: 'analyze --language "python" --enable-codeql --exclude "**/__pycache__/**" --exclude "**/venv/**" --exclude "**/node_modules/**" --enable-summary-comment'
+            env:
+              LINTELLECT_API_URL: $(LINTELLECT_API_URL)
+              LINTELLECT_API_KEY: $(LINTELLECT_API_KEY)
+              GITHUB_TOKEN: $(GITHUB_TOKEN)
+
+          # Example 5: JavaScript/TypeScript Analysis
+          - task: DotNetCoreCLI@2
+            displayName: "JavaScript/TypeScript Analysis"
+            inputs:
+              command: "custom"
+              custom: "Lintellect"
+              arguments: 'analyze --language "javascript" --enable-codeql --exclude "**/node_modules/**" --exclude "**/dist/**" --exclude "**/build/**" --enable-summary-comment --enable-inline-suggestions'
+            env:
+              LINTELLECT_API_URL: $(LINTELLECT_API_URL)
+              LINTELLECT_API_KEY: $(LINTELLECT_API_KEY)
+              GITHUB_TOKEN: $(GITHUB_TOKEN)
+
+          # Example 6: Java Analysis with Comprehensive Exclusions
+          - task: DotNetCoreCLI@2
+            displayName: "Java Analysis with Comprehensive Exclusions"
+            inputs:
+              command: "custom"
+              custom: "Lintellect"
+              arguments: 'analyze --language "java" --enable-codeql --exclude "**/target/**" --exclude "**/build/**" --exclude "**/out/**" --exclude "**/.gradle/**" --exclude "**/.m2/**" --enable-summary-comment --enable-inline-suggestions --enable-description-summary'
+            env:
+              LINTELLECT_API_URL: $(LINTELLECT_API_URL)
+              LINTELLECT_API_KEY: $(LINTELLECT_API_KEY)
+              GITHUB_TOKEN: $(GITHUB_TOKEN)
+
+          # Example 7: Go Analysis
+          - task: DotNetCoreCLI@2
+            displayName: "Go Analysis"
+            inputs:
+              command: "custom"
+              custom: "Lintellect"
+              arguments: 'analyze --language "go" --enable-codeql --exclude "**/vendor/**" --exclude "**/testdata/**" --enable-summary-comment'
+            env:
+              LINTELLECT_API_URL: $(LINTELLECT_API_URL)
+              LINTELLECT_API_KEY: $(LINTELLECT_API_KEY)
+              GITHUB_TOKEN: $(GITHUB_TOKEN)
+
+          # Example 8: Comprehensive Analysis with All Features
+          - task: DotNetCoreCLI@2
+            displayName: "Comprehensive Analysis (All Features)"
+            inputs:
+              command: "custom"
+              custom: "Lintellect"
+              arguments: 'analyze --language "csharp" --enable-codeql --exclude "**/bin/**" --exclude "**/obj/**" --exclude "**/test/**" --exclude "**/Generated/**" --exclude "**/packages/**" --enable-summary-comment --enable-inline-suggestions --enable-description-summary --enable-azure-devops-code-owners'
+            env:
+              LINTELLECT_API_URL: $(LINTELLECT_API_URL)
+              LINTELLECT_API_KEY: $(LINTELLECT_API_KEY)
+              GITHUB_TOKEN: $(GITHUB_TOKEN)

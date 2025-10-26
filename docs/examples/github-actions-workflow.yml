@@ -1,5 +1,13 @@
 name: PR Analysis
 
+# Environment Variables Required:
+# - LINTELLECT_API_URL: Your Lintellect API endpoint URL
+# - LINTELLECT_API_KEY: Your Lintellect API key
+# - GITHUB_TOKEN: GitHub Personal Access Token (REQUIRED - CodeQL is enabled by default)
+#
+# Optional Environment Variables:
+# - LINTELLECT_API_URL and LINTELLECT_API_KEY can be provided via command line arguments instead
+
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -21,23 +29,209 @@ jobs:
 
       - name: Install DevOps PR Analyzer
         run: |
-          dotnet tool install --global devops-pr-analyzer
+          dotnet tool install --global Lintellect
 
-      - name: Analyze Pull Request
+      # Example 1: Basic C# Analysis with AI Features (CodeQL enabled by default)
+      - name: Basic C# Analysis
         run: |
-          devops-pr-analyzer analyze \
-            --project-name "${{ github.repository_owner }}" \
-            --repository-name "${{ github.event.repository.name }}" \
-            --pull-request-id "${{ github.event.number }}" \
+          Lintellect analyze \
             --language "csharp" \
-            --api-endpoint "${{ secrets.AI_API_ENDPOINT }}" \
-            --api-key "${{ secrets.AI_API_KEY }}" \
-            --EnableSummaryComment \
-            --EnableInlineSuggestions \
-            --EnableAzureDevopsCodeOwners
+            --enable-summary-comment \
+            --enable-inline-suggestions \
+            --enable-description-summary
         env:
-          DEVOPS_PR_AI_API_ENDPOINT: ${{ secrets.AI_API_ENDPOINT }}
-          DEVOPS_PR_AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Example 2: C# Analysis with Explicit CodeQL (redundant but shows the option)
+      - name: C# Analysis with Explicit CodeQL
+        run: |
+          Lintellect analyze \
+            --language "csharp" \
+            --enable-codeql \
+            --github-token "${{ secrets.GITHUB_TOKEN }}" \
+            --enable-summary-comment \
+            --enable-inline-suggestions
+        env:
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Example 3: C# Analysis WITHOUT CodeQL (AI features only)
+      - name: C# Analysis without CodeQL
+        run: |
+          Lintellect analyze \
+            --language "csharp" \
+            --enable-codeql false \
+            --enable-summary-comment \
+            --enable-inline-suggestions \
+            --enable-description-summary
+        env:
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+          # Note: GITHUB_TOKEN not required when CodeQL is disabled
+
+      # Example 4: Multi-Language Analysis with Exclusions
+      - name: Multi-Language Analysis with File Exclusions
+        run: |
+          Lintellect analyze \
+            --language "csharp" \
+            --exclude "**/bin/**" \
+            --exclude "**/obj/**" \
+            --exclude "**/test/**" \
+            --exclude "**/Generated/**" \
+            --enable-summary-comment \
+            --enable-inline-suggestions \
+            --enable-azure-devops-code-owners
+        env:
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Example 4: Python Analysis with CodeQL
+      - name: Python Analysis with CodeQL
+        run: |
+          Lintellect analyze \
+            --language "python" \
+            --enable-codeql \
+            --exclude "**/__pycache__/**" \
+            --exclude "**/venv/**" \
+            --exclude "**/node_modules/**" \
+            --enable-summary-comment
+        env:
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Example 5: JavaScript/TypeScript Analysis
+      - name: JavaScript/TypeScript Analysis
+        run: |
+          Lintellect analyze \
+            --language "javascript" \
+            --enable-codeql \
+            --exclude "**/node_modules/**" \
+            --exclude "**/dist/**" \
+            --exclude "**/build/**" \
+            --enable-summary-comment \
+            --enable-inline-suggestions
+        env:
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Example 6: Java Analysis with Comprehensive Exclusions
+      - name: Java Analysis with Comprehensive Exclusions
+        run: |
+          Lintellect analyze \
+            --language "java" \
+            --enable-codeql \
+            --exclude "**/target/**" \
+            --exclude "**/build/**" \
+            --exclude "**/out/**" \
+            --exclude "**/.gradle/**" \
+            --exclude "**/.m2/**" \
+            --enable-summary-comment \
+            --enable-inline-suggestions \
+            --enable-description-summary
+        env:
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Example 7: Go Analysis
+      - name: Go Analysis
+        run: |
+          Lintellect analyze \
+            --language "go" \
+            --enable-codeql \
+            --exclude "**/vendor/**" \
+            --exclude "**/testdata/**" \
+            --enable-summary-comment
+        env:
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Example 8: Comprehensive Analysis with All Features
+      - name: Comprehensive Analysis (All Features)
+        run: |
+          Lintellect analyze \
+            --language "csharp" \
+            --enable-codeql \
+            --exclude "**/bin/**" \
+            --exclude "**/obj/**" \
+            --exclude "**/test/**" \
+            --exclude "**/Generated/**" \
+            --exclude "**/packages/**" \
+            --enable-summary-comment \
+            --enable-inline-suggestions \
+            --enable-description-summary \
+            --enable-azure-devops-code-owners
+        env:
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Example 9: Ruby Analysis
+      - name: Ruby Analysis
+        run: |
+          Lintellect analyze \
+            --language "ruby" \
+            --enable-codeql \
+            --exclude "**/vendor/**" \
+            --exclude "**/tmp/**" \
+            --exclude "**/log/**" \
+            --enable-summary-comment
+        env:
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Example 10: PHP Analysis
+      - name: PHP Analysis
+        run: |
+          Lintellect analyze \
+            --language "php" \
+            --enable-codeql \
+            --exclude "**/vendor/**" \
+            --exclude "**/node_modules/**" \
+            --exclude "**/storage/**" \
+            --enable-summary-comment
+        env:
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Example 11: Swift Analysis
+      - name: Swift Analysis
+        run: |
+          Lintellect analyze \
+            --language "swift" \
+            --enable-codeql \
+            --exclude "**/DerivedData/**" \
+            --exclude "**/build/**" \
+            --exclude "**/Pods/**" \
+            --enable-summary-comment
+        env:
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Example 12: Kotlin Analysis
+      - name: Kotlin Analysis
+        run: |
+          Lintellect analyze \
+            --language "kotlin" \
+            --enable-codeql \
+            --exclude "**/build/**" \
+            --exclude "**/.gradle/**" \
+            --exclude "**/out/**" \
+            --enable-summary-comment
+        env:
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check Analysis Results
         if: failure()

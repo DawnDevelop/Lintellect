@@ -19,7 +19,7 @@ public sealed class GitHubClientService : IGitClient
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        var productHeader = new ProductHeaderValue("DevOps-PR-Analyzer");
+        var productHeader = new ProductHeaderValue("Lintellect");
         _client = new GitHubClient(productHeader)
         {
             Credentials = new Credentials(token)
@@ -479,7 +479,7 @@ public sealed class GitHubClientService : IGitClient
             // We'll make a direct HTTP request to get the scopes
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("token", _client.Credentials.GetToken());
-            httpClient.DefaultRequestHeaders.UserAgent.Add(new System.Net.Http.Headers.ProductInfoHeaderValue("DevOps-PR-Analyzer", "1.0"));
+            httpClient.DefaultRequestHeaders.UserAgent.Add(new System.Net.Http.Headers.ProductInfoHeaderValue("Lintellect", "1.0"));
 
             var response = await httpClient.GetAsync("https://api.github.com");
             if (response.Headers.TryGetValues("X-OAuth-Scopes", out var scopeValues))

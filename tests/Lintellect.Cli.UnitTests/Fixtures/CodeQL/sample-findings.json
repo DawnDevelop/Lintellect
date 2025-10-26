@@ -1,0 +1,93 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "CodeQL",
+          "version": "2.15.0",
+          "informationUri": "https://codeql.github.com/"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "cs/path-injection",
+          "ruleIndex": 0,
+          "message": {
+            "text": "This call to 'File.Open' could result in a path injection vulnerability."
+          },
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///src/Program.cs"
+                },
+                "region": {
+                  "startLine": 15,
+                  "startColumn": 8,
+                  "endLine": 15,
+                  "endColumn": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "cs/sql-injection",
+          "ruleIndex": 1,
+          "message": {
+            "text": "This SQL query is constructed using user input, which could lead to SQL injection."
+          },
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///src/DatabaseService.cs"
+                },
+                "region": {
+                  "startLine": 42,
+                  "startColumn": 12,
+                  "endLine": 42,
+                  "endColumn": 45
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "invocations": [
+        {
+          "toolExecutionNotifications": [
+            {
+              "descriptor": {
+                "id": "compiler-warning"
+              },
+              "level": "warning",
+              "message": {
+                "text": "Warning CS0618: 'OldMethod()' is obsolete: 'Use NewMethod() instead'"
+              },
+              "locations": [
+                {
+                  "physicalLocation": {
+                    "artifactLocation": {
+                      "uri": "file:///src/LegacyCode.cs"
+                    },
+                    "region": {
+                      "startLine": 8,
+                      "startColumn": 5,
+                      "endLine": 8,
+                      "endColumn": 15
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

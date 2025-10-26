@@ -182,7 +182,7 @@ public class StaticAnalysisCommandTests
         var githubTokenOption = _command.Options.OfType<Option<string>>().First(o => o.Name == "--github-token");
 
         // Assert
-        githubTokenOption.Description.ShouldBe("GitHub Personal Access Token");
+        githubTokenOption.Description.ShouldBe("GitHub Personal Access Token (required for CodeQL analysis)");
     }
 
     [Test]
