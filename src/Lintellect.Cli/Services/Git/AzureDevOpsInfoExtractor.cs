@@ -14,7 +14,9 @@ internal sealed class AzureDevOpsInfoExtractor : IGitInfoExtractor
         var projectName = Env("SYSTEM_TEAMPROJECT");
 
         if (string.IsNullOrWhiteSpace(commitId) || string.IsNullOrWhiteSpace(repositoryName))
+        {
             return null;
+        }
 
         // Determine build type
         if (!int.TryParse(pullRequestId, out var result))
@@ -44,7 +46,9 @@ internal sealed class AzureDevOpsInfoExtractor : IGitInfoExtractor
         return new GitInfo(parsedBuildId, commitId, repositoryName, type, ProjectName: projectName);
     }
 
-    private static string? Env(string k) => Environment.GetEnvironmentVariable(k);
-
+    private static string? Env(string k)
+    {
+        return Environment.GetEnvironmentVariable(k);
+    }
 }
 

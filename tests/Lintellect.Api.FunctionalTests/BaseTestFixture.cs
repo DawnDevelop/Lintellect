@@ -1,6 +1,7 @@
-namespace Lintellect.Api.functionaltests;
 
-using static Testing;
+using static Lintellect.Api.functionaltests.Testing;
+
+namespace Lintellect.Api.functionaltests;
 
 [TestFixture]
 public abstract class BaseTestFixture

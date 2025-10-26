@@ -21,11 +21,8 @@ public class ApiKeyEndpointFilter(
 
         var configuredApiKey = options.Value.ApiKey;
 
-        if (string.IsNullOrEmpty(configuredApiKey) || configuredApiKey != extractedApiKey)
-        {
-            return TypedResults.Unauthorized();
-        }
-
-        return await next(context);
+        return string.IsNullOrEmpty(configuredApiKey) || configuredApiKey != extractedApiKey
+            ? TypedResults.Unauthorized()
+            : await next(context);
     }
 }

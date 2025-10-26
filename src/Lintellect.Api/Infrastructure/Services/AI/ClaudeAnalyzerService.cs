@@ -32,10 +32,7 @@ internal sealed class ClaudeAnalyzerService : IAnalyzerService
             .WaitAndRetryAsync(
                 retryCount: 3,
                 sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                onRetry: (outcome, timespan, retryCount, context) =>
-                {
-                    Console.WriteLine($"Claude API retry {retryCount} in {timespan} seconds due to: {outcome?.Message}");
-                });
+                onRetry: (outcome, timespan, retryCount, context) => Console.WriteLine($"Claude API retry {retryCount} in {timespan} seconds due to: {outcome?.Message}"));
     }
 
     /// <summary>

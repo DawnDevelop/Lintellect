@@ -58,7 +58,11 @@ public class CompleteAnalysisJobCommandTests : Testing
         var mediator = await GetService<IMediator>();
 
         // Act & Assert
-        var act = async () => await mediator.Send(completeCommand);
-        await Should.ThrowAsync<InvalidOperationException>(act);
+        async Task<Unit> act()
+        {
+            return await mediator.Send(completeCommand);
+        }
+
+        await Should.ThrowAsync<InvalidOperationException>((Func<Task<Unit>>)act);
     }
 }

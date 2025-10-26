@@ -63,7 +63,11 @@ public class AnalysisJobTests
         job.Start(); // First start is valid
 
         // Act & Assert
-        void act() => job.Start();
+        void act()
+        {
+            job.Start();
+        }
+
         Should.Throw<InvalidOperationException>(act)
             .Message.ShouldBe("Cannot start job in Running status");
     }
@@ -113,7 +117,11 @@ public class AnalysisJobTests
         var job = AnalysisJobBuilder.ValidJob(); // Still pending
 
         // Act & Assert
-        void act() => job.Complete("summary", "analysis", "suggestions", "analyzer");
+        void act()
+        {
+            job.Complete("summary", "analysis", "suggestions", "analyzer");
+        }
+
         Should.Throw<InvalidOperationException>(act)
             .Message.ShouldBe("Cannot complete job in Pending status");
     }
@@ -179,7 +187,11 @@ public class AnalysisJobTests
         job.Complete("summary", "analysis", "suggestions", "analyzer");
 
         // Act & Assert
-        void act() => job.Fail("error");
+        void act()
+        {
+            job.Fail("error");
+        }
+
         Should.Throw<InvalidOperationException>(act)
             .Message.ShouldBe("Cannot fail job in Completed status");
     }

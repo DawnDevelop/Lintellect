@@ -75,16 +75,24 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
         // Add non-null tasks to the list
         if (summaryTask is not null)
+        {
             tasks.Add(summaryTask);
+        }
 
         if (detailedAnalysisTask is not null)
+        {
             tasks.Add(detailedAnalysisTask);
+        }
 
         if (inlineSuggestionsTask is not null)
+        {
             tasks.Add(inlineSuggestionsTask);
+        }
 
         if (codeOwnerTask is not null)
+        {
             tasks.Add(codeOwnerTask);
+        }
 
         // Wait for all tasks to complete
         await Task.WhenAll(tasks);
@@ -142,14 +150,13 @@ public sealed class ProcessAnalysisJobCommandHandler(
         CancellationToken cancellationToken)
     {
         if (!analysisRequest.EnableAzureDevopsCodeOwners)
+        {
             return null;
+        }
 
         var codeOwnersContent = await prService.GetCodeOwnersFileAsync(analysisRequest);
 
-        if (codeOwnersContent == null)
-            return null;
-
-        return await analyzer.GetCodeOwnersAsync(codeOwnersContent, changedFilePaths, cancellationToken);
+        return codeOwnersContent == null ? null : await analyzer.GetCodeOwnersAsync(codeOwnersContent, changedFilePaths, cancellationToken);
     }
 
     private async Task PostResultsToPullRequestAsync(
@@ -244,9 +251,9 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
     private static DiffStatistics BuildDiffStatistics(Dictionary<string, string> diffs)
     {
-        int filesChanged = diffs.Count;
-        int linesAdded = 0;
-        int linesRemoved = 0;
+        var filesChanged = diffs.Count;
+        var linesAdded = 0;
+        var linesRemoved = 0;
 
         foreach (var diff in diffs.Values)
         {
@@ -254,9 +261,13 @@ public sealed class ProcessAnalysisJobCommandHandler(
             foreach (var line in lines)
             {
                 if (line.StartsWith('+') && !line.StartsWith("+++"))
+                {
                     linesAdded++;
+                }
                 else if (line.StartsWith('-') && !line.StartsWith("---"))
+                {
                     linesRemoved++;
+                }
             }
         }
 

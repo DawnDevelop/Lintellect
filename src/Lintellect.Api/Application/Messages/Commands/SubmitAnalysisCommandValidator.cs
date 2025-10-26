@@ -79,12 +79,9 @@ public sealed class SubmitAnalysisCommandValidator : AbstractValidator<SubmitAna
         });
 
         // Validate GitHub credentials format if provided
-        When(x => x.AnalysisRequest != null && !string.IsNullOrWhiteSpace(x.AnalysisRequest.GitHubToken), () =>
-        {
-            RuleFor(x => x.AnalysisRequest.GitHubToken)
+        When(x => x.AnalysisRequest != null && !string.IsNullOrWhiteSpace(x.AnalysisRequest.GitHubToken), () => RuleFor(x => x.AnalysisRequest.GitHubToken)
                 .NotEmpty()
-                .WithMessage("GitHubToken cannot be empty if provided.");
-        });
+                .WithMessage("GitHubToken cannot be empty if provided."));
 
         // Validate that at least one AI feature is enabled
         RuleFor(x => x.AnalysisRequest)
@@ -132,10 +129,7 @@ public sealed class SubmitAnalysisCommandValidator : AbstractValidator<SubmitAna
 
     private static bool BeValidUri(string? uriString)
     {
-        if (string.IsNullOrWhiteSpace(uriString))
-            return false;
-
-        return Uri.TryCreate(uriString, UriKind.Absolute, out var uri) &&
+        return !string.IsNullOrWhiteSpace(uriString) && Uri.TryCreate(uriString, UriKind.Absolute, out var uri) &&
                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 }

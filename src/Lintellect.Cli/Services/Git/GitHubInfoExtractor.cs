@@ -20,12 +20,7 @@ internal sealed class GitHubInfoExtractor : IGitInfoExtractor
 
         // Extract PR number from GITHUB_REF (format: refs/pull/{pr_number}/merge)
         var pullRequestId = ExtractPullRequestNumber(gitHubRef);
-        if (string.IsNullOrWhiteSpace(pullRequestId))
-        {
-            return null;
-        }
-
-        return new GitInfo(int.Parse(pullRequestId), commitId, repositoryName);
+        return string.IsNullOrWhiteSpace(pullRequestId) ? null : new GitInfo(int.Parse(pullRequestId), commitId, repositoryName);
     }
 
     private static string? ExtractPullRequestNumber(string gitHubRef)
@@ -42,5 +37,8 @@ internal sealed class GitHubInfoExtractor : IGitInfoExtractor
         return null;
     }
 
-    private static string? Env(string k) => Environment.GetEnvironmentVariable(k);
+    private static string? Env(string k)
+    {
+        return Environment.GetEnvironmentVariable(k);
+    }
 }

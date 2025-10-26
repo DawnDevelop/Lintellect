@@ -98,10 +98,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
         }
 
         var result = JsonSerializer.Deserialize<CodeOwnersResult>(response.Content, JsonExtensions.JsonSerializerOptions);
-        if (result is null)
-            return null;
-
-        return result;
+        return result is null ? null : result;
     }
 
     // <inheritdoc/>
@@ -176,10 +173,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
         }
 
         var result = JsonSerializer.Deserialize<InlineSuggestionsResponse>(response.Content, JsonExtensions.JsonSerializerOptions);
-        if (result is null)
-            return [];
-
-        return result.Suggestions;
+        return result is null ? [] : result.Suggestions;
     }
 
     /// <summary>
@@ -191,7 +185,9 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
         var builder = Kernel.CreateBuilder();
 
         if (options.Endpoint is null)
+        {
             throw new InvalidOperationException("Endpoint must be provided for SemanticAnalyzerService.");
+        }
 
         if (!string.IsNullOrWhiteSpace(options.ApiKey))
         {
@@ -203,7 +199,9 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
         else
         {
             if (options.TokenCredential is null)
+            {
                 throw new InvalidOperationException("Either ApiKey and Endpoint or TokenCredential must be provided for SemanticAnalyzerService.");
+            }
 
             builder.AddAzureOpenAIChatCompletion(
                      deploymentName: options.DeploymentName,

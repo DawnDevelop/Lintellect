@@ -16,11 +16,15 @@ internal class CSharpAnalyzer : ICodeAnalyzer
     public async Task<List<AnalyzerFindings>> AnalyzeAsync(string solutionPath)
     {
         if (!File.Exists(solutionPath))
+        {
             throw new FileNotFoundException($"Solution file not found at path: {solutionPath}");
+        }
 
         // 1. Extract repository archive to temp directory
         if (!MSBuildLocator.IsRegistered)
+        {
             MSBuildLocator.RegisterDefaults();
+        }
 
         using var workspace = MSBuildWorkspace.Create();
         workspace.RegisterWorkspaceFailedHandler(e => Console.WriteLine($"[MSBuild] {e.Diagnostic.Message}"));
@@ -40,7 +44,9 @@ internal class CSharpAnalyzer : ICodeAnalyzer
 
             var compilation = await project.GetCompilationAsync().ConfigureAwait(false);
             if (compilation == null)
+            {
                 continue;
+            }
 
             // include compiler diagnostics
             var diagnostics = compilation.GetDiagnostics();
@@ -84,7 +90,9 @@ internal class CSharpAnalyzer : ICodeAnalyzer
         var analyzerDir = Path.Combine(baseDir, "analyzers", "dotnet", "cs");
 
         if (!Directory.Exists(analyzerDir))
+        {
             return [];
+        }
 
         var loader = new AnalyzerAssemblyLoader();
         var dlls = Directory.GetFiles(analyzerDir, "*.dll", SearchOption.AllDirectories);
@@ -99,6 +107,13 @@ internal sealed class AnalyzerAssemblyLoader : IAnalyzerAssemblyLoader
 {
     private readonly HashSet<string> _deps = [];
 
-    public void AddDependencyLocation(string fullPath) => _deps.Add(fullPath);
-    public Assembly LoadFromPath(string fullPath) => Assembly.LoadFrom(fullPath);
+    public void AddDependencyLocation(string fullPath)
+    {
+        _deps.Add(fullPath);
+    }
+
+    public Assembly LoadFromPath(string fullPath)
+    {
+        return Assembly.LoadFrom(fullPath);
+    }
 }

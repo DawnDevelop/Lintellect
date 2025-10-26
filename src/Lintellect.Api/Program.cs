@@ -26,11 +26,8 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddLogging(x => x.AddConsole());
 
 // Register API Key configuration
-builder.Services.Configure<AuthorizationOptions>(x =>
-{
-    x.ApiKey = builder.Configuration.GetValue<string>("ApiKey")
-        ?? throw new InvalidOperationException("API Key configuration is missing.");
-});
+builder.Services.Configure<AuthorizationOptions>(x => x.ApiKey = builder.Configuration.GetValue<string>("ApiKey")
+        ?? throw new InvalidOperationException("API Key configuration is missing."));
 
 // Register the endpoint filter
 builder.Services.AddSingleton<ApiKeyEndpointFilter>();

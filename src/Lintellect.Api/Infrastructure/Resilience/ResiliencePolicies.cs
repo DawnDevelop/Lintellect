@@ -19,10 +19,7 @@ public static class ResiliencePolicies
                 retryCount: 3,
                 sleepDurationProvider: retryAttempt =>
                     TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                onRetry: (outcome, timespan, retryCount, context) =>
-                {
-                    Console.WriteLine($"Retry {retryCount} in {timespan} seconds due to: {outcome.Exception?.Message}");
-                });
+                onRetry: (outcome, timespan, retryCount, context) => Console.WriteLine($"Retry {retryCount} in {timespan} seconds due to: {outcome.Exception?.Message}"));
     }
 
     /// <summary>
@@ -35,14 +32,8 @@ public static class ResiliencePolicies
             .CircuitBreakerAsync(
                 handledEventsAllowedBeforeBreaking: 5,
                 durationOfBreak: TimeSpan.FromSeconds(30),
-                onBreak: (exception, duration) =>
-                {
-                    Console.WriteLine($"Circuit breaker opened for {duration} due to: {exception.Exception.Message}");
-                },
-                onReset: () =>
-                {
-                    Console.WriteLine("Circuit breaker reset");
-                });
+                onBreak: (exception, duration) => Console.WriteLine($"Circuit breaker opened for {duration} due to: {exception.Exception.Message}"),
+                onReset: () => Console.WriteLine("Circuit breaker reset"));
     }
 
     /// <summary>

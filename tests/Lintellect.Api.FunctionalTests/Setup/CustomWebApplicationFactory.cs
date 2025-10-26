@@ -25,13 +25,12 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
             var descriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
             if (descriptor != null)
+            {
                 services.Remove(descriptor);
+            }
 
             // Add test database context
-            services.AddDbContext<ApplicationDbContext>(options =>
-            {
-                options.UseNpgsql(_connectionString);
-            });
+            services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(_connectionString));
 
             // Replace external services with mocks
             services.AddScoped<IGitClientFactory, MockGitClientFactory>();

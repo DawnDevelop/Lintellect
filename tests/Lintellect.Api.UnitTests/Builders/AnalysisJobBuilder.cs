@@ -15,8 +15,8 @@ public sealed class AnalysisJobBuilder
         EnableDescriptionSummary = true,
         EnableInlineSuggestions = true,
         EnableAzureDevopsCodeOwners = true,
-        Findings = new List<AnalyzerFindings>
-        {
+        Findings =
+        [
             new()
             {
                 RuleId = "CS0618",
@@ -25,7 +25,7 @@ public sealed class AnalysisJobBuilder
                 Line = 10,
                 Severity = "Warning"
             }
-        }
+        ]
     };
 
     public AnalysisJobBuilder WithAnalysisRequest(AnalysisRequest request)

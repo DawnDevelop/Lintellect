@@ -28,7 +28,7 @@ public static class DiffGenerationHelper
         {
             var newLines = modifiedContent.Split('\n');
             diff.AppendLine($"@@ -0,0 +1,{newLines.Length} @@");
-            for (int i = 0; i < newLines.Length; i++)
+            for (var i = 0; i < newLines.Length; i++)
             {
                 diff.AppendLine($"+{i + 1}:{newLines[i].TrimEnd('\r')}");
             }
@@ -40,7 +40,7 @@ public static class DiffGenerationHelper
         {
             var oldLines = originalContent.Split('\n');
             diff.AppendLine($"@@ -1,{oldLines.Length} +0,0 @@");
-            for (int i = 0; i < oldLines.Length; i++)
+            for (var i = 0; i < oldLines.Length; i++)
             {
                 diff.AppendLine($"-{i + 1}:{oldLines[i].TrimEnd('\r')}");
             }
@@ -98,7 +98,7 @@ public static class DiffGenerationHelper
             var newLines = modifiedContent.Split('\n');
             var linesToShow = Math.Min(newLines.Length, maxNewFileLines);
             diff.AppendLine($"@@ -0,0 +1,{linesToShow} @@ (New file, showing first {linesToShow} of {newLines.Length} lines)");
-            for (int i = 0; i < linesToShow; i++)
+            for (var i = 0; i < linesToShow; i++)
             {
                 diff.AppendLine($"+{i + 1}:{newLines[i].TrimEnd('\r')}");
             }
@@ -115,7 +115,7 @@ public static class DiffGenerationHelper
             var oldLines = originalContent.Split('\n');
             var linesToShow = Math.Min(oldLines.Length, maxNewFileLines);
             diff.AppendLine($"@@ -1,{linesToShow} +0,0 @@ (Deleted file, showing first {linesToShow} of {oldLines.Length} lines)");
-            for (int i = 0; i < linesToShow; i++)
+            for (var i = 0; i < linesToShow; i++)
             {
                 diff.AppendLine($"-{i + 1}:{oldLines[i].TrimEnd('\r')}");
             }
@@ -146,7 +146,9 @@ public static class DiffGenerationHelper
             var hunks = ExtractChangedHunksWithLineNumbers(oldLines, newLines, contextLines);
 
             if (hunks.Count == 0)
+            {
                 return null; // No changes detected
+            }
 
             var totalDiffLines = 0;
             foreach (var hunk in hunks)
@@ -173,10 +175,10 @@ public static class DiffGenerationHelper
         var changes = new List<string>();
         var maxLines = Math.Max(oldLines.Length, newLines.Length);
 
-        int oldLineNum = 1;
-        int newLineNum = 1;
+        var oldLineNum = 1;
+        var newLineNum = 1;
 
-        for (int i = 0; i < maxLines; i++)
+        for (var i = 0; i < maxLines; i++)
         {
             var oldLine = i < oldLines.Length ? oldLines[i].TrimEnd('\r') : null;
             var newLine = i < newLines.Length ? newLines[i].TrimEnd('\r') : null;
@@ -220,8 +222,8 @@ public static class DiffGenerationHelper
         var changes = new List<(int oldLineNum, int newLineNum, string type, string line)>(); // type: "old", "new", "same"
 
         // Line-by-line comparison with proper line number tracking
-        int oldIdx = 0;
-        int newIdx = 0;
+        var oldIdx = 0;
+        var newIdx = 0;
 
         while (oldIdx < oldLines.Length || newIdx < newLines.Length)
         {
@@ -254,7 +256,7 @@ public static class DiffGenerationHelper
         var changeRegions = new List<(int start, int end)>();
         int? regionStart = null;
 
-        for (int i = 0; i < changes.Count; i++)
+        for (var i = 0; i < changes.Count; i++)
         {
             if (changes[i].type != "same")
             {
@@ -291,7 +293,7 @@ public static class DiffGenerationHelper
             hunk.AppendLine($"@@ -{firstOldLine},{oldCount} +{firstNewLine},{newCount} @@");
 
             // Add hunk lines with line numbers
-            for (int i = hunkStart; i <= hunkEnd; i++)
+            for (var i = hunkStart; i <= hunkEnd; i++)
             {
                 var (oldLineNum, newLineNum, type, line) = changes[i];
                 var prefix = type switch

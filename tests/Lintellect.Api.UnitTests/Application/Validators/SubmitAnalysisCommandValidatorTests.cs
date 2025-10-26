@@ -1,6 +1,5 @@
 using FluentValidation.TestHelper;
 using Lintellect.Api.Application.Interfaces;
-using Lintellect.Api.Application.Models;
 
 namespace Lintellect.Api.UnitTests.Application.Validators;
 
@@ -153,7 +152,7 @@ public class SubmitAnalysisCommandValidatorTests
             .Returns(_mockGitClient.Object);
 
         _mockGitClient.Setup(c => c.HasSufficientPermissionsAsync(It.IsAny<AnalysisRequest>()))
-            .ReturnsAsync(new List<CheckPermissionResult> { new(true) });
+            .ReturnsAsync([new(true)]);
 
         // Act
         var result = await _validator.TestValidateAsync(command);

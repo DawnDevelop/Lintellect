@@ -27,10 +27,25 @@ public static class HttpClientExtensions
         string? repositoryName = null)
     {
         var queryParams = new List<string>();
-        if (skip > 0) queryParams.Add($"skip={skip}");
-        if (take != 50) queryParams.Add($"take={take}");
-        if (!string.IsNullOrEmpty(projectName)) queryParams.Add($"projectName={projectName}");
-        if (!string.IsNullOrEmpty(repositoryName)) queryParams.Add($"repositoryName={repositoryName}");
+        if (skip > 0)
+        {
+            queryParams.Add($"skip={skip}");
+        }
+
+        if (take != 50)
+        {
+            queryParams.Add($"take={take}");
+        }
+
+        if (!string.IsNullOrEmpty(projectName))
+        {
+            queryParams.Add($"projectName={projectName}");
+        }
+
+        if (!string.IsNullOrEmpty(repositoryName))
+        {
+            queryParams.Add($"repositoryName={repositoryName}");
+        }
 
         var query = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
         return await client.GetAsync($"/api/analysis/history{query}");

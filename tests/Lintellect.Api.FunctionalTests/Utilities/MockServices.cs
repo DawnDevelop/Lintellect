@@ -63,7 +63,7 @@ public sealed class MockGitClient : IGitClient
         return Task.FromResult(new GitPullRequestCommentThread
         {
             Id = 1,
-            Comments = new List<Comment> { new() { Content = comment } }
+            Comments = [new() { Content = comment }]
         });
     }
 
@@ -74,7 +74,7 @@ public sealed class MockGitClient : IGitClient
         return Task.FromResult(new GitPullRequestCommentThread
         {
             Id = 1,
-            Comments = new List<Comment> { new() { Content = codeChange } }
+            Comments = [new() { Content = codeChange }]
         });
     }
 
@@ -139,10 +139,10 @@ public sealed class MockAnalyzerService : IAnalyzerService
     {
         return Task.FromResult<CodeOwnersResult?>(new CodeOwnersResult
         {
-            CodeOwners = new List<CodeOwner>
-            {
+            CodeOwners =
+            [
                 new() { Name = "test@example.com", Type = CodeOwnerType.Email, Email = "test@example.com" }
-            }
+            ]
         });
     }
 }

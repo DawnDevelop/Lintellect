@@ -33,11 +33,11 @@ public class ValidationBehaviorTests
 
         _validators.Clear();
 
-        MessageHandlerDelegate<TestRequest, TestResponse> next = (req, ct) =>
+        ValueTask<TestResponse> next(TestRequest req, CancellationToken ct)
         {
             nextCalled = true;
             return ValueTask.FromResult(expectedResponse);
-        };
+        }
 
         // Act
         var result = await _behavior.Handle(request, next, cancellationToken);
@@ -63,11 +63,11 @@ public class ValidationBehaviorTests
         _validators.Clear();
         _validators.Add(validator.Object);
 
-        MessageHandlerDelegate<TestRequest, TestResponse> next = (req, ct) =>
+        ValueTask<TestResponse> next(TestRequest req, CancellationToken ct)
         {
             nextCalled = true;
             return ValueTask.FromResult(expectedResponse);
-        };
+        }
 
         // Act
         var result = await _behavior.Handle(request, next, cancellationToken);
@@ -95,15 +95,19 @@ public class ValidationBehaviorTests
         _validators.Clear();
         _validators.Add(validator.Object);
 
-        MessageHandlerDelegate<TestRequest, TestResponse> next = (req, ct) =>
+        ValueTask<TestResponse> next(TestRequest req, CancellationToken ct)
         {
             nextCalled = true;
             return ValueTask.FromResult(new TestResponse());
-        };
+        }
 
         // Act & Assert
-        var act = async () => await _behavior.Handle(request, next, cancellationToken);
-        await Should.ThrowAsync<Api.Application.Common.Exceptions.ValidationException>(act);
+        async Task<TestResponse> act()
+        {
+            return await _behavior.Handle(request, next, cancellationToken);
+        }
+
+        await Should.ThrowAsync<Api.Application.Common.Exceptions.ValidationException>((Func<Task<TestResponse>>)act);
         nextCalled.ShouldBeFalse();
     }
 
@@ -126,8 +130,10 @@ public class ValidationBehaviorTests
         _validators.Add(validator1.Object);
         _validators.Add(validator2.Object);
 
-        MessageHandlerDelegate<TestRequest, TestResponse> next = (req, ct) =>
-            ValueTask.FromResult(new TestResponse());
+        static ValueTask<TestResponse> next(TestRequest req, CancellationToken ct)
+        {
+            return ValueTask.FromResult(new TestResponse());
+        }
 
         // Act
         await _behavior.Handle(request, next, cancellationToken);

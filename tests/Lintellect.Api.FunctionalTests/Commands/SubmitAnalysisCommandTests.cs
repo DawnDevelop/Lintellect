@@ -38,7 +38,11 @@ public class SubmitAnalysisCommandTests : Testing
         var mediator = await GetService<IMediator>();
 
         // Act & Assert
-        var act = async () => await mediator.Send(command);
-        await Should.ThrowAsync<ValidationException>(act);
+        async Task<Guid> act()
+        {
+            return await mediator.Send(command);
+        }
+
+        await Should.ThrowAsync<ValidationException>((Func<Task<Guid>>)act);
     }
 }

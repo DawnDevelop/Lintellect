@@ -114,7 +114,7 @@ internal sealed class AnalysisPromptBuilder
         AppendFindingsByCategory(builder, "?? Errors (Must Fix)", errors, includeCodeBlock: true);
         AppendFindingsByCategory(builder, "?? Warnings (Should Fix)", warnings.Take(25).ToList(), includeCodeBlock: false, warnings.Count);
 
-        if (info.Count > 0 && info.Count <= 15)
+        if (info.Count is > 0 and <= 15)
         {
             AppendFindingsByCategory(builder, "?? Informational Messages", info, includeCodeBlock: false);
         }
@@ -130,7 +130,9 @@ internal sealed class AnalysisPromptBuilder
         int? totalCount = null)
     {
         if (findings.Count == 0)
+        {
             return;
+        }
 
         builder.AppendLine($"### {title}");
 
@@ -229,7 +231,9 @@ internal sealed class AnalysisPromptBuilder
     private static string BuildCodeChangesForReview(Dictionary<string, string> diffs)
     {
         if (diffs.Count == 0)
+        {
             return string.Empty;
+        }
 
         var builder = new StringBuilder();
         builder.AppendLine("## Code Changes to Review (Priority: Review Every Line):");
