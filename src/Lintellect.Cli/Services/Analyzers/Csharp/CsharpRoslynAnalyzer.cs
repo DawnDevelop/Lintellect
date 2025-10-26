@@ -27,16 +27,17 @@ internal class CSharpAnalyzer : ICodeAnalyzer
 
         var solution = await workspace.OpenSolutionAsync(solutionPath).ConfigureAwait(false);
 
-        //var analyzers = LoadMicrosoftAnalyzers();
 
         var findings = new List<AnalyzerFindings>();
 
         foreach (var project in solution.Projects)
         {
-            var analyzers = project.AnalyzerReferences
-                .SelectMany(r => r.GetAnalyzers(LanguageNames.CSharp))
-                .ToImmutableArray();
-
+            var analyzers = LoadExternalAnalyzers();
+            if(!analyzers.Any())
+            {
+                analyzers = [.. project.AnalyzerReferences.SelectMany(r => r.GetAnalyzers(LanguageNames.CSharp))];
+            }
+            
             var compilation = await project.GetCompilationAsync().ConfigureAwait(false);
             if (compilation == null)
                 continue;
@@ -76,7 +77,7 @@ internal class CSharpAnalyzer : ICodeAnalyzer
                         && !d.Location.SourceTree.FilePath.Contains("/obj/", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static ImmutableArray<DiagnosticAnalyzer> LoadMicrosoftAnalyzers()
+    private static ImmutableArray<DiagnosticAnalyzer> LoadExternalAnalyzers()
     {
         // Look for NetAnalyzers shipped with your application
         var baseDir = AppContext.BaseDirectory;
