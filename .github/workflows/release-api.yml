@@ -77,6 +77,9 @@ jobs:
       - name: Build API
         run: dotnet build src/Lintellect.Api/Lintellect.Api.csproj --no-restore --configuration Release
 
+      - name: Build API tests
+        run: dotnet build tests/Lintellect.Api.UnitTests/Lintellect.Api.UnitTests.csproj --no-restore --configuration Release
+
       - name: Run API tests
         run: |
           dotnet test tests/Lintellect.Api.UnitTests/Lintellect.Api.UnitTests.csproj --no-build --configuration Release --verbosity normal

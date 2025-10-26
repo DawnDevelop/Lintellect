@@ -75,6 +75,9 @@ jobs:
       - name: Build CLI
         run: dotnet build src/Lintellect.Cli/Lintellect.Cli.csproj --no-restore --configuration Release
 
+      - name: Build CLI tests
+        run: dotnet build tests/Lintellect.Cli.UnitTests/Lintellect.Cli.UnitTests.csproj --no-restore --configuration Release
+
       - name: Run CLI tests
         run: dotnet test tests/Lintellect.Cli.UnitTests/Lintellect.Cli.UnitTests.csproj --no-build --configuration Release --verbosity normal
 
