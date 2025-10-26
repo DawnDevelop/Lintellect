@@ -1,4 +1,3 @@
-using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;

@@ -4,7 +4,6 @@ using Lintellect.Shared.Models;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
 using Microsoft.VisualStudio.Services.WebApi;
 using Octokit;
-using System.Net.Http;
 
 namespace Lintellect.Api.Infrastructure.Services.Git.GitHub;
 

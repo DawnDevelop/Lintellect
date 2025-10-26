@@ -1,7 +1,5 @@
 using FluentValidation;
 using Lintellect.Api.Application.Interfaces;
-using Lintellect.Api.Infrastructure.Services.Git;
-using System.Net.Http;
 
 namespace Lintellect.Api.Application.Messages.Commands;
 

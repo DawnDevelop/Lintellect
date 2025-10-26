@@ -1,5 +1,3 @@
-using Lintellect.Api.Application.Messages.Commands;
-
 namespace Lintellect.Api.functionaltests.Utilities;
 
 /// <summary>

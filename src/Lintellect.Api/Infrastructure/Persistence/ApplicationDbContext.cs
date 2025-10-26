@@ -1,7 +1,6 @@
 using Lintellect.Api.Application.Common.Interfaces;
 using Lintellect.Api.Domain.Entities;
 using Lintellect.Api.Domain.Events;
-using Lintellect.Api.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lintellect.Api.Infrastructure.Persistence;

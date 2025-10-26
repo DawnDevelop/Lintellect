@@ -1,7 +1,5 @@
 using Lintellect.Api.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Lintellect.Api.Infrastructure.Persistence;
 

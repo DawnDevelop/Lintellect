@@ -28,7 +28,7 @@ internal sealed class AzureDevOpsInfoExtractor : IGitInfoExtractor
 
         var buildId = Env("BUILD_BUILDID");
 
-        if(!int.TryParse(buildId, out var parsedBuildId))
+        if (!int.TryParse(buildId, out var parsedBuildId))
         {
             parsedBuildId = -1;
             Console.WriteLine("Warning: Unable to parse BUILD_BUILDID environment variable.");

@@ -1,8 +1,3 @@
-using Lintellect.Api.Application.Common.Interfaces;
-using Lintellect.Api.Application.Messages.Commands;
-using Lintellect.Api.Domain.Entities;
-using Lintellect.Api.Domain.Enums;
-using Lintellect.Api.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lintellect.Api.UnitTests.Application.Commands;

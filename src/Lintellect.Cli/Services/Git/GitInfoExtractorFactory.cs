@@ -1,8 +1,5 @@
 using Lintellect.Cli.Interfaces;
 using Lintellect.Shared.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Lintellect.Cli.Services.Git;
 

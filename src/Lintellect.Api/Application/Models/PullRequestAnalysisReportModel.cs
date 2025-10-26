@@ -1,4 +1,3 @@
-using Lintellect.Api.Infrastructure.Services;
 using Lintellect.Shared.Models;
 
 namespace Lintellect.Api.Application.Models;

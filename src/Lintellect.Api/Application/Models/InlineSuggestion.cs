@@ -1,6 +1,3 @@
-using Lintellect.Shared.Models;
-using System.Text;
-
 namespace Lintellect.Api.Application.Models;
 
 /// <summary>

@@ -72,7 +72,7 @@ internal class CSharpAnalyzer : ICodeAnalyzer
         return diagnostics.Where(d => d.Location.IsInSource &&
                         (d.Severity == DiagnosticSeverity.Warning
                         || d.Severity == DiagnosticSeverity.Error
-                        || d.Severity == DiagnosticSeverity.Info) 
+                        || d.Severity == DiagnosticSeverity.Info)
                         && !d.Location.SourceTree.FilePath.Contains("/obj/", StringComparison.OrdinalIgnoreCase));
     }
 

@@ -4,21 +4,13 @@ using Lintellect.Api.Infrastructure.Extensions;
 using Lintellect.Shared.Models;
 using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
-using Microsoft.VisualStudio.Services.Account.Client;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.Identity;
 using Microsoft.VisualStudio.Services.Identity.Client;
 using Microsoft.VisualStudio.Services.OAuth;
 using Microsoft.VisualStudio.Services.Security.Client;
-using Microsoft.VisualStudio.Services.Tokens.TokenAdmin.Client;
 using Microsoft.VisualStudio.Services.WebApi;
-using Microsoft.VisualStudio.Services.WebApi.HttpClients;
-using Octokit;
-using System.IO;
-using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json;
 
 namespace Lintellect.Api.Infrastructure.Services.Git.AzureDevops;
 

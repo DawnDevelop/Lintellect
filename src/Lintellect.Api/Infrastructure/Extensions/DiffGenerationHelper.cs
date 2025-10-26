@@ -19,7 +19,7 @@ public static class DiffGenerationHelper
     public static string GenerateUnifiedDiff(string filePath, string? originalContent, string? modifiedContent)
     {
         var diff = new StringBuilder();
-        
+
         diff.AppendLine($"--- a{filePath}");
         diff.AppendLine($"+++ b{filePath}");
 
@@ -52,7 +52,7 @@ public static class DiffGenerationHelper
         {
             var oldLines = originalContent.Split('\n');
             var newLines = modifiedContent.Split('\n');
-            
+
             var changes = BuildLineChanges(oldLines, newLines);
 
             if (changes.Count > 0)
@@ -81,9 +81,9 @@ public static class DiffGenerationHelper
     /// <param name="maxLinesPerFile">Maximum total lines per file diff (default: 1000).</param>
     /// <returns>A compact unified diff string with line numbers, or null if no changes detected.</returns>
     public static string? GenerateCompactDiff(
-        string filePath, 
-        string? originalContent, 
-        string? modifiedContent, 
+        string filePath,
+        string? originalContent,
+        string? modifiedContent,
         int contextLines = 3,
         int maxNewFileLines = 50,
         int maxLinesPerFile = 1000)
@@ -131,7 +131,7 @@ public static class DiffGenerationHelper
         {
             var oldLines = originalContent.Split('\n');
             var newLines = modifiedContent.Split('\n');
-            
+
             // Check if file is too large and needs truncation
             var totalLines = Math.Max(oldLines.Length, newLines.Length);
             if (totalLines > maxLinesPerFile * 2) // If file is extremely large
@@ -142,9 +142,9 @@ public static class DiffGenerationHelper
                 diff.AppendLine($"... (Full diff omitted for token optimization - file exceeds {maxLinesPerFile * 2} line threshold)");
                 return diff.ToString();
             }
-            
+
             var hunks = ExtractChangedHunksWithLineNumbers(oldLines, newLines, contextLines);
-            
+
             if (hunks.Count == 0)
                 return null; // No changes detected
 
@@ -218,11 +218,11 @@ public static class DiffGenerationHelper
     {
         var hunks = new List<string>();
         var changes = new List<(int oldLineNum, int newLineNum, string type, string line)>(); // type: "old", "new", "same"
-        
+
         // Line-by-line comparison with proper line number tracking
         int oldIdx = 0;
         int newIdx = 0;
-        
+
         while (oldIdx < oldLines.Length || newIdx < newLines.Length)
         {
             var oldLine = oldIdx < oldLines.Length ? oldLines[oldIdx].TrimEnd('\r') : null;
@@ -253,7 +253,7 @@ public static class DiffGenerationHelper
         // Find continuous regions of changes
         var changeRegions = new List<(int start, int end)>();
         int? regionStart = null;
-        
+
         for (int i = 0; i < changes.Count; i++)
         {
             if (changes[i].type != "same")
@@ -276,20 +276,20 @@ public static class DiffGenerationHelper
         {
             var hunkStart = Math.Max(0, start - contextLines);
             var hunkEnd = Math.Min(changes.Count - 1, end + contextLines);
-            
+
             var hunk = new StringBuilder();
-            
+
             // Calculate hunk header info
             var firstOldLine = changes[hunkStart].oldLineNum > 0 ? changes[hunkStart].oldLineNum : 1;
             var firstNewLine = changes[hunkStart].newLineNum > 0 ? changes[hunkStart].newLineNum : 1;
-            
+
             var oldCount = changes.Skip(hunkStart).Take(hunkEnd - hunkStart + 1)
                 .Count(c => c.type is "old" or "same");
             var newCount = changes.Skip(hunkStart).Take(hunkEnd - hunkStart + 1)
                 .Count(c => c.type is "new" or "same");
 
             hunk.AppendLine($"@@ -{firstOldLine},{oldCount} +{firstNewLine},{newCount} @@");
-            
+
             // Add hunk lines with line numbers
             for (int i = hunkStart; i <= hunkEnd; i++)
             {
@@ -323,12 +323,12 @@ public static class DiffGenerationHelper
         // Use the new method but strip line numbers for backward compatibility
         var hunksWithNumbers = ExtractChangedHunksWithLineNumbers(oldLines, newLines, contextLines);
         var hunks = new List<string>();
-        
+
         foreach (var hunk in hunksWithNumbers)
         {
             var lines = hunk.Split('\n');
             var result = new StringBuilder();
-            
+
             foreach (var line in lines)
             {
                 if (line.StartsWith("@@"))
@@ -355,10 +355,10 @@ public static class DiffGenerationHelper
                     result.AppendLine(line);
                 }
             }
-            
+
             hunks.Add(result.ToString());
         }
-        
+
         return hunks;
     }
 }

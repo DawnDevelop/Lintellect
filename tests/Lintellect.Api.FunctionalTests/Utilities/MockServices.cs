@@ -1,6 +1,3 @@
-using Lintellect.Api.Application.Interfaces;
-using Lintellect.Api.Application.Models;
-
 namespace Lintellect.Api.functionaltests.Utilities;
 
 /// <summary>

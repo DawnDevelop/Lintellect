@@ -4,6 +4,6 @@ namespace Lintellect.Api.Apis.Models;
 /// Response when submitting an analysis job.
 /// </summary>
 public sealed record SubmitAnalysisResponse(
-    Guid JobId, 
-    string Status, 
+    Guid JobId,
+    string Status,
     string Message);

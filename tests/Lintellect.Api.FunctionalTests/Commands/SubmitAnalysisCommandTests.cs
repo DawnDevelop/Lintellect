@@ -1,5 +1,4 @@
 using Lintellect.Api.Application.Common.Exceptions;
-using Lintellect.Api.Domain.Enums;
 using Mediator;
 
 namespace Lintellect.Api.functionaltests.Commands;

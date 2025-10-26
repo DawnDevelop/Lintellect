@@ -1,4 +1,3 @@
-using Shouldly;
 using Mediator;
 
 namespace Lintellect.Api.functionaltests.Queries;

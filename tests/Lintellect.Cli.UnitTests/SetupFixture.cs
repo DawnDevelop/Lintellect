@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace Lintellect.Cli.UnitTests;
 
 [SetUpFixture]
@@ -22,7 +18,7 @@ internal class SetupFixture
         var assemblyLocation = assembly.Location;
         var outputDir = Path.GetDirectoryName(assemblyLocation)!;
         var fixturePath = Path.Combine(outputDir, "Fixtures");
-        
+
         if (Directory.Exists(fixturePath))
         {
             Directory.Delete(fixturePath, true);

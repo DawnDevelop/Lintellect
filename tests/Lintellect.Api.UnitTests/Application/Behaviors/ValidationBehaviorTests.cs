@@ -1,7 +1,7 @@
 using FluentValidation;
 using FluentValidation.Results;
-using Microsoft.Extensions.Logging;
 using Lintellect.Api.Application.Common.Behaviors;
+using Microsoft.Extensions.Logging;
 
 namespace Lintellect.Api.UnitTests.Application.Behaviors;
 

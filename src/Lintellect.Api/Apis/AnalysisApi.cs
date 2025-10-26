@@ -1,9 +1,7 @@
 using Lintellect.Api.Apis.Models;
 using Lintellect.Api.Application.Messages.Commands;
-using Lintellect.Api.Infrastructure.Services;
-using Lintellect.Api.Apis.Authorization;
 using Lintellect.Api.Application.Messages.Queries;
-using Lintellect.Api.Infrastructure.Services.Git;
+using Lintellect.Api.Infrastructure.Services;
 using Lintellect.Shared.Models;
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;

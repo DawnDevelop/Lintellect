@@ -5,10 +5,7 @@ using Lintellect.Api.Application.Models;
 using Lintellect.Api.Infrastructure.Services.AI.Prompts;
 using Lintellect.Shared.Models;
 using Polly;
-using Polly.Extensions.Http;
-using System.Net.Http.Json;
 using System.Text.Json;
-using System.Threading;
 
 namespace Lintellect.Api.Infrastructure.Services.AI;
 

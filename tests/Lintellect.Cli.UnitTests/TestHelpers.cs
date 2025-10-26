@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using System.IO;
 using System.IO.Compression;
 
 namespace Lintellect.Cli.UnitTests;
@@ -26,7 +21,7 @@ internal class TestHelpers
         var assembly = typeof(TestHelpers).Assembly;
         var assemblyLocation = assembly.Location;
         var assemblyDir = Path.GetDirectoryName(assemblyLocation)!;
-        
+
         // Navigate up to find the test project root (contains .csproj)
         var current = new DirectoryInfo(assemblyDir);
         while (current != null)
@@ -35,7 +30,7 @@ internal class TestHelpers
                 return current.FullName;
             current = current.Parent;
         }
-        
+
         throw new InvalidOperationException("Could not find test project directory");
     }
 
@@ -65,9 +60,9 @@ internal class TestHelpers
         var assembly = typeof(TestHelpers).Assembly;
         var assemblyLocation = assembly.Location;
         var outputDir = Path.GetDirectoryName(assemblyLocation)!;
-        
+
         var zipPath = Path.Combine(outputDir, "SampleRepos", zipFileName);
-        
+
         if (!File.Exists(zipPath))
         {
             throw new FileNotFoundException($"Zip file not found: {zipPath}");
@@ -100,7 +95,7 @@ internal class TestHelpers
         {
             var innerFolder = extractedItems[0];
             var innerFolderName = Path.GetFileName(innerFolder);
-            
+
             // If the zip has a nested folder (e.g., SimpleRepo/SimpleRepo/...), move contents up
             if (innerFolderName.Equals(repoName, StringComparison.OrdinalIgnoreCase))
             {

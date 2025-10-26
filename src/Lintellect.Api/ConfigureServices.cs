@@ -1,25 +1,16 @@
-using Azure;
-using Azure.Core;
-using Azure.Messaging.ServiceBus;
-using Azure.Messaging.ServiceBus.Administration;
-using Lintellect.Api.Apis.Options;
-using Lintellect.Shared.Models;
 using FluentValidation;
-using Mediator;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Aspire.Npgsql.EntityFrameworkCore.PostgreSQL;
-using Lintellect.Api.Infrastructure.Services.AI;
-using Lintellect.Api.Infrastructure.Services.Git;
-using Lintellect.Api.Infrastructure.Persistence;
-using Lintellect.Api.Application.Interfaces;
-using Lintellect.Api.Infrastructure.Telemetry;
-using Lintellect.Api.Infrastructure.Services;
 using Lintellect.Api.Application.Common.Behaviors;
 using Lintellect.Api.Application.Common.Interfaces;
+using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
+using Lintellect.Api.Infrastructure.Persistence;
 using Lintellect.Api.Infrastructure.Resilience;
+using Lintellect.Api.Infrastructure.Services;
+using Lintellect.Api.Infrastructure.Services.AI;
+using Lintellect.Api.Infrastructure.Services.Git;
+using Lintellect.Api.Infrastructure.Telemetry;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Lintellect.Api;
 

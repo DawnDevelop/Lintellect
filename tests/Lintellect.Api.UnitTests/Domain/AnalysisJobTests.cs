@@ -1,6 +1,3 @@
-using Lintellect.Api.Domain.Enums;
-using Lintellect.Api.Domain.Events;
-
 namespace Lintellect.Api.UnitTests.Domain;
 
 [TestFixture]

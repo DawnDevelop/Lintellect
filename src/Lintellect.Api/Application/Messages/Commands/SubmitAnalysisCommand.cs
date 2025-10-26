@@ -1,7 +1,6 @@
 using Lintellect.Api.Application.Common.Interfaces;
-using Lintellect.Api.Infrastructure.Services;
 using Lintellect.Api.Domain.Entities;
-using Lintellect.Api.Domain.Enums;
+using Lintellect.Api.Infrastructure.Services;
 using Lintellect.Shared.Models;
 using Mediator;
 

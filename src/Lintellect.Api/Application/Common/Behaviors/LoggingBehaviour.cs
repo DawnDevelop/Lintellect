@@ -2,6 +2,7 @@ using Lintellect.Api.Application.Common.Exceptions;
 using Mediator;
 
 namespace Lintellect.Api.Application.Common.Behaviors;
+
 public sealed class LoggingBehaviour<TMessage, TResponse>(ILogger<TMessage> logger) : IPipelineBehavior<TMessage, TResponse>
     where TMessage : IMessage
 {
@@ -22,6 +23,6 @@ public sealed class LoggingBehaviour<TMessage, TResponse>(ILogger<TMessage> logg
             logger.LogError(ex, "An Error Occured");
             throw;
         }
-        
+
     }
 }

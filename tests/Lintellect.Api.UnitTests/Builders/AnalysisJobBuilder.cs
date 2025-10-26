@@ -1,5 +1,3 @@
-using Lintellect.Api.Domain.Entities;
-
 namespace Lintellect.Api.UnitTests.Builders;
 
 /// <summary>

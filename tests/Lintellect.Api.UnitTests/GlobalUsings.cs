@@ -1,11 +1,10 @@
-global using Lintellect.Api.UnitTests.Builders;
 global using Lintellect.Api.Application.Common.Interfaces;
 global using Lintellect.Api.Application.Messages.Commands;
-global using Lintellect.Api.Application.Messages.Queries;
 global using Lintellect.Api.Domain.Entities;
 global using Lintellect.Api.Domain.Enums;
 global using Lintellect.Api.Domain.Events;
 global using Lintellect.Api.Infrastructure.Services;
+global using Lintellect.Api.UnitTests.Builders;
 global using Lintellect.Shared.Models;
 global using Mediator;
 global using Moq;

@@ -4,7 +4,6 @@ using Lintellect.Api.Infrastructure.Extensions;
 using Lintellect.Api.Infrastructure.Services.Git;
 using Lintellect.Shared.Models;
 using Mediator;
-using System.Reflection.Metadata.Ecma335;
 
 namespace Lintellect.Api.Application.Messages.Commands;
 
