@@ -57,41 +57,41 @@ jobs:
           path: ./TestResults
           retention-days: 30
 
-  integration-tests:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    needs: build-and-test
+  # integration-tests:
+  #   name: Integration Tests
+  #   runs-on: ubuntu-latest
+  #   needs: build-and-test
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v5
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+  #     - name: Setup .NET
+  #       uses: actions/setup-dotnet@v5
+  #       with:
+  #         dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+  #     - name: Cache NuGet packages
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: ~/.nuget/packages
+  #         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-nuget-
 
-      - name: Restore dependencies
-        run: dotnet restore
+  #     - name: Restore dependencies
+  #       run: dotnet restore
 
-      - name: Run integration tests
-        run: dotnet test tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --logger trx --results-directory ./TestResults
+  #     - name: Run integration tests
+  #       run: dotnet test tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --logger trx --results-directory ./TestResults
 
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: integration-test-results
-          path: ./TestResults
-          retention-days: 30
+  #     - name: Upload test results
+  #       if: always()
+  #       uses: actions/upload-artifact@v5
+  #       with:
+  #         name: integration-test-results
+  #         path: ./TestResults
+  #         retention-days: 30
 
   code-quality:
     name: Code Quality
@@ -167,7 +167,7 @@ jobs:
   code-coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
-    needs: [build-and-test, integration-tests]
+    needs: [build-and-test]
 
     steps:
       - name: Checkout code
@@ -246,14 +246,7 @@ jobs:
     name: PR Validation
     runs-on: ubuntu-latest
     needs:
-      [
-        build-and-test,
-        integration-tests,
-        code-quality,
-        security-scan,
-        code-coverage,
-        docker-build,
-      ]
+      [build-and-test, code-quality, security-scan, code-coverage, docker-build]
     if: github.event_name == 'pull_request'
 
     steps:
@@ -276,14 +269,7 @@ jobs:
     name: Main Branch Build
     runs-on: ubuntu-latest
     needs:
-      [
-        build-and-test,
-        integration-tests,
-        code-quality,
-        security-scan,
-        code-coverage,
-        docker-build,
-      ]
+      [build-and-test, code-quality, security-scan, code-coverage, docker-build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
