@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "CodeQL",
+          "version": "2.15.0",
+          "informationUri": "https://codeql.github.com/"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "cs/invalid-rule",
+          "message": {
+            "text": "This is a test finding with invalid structure"
+          },
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ""
+                },
+                "region": {
+                  "startLine": 0,
+                  "startColumn": 0,
+                  "endLine": 0,
+                  "endColumn": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
