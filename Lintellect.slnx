@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Packages.props" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj" />
     <Project Path="tests/Lintellect.Api.UnitTests/Lintellect.Api.UnitTests.csproj" />
