@@ -173,19 +173,13 @@ jobs:
       - name: Publish CLI
         run: dotnet publish src/Lintellect.Cli/Lintellect.Cli.csproj --configuration Release --runtime ${{ matrix.platform }} --self-contained true --output ./publish/cli --force
 
-      - name: Create binary archive
-        run: |
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            # Create a directory structure for the archive
-            mkdir -p ./lintellect-cli-main-${{ matrix.platform }}
-            cp -r ./publish/cli/* ./lintellect-cli-main-${{ matrix.platform }}/
-            Compress-Archive -Path "./lintellect-cli-main-${{ matrix.platform }}" -DestinationPath "./lintellect-cli-main-${{ matrix.platform }}.${{ matrix.extension }}"
-          else
-            # Create a directory structure for the archive
-            mkdir -p ./lintellect-cli-main-${{ matrix.platform }}
-            cp -r ./publish/cli/* ./lintellect-cli-main-${{ matrix.platform }}/
-            tar -czf "./lintellect-cli-main-${{ matrix.platform }}.${{ matrix.extension }}" -C ./lintellect-cli-main-${{ matrix.platform }} .
-          fi
+      - name: Create binary archive (Windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path "./publish/cli" -DestinationPath "./lintellect-cli-main-${{ matrix.platform }}.${{ matrix.extension }}"
+
+      - name: Create binary archive (Linux)
+        if: runner.os == 'Linux'
+        run: tar -czf "./lintellect-cli-main-${{ matrix.platform }}.${{ matrix.extension }}" -C ./publish/cli .
 
       - name: Upload binary
         uses: actions/upload-artifact@v5
