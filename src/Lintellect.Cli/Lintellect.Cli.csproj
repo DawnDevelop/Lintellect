@@ -9,9 +9,6 @@
 		<!--<PublishAot>true</PublishAot>-->
 		<InvariantGlobalization>true</InvariantGlobalization>
 		<AnalysisMode>AllEnabledByDefault</AnalysisMode>
-		
-		<!-- Runtime Identifiers for cross-platform publishing -->
-		<RuntimeIdentifiers>win-x64;win-x86;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
 
 		<!-- Package as .NET Tool -->
 		<PackAsTool>true</PackAsTool>
