@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Lintellect.Api.Apis.Authorization;
 using Lintellect.Api.Apis.Models;
 using Lintellect.Api.Application.Messages.Commands;
 using Lintellect.Api.Application.Messages.Queries;
@@ -15,8 +16,8 @@ public static class AnalysisApi
     public static IEndpointRouteBuilder MapAnalysisApi(this IEndpointRouteBuilder app)
     {
         var api = app.MapGroup("api/analysis")
-            .WithTags("Analysis");
-        //.AddEndpointFilter<ApiKeyEndpointFilter>();
+            .WithTags("Analysis")
+            .AddEndpointFilter<ApiKeyEndpointFilter>();
 
         api.MapPost("/analyze", SubmitAnalysis)
             .WithName("SubmitAnalysis")
