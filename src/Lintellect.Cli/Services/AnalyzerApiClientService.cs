@@ -32,7 +32,7 @@ internal class AnalyzerApiClientService : IDisposable
 
         var request = new
         {
-            AnalysisResult = result
+            AnalysisRequest = result
         };
 
         var jsonContent = JsonSerializer.Serialize(request);
