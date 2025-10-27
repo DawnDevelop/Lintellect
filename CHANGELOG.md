@@ -6,20 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
 ## [CLI v0.0.6] - 2025-10-27
 
-### Added
-- TBD
-
 ### Changed
-- TBD
 
-### Fixed
-- TBD
-
-### Security
-- TBD
-
+- Updated commands to match proper patterns
 
 ## [CLI v0.0.5] - 2025-10-27
 
