@@ -199,12 +199,7 @@ jobs:
 
       - name: Publish CLI
         run: |
-          dotnet publish src/Lintellect.Cli/Lintellect.Cli.csproj \
-            --configuration Release \
-            --runtime ${{ matrix.platform }} \
-            --self-contained true \
-            --output ./publish/cli \
-            --force
+          dotnet publish src/Lintellect.Cli/Lintellect.Cli.csproj --configuration Release --runtime ${{ matrix.platform }} --self-contained true --output ./publish/cli --force
 
       - name: Create binary archive (Windows)
         if: runner.os == 'Windows'

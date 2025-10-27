@@ -13,7 +13,7 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/lintellect-api
+  IMAGE_NAME: dawndevelop/lintellect-api
 
 jobs:
   build-and-test:

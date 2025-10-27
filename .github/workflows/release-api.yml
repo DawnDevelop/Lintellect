@@ -11,7 +11,7 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/lintellect-api
+  IMAGE_NAME: dawndevelop/lintellect-api
 
 jobs:
   extract-version:
@@ -174,12 +174,7 @@ jobs:
 
       - name: Publish API
         run: |
-          dotnet publish src/Lintellect.Api/Lintellect.Api.csproj \
-            --configuration Release \
-            --runtime ${{ matrix.platform }} \
-            --self-contained true \
-            --output ./publish/api \
-            --force
+          dotnet publish src/Lintellect.Api/Lintellect.Api.csproj --configuration Release --runtime ${{ matrix.platform }} --self-contained true --output ./publish/api --force
 
       - name: Create binary archive (Windows)
         if: runner.os == 'Windows'
