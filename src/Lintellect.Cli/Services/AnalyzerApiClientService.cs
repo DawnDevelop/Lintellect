@@ -6,7 +6,7 @@ namespace Lintellect.Cli.Services;
 
 internal class AnalyzerApiClientService : IDisposable
 {
-    private static Uri StartAnalysisEndpoint => new("api/analysis/start", UriKind.Relative);
+    private static Uri StartAnalysisEndpoint => new("api/analyze", UriKind.Relative);
 
     private readonly HttpClient _httpClient;
 

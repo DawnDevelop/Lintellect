@@ -17,22 +17,43 @@
 		<FileVersion>0.0.6.0</FileVersion>
 		<InformationalVersion>0.0.6</InformationalVersion>
 		
-		<!-- Docker Configuration for GitHub Container Registry -->
-		<ContainerImageName>ghcr.io/dawndevelop/lintellect-api</ContainerImageName>
-		<ContainerImageTag>0.0.6</ContainerImageTag>
-		<ContainerRegistry>ghcr.io</ContainerRegistry>
-		<ContainerRepository>dawndevelop/lintellect-api</ContainerRepository>
-		
 		<!-- Publishing Configuration -->
-		<PublishSingleFile>true</PublishSingleFile>
-		<SelfContained>true</SelfContained>
-		<RuntimeIdentifier>linux-x64</RuntimeIdentifier>
 		<AssemblyTitle>Lintellect API</AssemblyTitle>
 		<AssemblyDescription>Lintellect Code Analysis API Service</AssemblyDescription>
 		<AssemblyCompany>DawnDevelop</AssemblyCompany>
 		<AssemblyProduct>Lintellect</AssemblyProduct>
 		<AssemblyCopyright>Copyright © DawnDevelop</AssemblyCopyright>
 
+	</PropertyGroup>
+
+	<!-- Platform-specific configurations -->
+	<PropertyGroup Condition="'$(Configuration)' == 'Release' AND '$(RuntimeIdentifier)' == ''">
+		<PlatformTarget>AnyCPU</PlatformTarget>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
+		<PlatformTarget>x64</PlatformTarget>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+		<PlatformTarget>x64</PlatformTarget>
+	</PropertyGroup>
+
+	<!-- Container-specific configuration -->
+	<PropertyGroup Condition="'$(PublishContainer)' == 'true' OR '$(ContainerRepository)' != ''">
+		<RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+		<PlatformTarget>x64</PlatformTarget>
+		<SelfContained>false</SelfContained>
+		<PublishSingleFile>false</PublishSingleFile>
+		<ContainerRepository Condition="'$(ContainerRepository)' == ''">dawndevelop/lintellect-api</ContainerRepository>
+		<ContainerImageTag Condition="'$(ContainerImageTag)' == ''">0.0.6</ContainerImageTag>
+		<ContainerRegistry Condition="'$(ContainerRegistry)' == '' AND '$(ContainerRepository)' != 'API'">ghcr.io</ContainerRegistry>
+		<ContainerRegistry Condition="'$(ContainerRepository)' == 'API'"></ContainerRegistry>
+	</PropertyGroup>
+
+	<!-- Local development configuration (for Aspire) -->
+	<PropertyGroup Condition="'$(PublishContainer)' != 'true' AND '$(ContainerRepository)' == '' AND '$(RuntimeIdentifier)' == ''">
+		<PlatformTarget>AnyCPU</PlatformTarget>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -13,7 +13,7 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   REGISTRY: ghcr.io
-  IMAGE_NAME: dawndevelop/lintellect-api
+  IMAGE_NAME: ${{ github.repository_owner }}/lintellect-api
 
 jobs:
   build-and-test:
@@ -134,6 +134,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_CONFIGURATION=Release
 
   build-cli-binaries:
     name: Build CLI Binaries
