@@ -297,7 +297,7 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run all tests
-        run: dotnet test --no-build --configuration Release --verbosity normal
+        run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --logger trx --results-directory ./TestResults --filter "FullyQualifiedName!~FunctionalTests"
 
       - name: Build CLI package
         run: dotnet pack src/Lintellect.Cli/Lintellect.Cli.csproj --no-build --configuration Release --output ./packages
