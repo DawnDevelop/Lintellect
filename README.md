@@ -109,10 +109,10 @@ docker run -p 7000:7000 lintellect:latest
 
 ```bash
 # Install globally
-dotnet tool install --global lintellect
+dotnet tool install --global Lintellect.Cli
 
 # Verify installation
-lintellect --help
+Lintellect --help
 ```
 
 ## Usage
@@ -120,43 +120,58 @@ lintellect --help
 ### CLI Analysis
 
 ```bash
-# Basic analysis
-lintellect analyze --solution ./MyProject.sln
+# Basic C# analysis with AI features (CodeQL enabled by default)
+Lintellect analyze \
+  --language "csharp" \
+  --enable-summary-comment \
+  --enable-inline-suggestions \
+  --enable-description-summary
 
-# With API integration
-lintellect analyze \
-  --solution ./MyProject.sln \
-  --api-url "https://api.example.com" \
-  --api-key "your-api-key" \
-  --language CSharp
+# C# analysis with explicit CodeQL
+Lintellect analyze \
+  --language "csharp" \
+  --enable-codeql \
+  --github-token "your-github-token" \
+  --enable-summary-comment \
+  --enable-inline-suggestions
 
-# With exclusions
-lintellect analyze \
-  --solution ./MyProject.sln \
-  --exclude "**/bin/**" "**/obj/**" "**/node_modules/**"
-```
+# C# analysis WITHOUT CodeQL (AI features only)
+Lintellect analyze \
+  --language "csharp" \
+  --enable-codeql false \
+  --enable-summary-comment \
+  --enable-inline-suggestions \
+  --enable-description-summary
 
-### API Integration
+# Multi-language analysis with exclusions
+Lintellect analyze \
+  --language "csharp" \
+  --exclude "**/bin/**" \
+  --exclude "**/obj/**" \
+  --exclude "**/test/**" \
+  --exclude "**/Generated/**" \
+  --enable-summary-comment \
+  --enable-inline-suggestions \
+  --enable-azure-devops-code-owners
 
-```bash
-# Submit analysis job
-curl -X POST "https://api.example.com/api/analysis/submit" \
-  -H "API-Key: your-api-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "gitInfo": {
-      "projectName": "my-org",
-      "repositoryName": "my-repo",
-      "pullRequestId": 123
-    },
-    "language": "csharp",
-    "enableSummaryComment": true,
-    "enableInlineSuggestions": true
-  }'
+# Python analysis with CodeQL
+Lintellect analyze \
+  --language "python" \
+  --enable-codeql \
+  --exclude "**/__pycache__/**" \
+  --exclude "**/venv/**" \
+  --exclude "**/node_modules/**" \
+  --enable-summary-comment
 
-# Check job status
-curl -X GET "https://api.example.com/api/analysis/status/{jobId}" \
-  -H "API-Key: your-api-key"
+# JavaScript/TypeScript analysis
+Lintellect analyze \
+  --language "javascript" \
+  --enable-codeql \
+  --exclude "**/node_modules/**" \
+  --exclude "**/dist/**" \
+  --exclude "**/build/**" \
+  --enable-summary-comment \
+  --enable-inline-suggestions
 ```
 
 ### CI/CD Integration
@@ -165,27 +180,94 @@ curl -X GET "https://api.example.com/api/analysis/status/{jobId}" \
 
 ```yaml
 name: PR Analysis
+
+# Environment Variables Required:
+# - LINTELLECT_API_URL: Your Lintellect API endpoint URL
+# - LINTELLECT_API_KEY: Your Lintellect API key
+# - GITHUB_TOKEN: GitHub Personal Access Token (REQUIRED - CodeQL is enabled by default)
+
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
 
 jobs:
   analyze:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch full history for better analysis
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - name: Install Lintellect
-        run: dotnet tool install --global lintellect
-      - name: Analyze PR
+
+      - name: Install DevOps PR Analyzer
         run: |
-          lintellect analyze \
-            --solution ./MyProject.sln \
-            --api-url "${{ secrets.ANALYZER_API_ENDPOINT }}" \
-            --api-key "${{ secrets.ANALYZER_API_KEY }}"
+          dotnet tool install --global Lintellect
+
+      - name: Basic C# Analysis
+        run: |
+          Lintellect analyze \
+            --language "csharp" \
+            --enable-summary-comment \
+            --enable-inline-suggestions \
+            --enable-description-summary
+        env:
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+#### Azure DevOps Pipelines
+
+```yaml
+trigger: none # Trigger on every pull request by setting build validation inside the options
+
+# Environment Variables Required:
+# - LINTELLECT_API_URL: Your Lintellect API endpoint URL
+# - LINTELLECT_API_KEY: Your Lintellect API key
+# - GITHUB_TOKEN: GitHub Personal Access Token (REQUIRED - CodeQL is enabled by default)
+# - AZURE_DEVOPS_PAT: Azure DevOps Personal Access Token (for Azure DevOps integration)
+
+pool:
+  vmImage: "ubuntu-latest"
+
+variables:
+  buildConfiguration: "Release"
+
+stages:
+  - stage: Analyze
+    displayName: "Analyze PR"
+    jobs:
+      - job: AnalyzePR
+        displayName: "Analyze Pull Request"
+        steps:
+          - task: UseDotNet@2
+            displayName: "Use .NET 10"
+            inputs:
+              packageType: "sdk"
+              version: "10.0.x"
+
+          - task: DotNetCoreCLI@2
+            displayName: "Install DevOps PR Analyzer"
+            inputs:
+              command: "custom"
+              custom: "tool"
+              arguments: "install --global Lintellect"
+
+          - task: DotNetCoreCLI@2
+            displayName: "Basic C# Analysis"
+            inputs:
+              command: "custom"
+              custom: "Lintellect"
+              arguments: 'analyze --language "csharp" --enable-summary-comment --enable-inline-suggestions --enable-description-summary'
+            env:
+              LINTELLECT_API_URL: $(LINTELLECT_API_URL)
+              LINTELLECT_API_KEY: $(LINTELLECT_API_KEY)
+              GITHUB_TOKEN: $(GITHUB_TOKEN)
 ```
 
 ## API Reference
