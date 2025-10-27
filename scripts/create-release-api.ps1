@@ -53,11 +53,11 @@ function Show-Usage {
   Write-Host ""
   Write-Host "The script will:"
   Write-Host "  1. Create a release branch: release/api/v<version>"
-  Write-Host "  2. Update version numbers in project files"
+  Write-Host "  2. Update version numbers in project files (including Docker tags)"
   Write-Host "  3. Update CHANGELOG.md with API section"
   Write-Host "  4. Create a commit with the changes"
   Write-Host "  5. Push the branch to remote"
-  Write-Host "  6. Provide instructions for creating a PR"
+  Write-Host "  6. Provide instructions for creating a PR and GitHub Container Registry publishing"
 }
 
 # Function to validate version format
@@ -176,15 +176,27 @@ function Update-ApiVersion {
   # Read the file content
   $content = Get-Content $projectFile -Raw
     
-  # Update Version tag
-  if ($content -match '<Version>.*</Version>') {
-    $content = $content -replace '<Version>.*</Version>', "<Version>$Version</Version>"
-    Set-Content $projectFile -Value $content -NoNewline
+  # Update all version-related tags
+  $versionPatterns = @(
+    @{ Pattern = '<Version>.*</Version>'; Replacement = "<Version>$Version</Version>" },
+    @{ Pattern = '<AssemblyVersion>.*</AssemblyVersion>'; Replacement = "<AssemblyVersion>$Version.0</AssemblyVersion>" },
+    @{ Pattern = '<FileVersion>.*</FileVersion>'; Replacement = "<FileVersion>$Version.0</FileVersion>" },
+    @{ Pattern = '<InformationalVersion>.*</InformationalVersion>'; Replacement = "<InformationalVersion>$Version</InformationalVersion>" },
+    @{ Pattern = '<ContainerImageTag>.*</ContainerImageTag>'; Replacement = "<ContainerImageTag>$Version</ContainerImageTag>" }
+  )
+    
+  foreach ($pattern in $versionPatterns) {
+    if ($content -match $pattern.Pattern) {
+      $content = $content -replace $pattern.Pattern, $pattern.Replacement
+      Write-Status "Updated $($pattern.Pattern) to $Version"
+    }
+    else {
+      Write-Warning "Pattern not found: $($pattern.Pattern)"
+    }
   }
-  else {
-    Write-Error "Version tag not found in $projectFile"
-    exit 1
-  }
+    
+  # Write back to file
+  Set-Content $projectFile -Value $content -NoNewline
     
   Write-Success "Updated API version to $Version"
 }
@@ -300,12 +312,21 @@ function Show-NextSteps {
   Write-Host "   git tag -a api/v$Version -m `"Release API v$Version`""
   Write-Host "   git push origin api/v$Version"
   Write-Host "5. The release workflow will automatically:"
-  Write-Host "   - Build and push Docker images"
-  Write-Host "   - Create GitHub Release"
-  Write-Host "   - Publish binary archives"
+  Write-Host "   - Build and push Docker images to GitHub Container Registry"
+  Write-Host "   - Create GitHub Release with binary archives"
+  Write-Host "   - Publish container images with tags:"
+  Write-Host "     - ghcr.io/[REPO_OWNER]/lintellect-api:$Version"
+  Write-Host "     - ghcr.io/[REPO_OWNER]/lintellect-api:latest"
+  Write-Host "     - ghcr.io/[REPO_OWNER]/lintellect-api:$($Version.Split('.')[0])"
+  Write-Host "     - ghcr.io/[REPO_OWNER]/lintellect-api:$($Version.Split('.')[0]).$($Version.Split('.')[1])"
+  Write-Host ""
+  Write-Host "Docker Usage:"
+  Write-Host "  docker pull ghcr.io/[REPO_OWNER]/lintellect-api:$Version"
+  Write-Host "  docker run -p 7000:7000 ghcr.io/[REPO_OWNER]/lintellect-api:$Version"
   Write-Host ""
   Write-Host "Branch: $branchName"
   Write-Host "Version: $Version"
+  Write-Host "Container Registry: ghcr.io/[REPO_OWNER]/lintellect-api"
   Write-Host ""
 }
 

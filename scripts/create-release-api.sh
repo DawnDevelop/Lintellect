@@ -44,11 +44,11 @@ show_usage() {
     echo ""
     echo "The script will:"
     echo "  1. Create a release branch: release/api/v<version>"
-    echo "  2. Update version numbers in project files"
+    echo "  2. Update version numbers in project files (including Docker tags)"
     echo "  3. Update CHANGELOG.md with API section"
     echo "  4. Create a commit with the changes"
     echo "  5. Push the branch to remote"
-    echo "  6. Provide instructions for creating a PR"
+    echo "  6. Provide instructions for creating a PR and GitHub Container Registry publishing"
 }
 
 # Function to validate version format
@@ -154,14 +154,51 @@ update_api_version() {
         exit 1
     fi
     
+    # Create backup
+    cp "$project_file" "$project_file.bak"
+    
     # Update Version tag
     if grep -q "<Version>" "$project_file"; then
-        sed -i.bak "s/<Version>.*<\/Version>/<Version>$version<\/Version>/" "$project_file"
-        rm "$project_file.bak"
+        sed -i "s/<Version>.*<\/Version>/<Version>$version<\/Version>/" "$project_file"
+        print_status "Updated Version to $version"
     else
-        print_error "Version tag not found in $project_file"
-        exit 1
+        print_warning "Version tag not found"
     fi
+    
+    # Update AssemblyVersion tag
+    if grep -q "<AssemblyVersion>" "$project_file"; then
+        sed -i "s/<AssemblyVersion>.*<\/AssemblyVersion>/<AssemblyVersion>$version.0<\/AssemblyVersion>/" "$project_file"
+        print_status "Updated AssemblyVersion to $version.0"
+    else
+        print_warning "AssemblyVersion tag not found"
+    fi
+    
+    # Update FileVersion tag
+    if grep -q "<FileVersion>" "$project_file"; then
+        sed -i "s/<FileVersion>.*<\/FileVersion>/<FileVersion>$version.0<\/FileVersion>/" "$project_file"
+        print_status "Updated FileVersion to $version.0"
+    else
+        print_warning "FileVersion tag not found"
+    fi
+    
+    # Update InformationalVersion tag
+    if grep -q "<InformationalVersion>" "$project_file"; then
+        sed -i "s/<InformationalVersion>.*<\/InformationalVersion>/<InformationalVersion>$version<\/InformationalVersion>/" "$project_file"
+        print_status "Updated InformationalVersion to $version"
+    else
+        print_warning "InformationalVersion tag not found"
+    fi
+    
+    # Update ContainerImageTag tag
+    if grep -q "<ContainerImageTag>" "$project_file"; then
+        sed -i "s/<ContainerImageTag>.*<\/ContainerImageTag>/<ContainerImageTag>$version<\/ContainerImageTag>/" "$project_file"
+        print_status "Updated ContainerImageTag to $version"
+    else
+        print_warning "ContainerImageTag tag not found"
+    fi
+    
+    # Remove backup
+    rm "$project_file.bak"
     
     print_success "Updated API version to $version"
 }
@@ -262,12 +299,21 @@ show_next_steps() {
     echo "   git tag -a api/v$version -m \"Release API v$version\""
     echo "   git push origin api/v$version"
     echo "5. The release workflow will automatically:"
-    echo "   - Build and push Docker images"
-    echo "   - Create GitHub Release"
-    echo "   - Publish binary archives"
+    echo "   - Build and push Docker images to GitHub Container Registry"
+    echo "   - Create GitHub Release with binary archives"
+    echo "   - Publish container images with tags:"
+    echo "     - ghcr.io/[REPO_OWNER]/lintellect-api:$version"
+    echo "     - ghcr.io/[REPO_OWNER]/lintellect-api:latest"
+    echo "     - ghcr.io/[REPO_OWNER]/lintellect-api:$(echo $version | cut -d. -f1)"
+    echo "     - ghcr.io/[REPO_OWNER]/lintellect-api:$(echo $version | cut -d. -f1-2)"
+    echo ""
+    echo "Docker Usage:"
+    echo "  docker pull ghcr.io/[REPO_OWNER]/lintellect-api:$version"
+    echo "  docker run -p 7000:7000 ghcr.io/[REPO_OWNER]/lintellect-api:$version"
     echo ""
     echo "Branch: $branch_name"
     echo "Version: $version"
+    echo "Container Registry: ghcr.io/[REPO_OWNER]/lintellect-api"
     echo ""
 }
 

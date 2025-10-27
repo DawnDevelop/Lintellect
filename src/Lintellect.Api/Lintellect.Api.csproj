@@ -10,7 +10,29 @@
 		<EnableNETAnalyzers>true</EnableNETAnalyzers>
 		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 		<DockerfileContext>..\..</DockerfileContext>
-		<DockerComposeProjectPath>..\..\docker-compose.dcproj</DockerComposeProjectPath>
+		
+		<!-- Version and Release Information -->
+		<Version>0.0.0</Version>
+		<AssemblyVersion>0.0.0.0</AssemblyVersion>
+		<FileVersion>0.0.0.0</FileVersion>
+		<InformationalVersion>0.0.0</InformationalVersion>
+		
+		<!-- Docker Configuration for GitHub Container Registry -->
+		<ContainerImageName>ghcr.io/dawndevelop/lintellect-api</ContainerImageName>
+		<ContainerImageTag>latest</ContainerImageTag>
+		<ContainerRegistry>ghcr.io</ContainerRegistry>
+		<ContainerRepository>dawndevelop/lintellect-api</ContainerRepository>
+		
+		<!-- Publishing Configuration -->
+		<PublishSingleFile>true</PublishSingleFile>
+		<SelfContained>true</SelfContained>
+		<RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+		<AssemblyTitle>Lintellect API</AssemblyTitle>
+		<AssemblyDescription>Lintellect Code Analysis API Service</AssemblyDescription>
+		<AssemblyCompany>DawnDevelop</AssemblyCompany>
+		<AssemblyProduct>Lintellect</AssemblyProduct>
+		<AssemblyCopyright>Copyright © DawnDevelop</AssemblyCopyright>
+
 	</PropertyGroup>
 
 	<ItemGroup>
