@@ -174,7 +174,7 @@ jobs:
 
       - name: Publish API
         run: |
-          dotnet publish src/Lintellect.Api/Lintellect.Api.csproj --configuration Release --runtime ${{ matrix.platform }} --self-contained true --output ./publish/api --force
+          dotnet publish src/Lintellect.Api/Lintellect.Api.csproj --configuration Release --runtime ${{ matrix.platform }} --self-contained true --output ./publish/api --force /p:UseAppHost=true
 
       - name: Create binary archive (Windows)
         if: runner.os == 'Windows'
