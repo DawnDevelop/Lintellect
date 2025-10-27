@@ -26,7 +26,7 @@
 		<RepositoryType>git</RepositoryType>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageVersion>0.0.4-hotfix</PackageVersion>
-		<PackageReadmeFile>../../README.md</PackageReadmeFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -41,11 +41,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="..\..\README.md" Pack="true" PackagePath="\" Condition="Exists('..\..\README.md')" />
+	  <ProjectReference Include="..\Lintellect.Shared\Lintellect.Shared.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\Lintellect.Shared\Lintellect.Shared.csproj" />
+		<None Include="../../README.md" Pack="true" PackagePath="README.md" />
 	</ItemGroup>
 
 </Project>
