@@ -319,8 +319,8 @@ jobs:
           file: src/Lintellect.Api/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/lintellect-api:main
-            ghcr.io/${{ github.repository_owner }}/lintellect-api:edge
+            ghcr.io/dawndevelop/lintellect-api:main
+            ghcr.io/dawndevelop/lintellect-api:edge
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
