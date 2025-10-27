@@ -178,7 +178,8 @@ jobs:
             --configuration Release \
             --runtime ${{ matrix.platform }} \
             --self-contained true \
-            --output ./publish/api
+            --output ./publish/api \
+            --force
 
       - name: Create binary archive (Windows)
         if: runner.os == 'Windows'
