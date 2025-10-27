@@ -10,12 +10,7 @@ internal class MockCodeAnalyzer : ICodeAnalyzer
     public bool ShouldThrowException { get; set; } = false;
     public string? ExceptionMessage { get; set; }
 
-    public Task<List<AnalyzerFindings>> AnalyzeAsync(string solutionPath, string? githubToken = null)
-    {
-        return AnalyzeAsync(solutionPath, null, githubToken);
-    }
-
-    public Task<List<AnalyzerFindings>> AnalyzeAsync(string solutionPath, List<string>? exclusionPatterns, string? githubToken = null)
+    public Task<List<AnalyzerFindings>> AnalyzeAsync(string solutionPath)
     {
         return ShouldThrowException ? throw new FileNotFoundException(ExceptionMessage ?? "Mock exception") : Task.FromResult(Findings);
     }
