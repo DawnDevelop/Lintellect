@@ -10,7 +10,7 @@ internal class StaticAnalysisCommand : Command
     {
         var solution = new Option<string>("--solution")
         {
-            Description = "Path to .sln or .slnx",
+            Description = "Path to .sln or .slnx (default: current directory)",
             DefaultValueFactory = _ => ".",
             Validators =
             {
@@ -22,12 +22,13 @@ internal class StaticAnalysisCommand : Command
                         result.AddError("Solution path cannot be empty.");
                     }
                 }
-            }
+            },
+            Aliases = { "-s" }
         };
 
         var serviceUrl = new Option<string>("--api-url")
         {
-            Description = "AiPrReview.Service base URL (defaults to LINTELLECT_API_URL environment variable)",
+            Description = "Lintellect API base URL (default: LINTELLECT_API_URL environment variable)",
             Required = false,
             DefaultValueFactory = _ => Environment.GetEnvironmentVariable("LINTELLECT_API_URL") ?? string.Empty,
             Validators =
@@ -40,75 +41,91 @@ internal class StaticAnalysisCommand : Command
                         result.AddError("API URL must be a valid absolute URI.");
                     }
                 }
-            }
+            },
+            Aliases = { "-u" }
         };
 
         var apiKey = new Option<string>("--api-key")
         {
-            Description = "API key (defaults to LINTELLECT_API_KEY environment variable)",
+            Description = "API key (default: LINTELLECT_API_KEY environment variable)",
             DefaultValueFactory = _ => Environment.GetEnvironmentVariable("LINTELLECT_API_KEY") ?? string.Empty,
-            Required = false
+            Required = false,
+            Aliases = { "-k" }
         };
 
         var language = new Option<EProgrammingLanguage>("--language")
         {
-            Description = "Programming language",
-            DefaultValueFactory = _ => EProgrammingLanguage.CSharp
+            Description = "Programming language (default: csharp)",
+            DefaultValueFactory = _ => EProgrammingLanguage.CSharp,
+            Aliases = { "-l" }
         };
 
         var exclusions = new Option<string[]>("--exclude")
         {
-            Description = "File/folder patterns to exclude from analysis (e.g., '**/bin/**', '**/obj/**')",
-            AllowMultipleArgumentsPerToken = true
+            Description = "File/folder patterns to exclude from analysis (e.g., '**/bin/**', '**/obj/**') (default: none)",
+            AllowMultipleArgumentsPerToken = true,
+            Aliases = { "-e" }
         };
 
-        var enableSummaryComment = new Option<bool>("--EnableSummaryComment")
+        var enableSummaryComment = new Option<bool>("--enable-summary-comment")
         {
-            DefaultValueFactory = _ => true
+            Description = "Enable summary comment generation (default: true)",
+            DefaultValueFactory = _ => true,
+            Aliases = { "-esc" }
         };
 
-        var enableInlineSuggestions = new Option<bool>("--EnableInlineSuggestions")
+        var enableInlineSuggestions = new Option<bool>("--enable-inline-suggestions")
         {
-            DefaultValueFactory = _ => true
+            Description = "Enable inline suggestions (default: true)",
+            DefaultValueFactory = _ => true,
+            Aliases = { "-eis" }
         };
 
-        var enableDescriptionSummary = new Option<bool>("--EnableDescriptionSummary")
+        var enableDescriptionSummary = new Option<bool>("--enable-description-summary")
         {
-            DefaultValueFactory = _ => true
+            Description = "Enable description summary (default: true)",
+            DefaultValueFactory = _ => true,
+            Aliases = { "-eds" }
         };
 
-        var enableCodeOwners = new Option<bool>("--EnableAzureDevopsCodeOwners")
+        var enableCodeOwners = new Option<bool>("--enable-azure-devops-code-owners")
         {
-            DefaultValueFactory = _ => false
+            Description = "Enable Azure DevOps code owners integration (default: false)",
+            DefaultValueFactory = _ => false,
+            Aliases = { "-eac" }
         };
 
         // Git provider credentials
         var devopsPat = new Option<string>("--devops-pat")
         {
-            Description = "Azure DevOps Personal Access Token (defaults to AZURE_DEVOPS_PAT environment variable)",
+            Description = "Azure DevOps Personal Access Token (default: AZURE_DEVOPS_PAT environment variable)",
             DefaultValueFactory = _ => Environment.GetEnvironmentVariable("AZURE_DEVOPS_PAT") ?? string.Empty,
-            Required = false
+            Required = false,
+            Aliases = { "-pat" }
         };
 
         var azureDevOpsOrgUrl = new Option<string>("--azure-devops-org-url")
         {
-            Description = "Azure DevOps Organization URL (e.g., https://dev.azure.com/yourorg) (defaults to ENDPOINT_URL_SYSTEMVSSCONNECTION environment variable)",
+            Description = "Azure DevOps Organization URL (e.g., https://dev.azure.com/yourorg) (default: ENDPOINT_URL_SYSTEMVSSCONNECTION environment variable)",
             DefaultValueFactory = _ => Environment.GetEnvironmentVariable("ENDPOINT_URL_SYSTEMVSSCONNECTION") ?? string.Empty,
-            Required = false
+            Required = false,
+            Aliases = { "-org" }
         };
 
         var githubToken = new Option<string>("--github-token")
         {
-            Description = "GitHub Personal Access Token (optional, not required for Semgrep analysis) (defaults to GITHUB_TOKEN environment variable)",
+            Description = "GitHub Personal Access Token (optional, not required for Semgrep analysis) (default: GITHUB_TOKEN environment variable)",
             DefaultValueFactory = _ => Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? string.Empty,
-            Required = false
+            Required = false,
+            Aliases = { "-ghtoken" }
         };
 
         // Semgrep analysis options
         var enableSemgrep = new Option<bool>("--enable-semgrep")
         {
-            Description = "Enable Semgrep security and quality analysis",
-            DefaultValueFactory = _ => true
+            Description = "Enable Semgrep security and quality analysis (default: true)",
+            DefaultValueFactory = _ => true,
+            Aliases = { "-semgrep", "-es" }
         };
 
 

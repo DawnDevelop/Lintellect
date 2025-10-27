@@ -265,17 +265,13 @@ jobs:
         with:
           path: ./binaries
 
-      - name: Create release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Lintellect CLI v${{ needs.extract-version.outputs.version }}
-          body: ${{ needs.generate-release-notes.outputs.release-notes }}
-          files: |
-            ./binaries/lintellect-cli-linux-x64/lintellect-cli-${{ needs.extract-version.outputs.version }}-linux-x64.tar.gz
+      - name: Create release with GitHub CLI
+        run: |
+          gh release create ${{ github.ref_name }} \
+            --title "Lintellect CLI v${{ needs.extract-version.outputs.version }}" \
+            --notes "${{ needs.generate-release-notes.outputs.release-notes }}" \
+            ./binaries/lintellect-cli-linux-x64/lintellect-cli-${{ needs.extract-version.outputs.version }}-linux-x64.tar.gz \
             ./binaries/lintellect-cli-win-x64/lintellect-cli-${{ needs.extract-version.outputs.version }}-win-x64.zip
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
