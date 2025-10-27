@@ -3,7 +3,6 @@
 [![.NET](https://img.shields.io/badge/.NET-10.0-blue.svg)](https://dotnet.microsoft.com/download)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/your-org/lintellect/workflows/CI/badge.svg)](https://github.com/your-org/lintellect/actions)
-[![CodeQL](https://github.com/your-org/lintellect/workflows/CodeQL%20Analysis/badge.svg)](https://github.com/your-org/lintellect/actions)
 [![API Version](https://img.shields.io/badge/API-v1.0.0-blue.svg)](https://github.com/your-org/lintellect/releases)
 [![CLI Version](https://img.shields.io/badge/CLI-v1.0.0-green.svg)](https://www.nuget.org/packages/lintellect)
 
@@ -120,25 +119,24 @@ Lintellect --help
 ### CLI Analysis
 
 ```bash
-# Basic C# analysis with AI features (CodeQL enabled by default)
+# Basic C# analysis with AI features (Semgrep disabled by default)
 Lintellect analyze \
   --language "csharp" \
   --enable-summary-comment \
   --enable-inline-suggestions \
   --enable-description-summary
 
-# C# analysis with explicit CodeQL
+# C# analysis with Semgrep (MIT-licensed security analysis)
 Lintellect analyze \
   --language "csharp" \
-  --enable-codeql \
-  --github-token "your-github-token" \
+  --enable-semgrep \
   --enable-summary-comment \
   --enable-inline-suggestions
 
-# C# analysis WITHOUT CodeQL (AI features only)
+# C# analysis WITHOUT Semgrep (AI features only)
 Lintellect analyze \
   --language "csharp" \
-  --enable-codeql false \
+  --enable-semgrep false \
   --enable-summary-comment \
   --enable-inline-suggestions \
   --enable-description-summary
@@ -154,10 +152,10 @@ Lintellect analyze \
   --enable-inline-suggestions \
   --enable-azure-devops-code-owners
 
-# Python analysis with CodeQL
+# Python analysis with Semgrep
 Lintellect analyze \
   --language "python" \
-  --enable-codeql \
+  --enable-semgrep \
   --exclude "**/__pycache__/**" \
   --exclude "**/venv/**" \
   --exclude "**/node_modules/**" \
@@ -166,7 +164,7 @@ Lintellect analyze \
 # JavaScript/TypeScript analysis
 Lintellect analyze \
   --language "javascript" \
-  --enable-codeql \
+  --enable-semgrep \
   --exclude "**/node_modules/**" \
   --exclude "**/dist/**" \
   --exclude "**/build/**" \
@@ -184,7 +182,9 @@ name: PR Analysis
 # Environment Variables Required:
 # - LINTELLECT_API_URL: Your Lintellect API endpoint URL
 # - LINTELLECT_API_KEY: Your Lintellect API key
-# - GITHUB_TOKEN: GitHub Personal Access Token (REQUIRED - CodeQL is enabled by default)
+#
+# Optional Environment Variables:
+# - LINTELLECT_API_URL and LINTELLECT_API_KEY can be provided via command line arguments instead
 
 on:
   pull_request:
@@ -229,7 +229,9 @@ trigger: none # Trigger on every pull request by setting build validation inside
 # Environment Variables Required:
 # - LINTELLECT_API_URL: Your Lintellect API endpoint URL
 # - LINTELLECT_API_KEY: Your Lintellect API key
-# - GITHUB_TOKEN: GitHub Personal Access Token (REQUIRED - CodeQL is enabled by default)
+#
+# Optional Environment Variables:
+# - LINTELLECT_API_URL and LINTELLECT_API_KEY can be provided via command line arguments instead
 # - AZURE_DEVOPS_PAT: Azure DevOps Personal Access Token (for Azure DevOps integration)
 
 pool:

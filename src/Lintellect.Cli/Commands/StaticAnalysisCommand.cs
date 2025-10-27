@@ -35,7 +35,7 @@ internal class StaticAnalysisCommand : Command
                 result =>
                 {
                     var value = result.GetValueOrDefault<string>();
-                    if (!new Uri(value).IsAbsoluteUri)
+                    if (string.IsNullOrWhiteSpace(value) || !new Uri(value).IsAbsoluteUri)
                     {
                         result.AddError("API URL must be a valid absolute URI.");
                     }
@@ -99,15 +99,15 @@ internal class StaticAnalysisCommand : Command
 
         var githubToken = new Option<string>("--github-token")
         {
-            Description = "GitHub Personal Access Token (required for CodeQL analysis) (defaults to GITHUB_TOKEN environment variable)",
+            Description = "GitHub Personal Access Token (optional, not required for Semgrep analysis) (defaults to GITHUB_TOKEN environment variable)",
             DefaultValueFactory = _ => Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? string.Empty,
             Required = false
         };
 
-        // CodeQL analysis options
-        var enableCodeQL = new Option<bool>("--enable-codeql")
+        // Semgrep analysis options
+        var enableSemgrep = new Option<bool>("--enable-semgrep")
         {
-            Description = "Enable CodeQL security and quality analysis (enabled by default)",
+            Description = "Enable Semgrep security and quality analysis",
             DefaultValueFactory = _ => true
         };
 
@@ -127,9 +127,7 @@ internal class StaticAnalysisCommand : Command
         Options.Add(azureDevOpsOrgUrl);
         Options.Add(githubToken);
 
-        Options.Add(enableCodeQL);
-        //Options.Add(codeQLQuerySuites);
-        //Options.Add(codeQLTimeout);
+        Options.Add(enableSemgrep);
 
         SetAction(async (parseResult) =>
         {
@@ -144,15 +142,7 @@ internal class StaticAnalysisCommand : Command
             var devopsPatValue = parseResult.GetValue(devopsPat);
             var azureDevOpsOrgUrlValue = parseResult.GetValue(azureDevOpsOrgUrl);
             var githubTokenValue = parseResult.GetValue(githubToken);
-            var enableCodeQLValue = parseResult.GetValue(enableCodeQL);
-
-            // Validate GitHub token when CodeQL is enabled
-            if (enableCodeQLValue && string.IsNullOrEmpty(githubTokenValue))
-            {
-                Console.WriteLine("❌ Error: GitHub token is required when CodeQL analysis is enabled.");
-                Console.WriteLine("Please provide a GitHub Personal Access Token using --github-token option.");
-                return 1;
-            }
+            var enableSemgrepValue = parseResult.GetValue(enableSemgrep);
 
             Console.WriteLine($"Configuration:");
             Console.WriteLine($"  Solution Path: {path}");
@@ -163,14 +153,13 @@ internal class StaticAnalysisCommand : Command
             Console.WriteLine($"  DevOps PAT: {(string.IsNullOrEmpty(devopsPatValue) ? "Not provided" : "***")}");
             Console.WriteLine($"  Azure DevOps Org URL: {azureDevOpsOrgUrlValue ?? "Not provided"}");
             Console.WriteLine($"  GitHub Token: {(string.IsNullOrEmpty(githubTokenValue) ? "Not provided" : "***")}");
-            Console.WriteLine($"  CodeQL Analysis: {(enableCodeQLValue ? "Enabled" : "Disabled")}");
+            Console.WriteLine($"  Semgrep Analysis: {(enableSemgrepValue ? "Enabled" : "Disabled")}");
 
             Console.WriteLine();
 
             var orchestrator = new AnalysisOrchestrator(
                 languageOptionResult,
-                enableCodeQLValue,
-                githubTokenValue,
+                enableSemgrepValue,
                 [.. exclusionPatterns]);
 
 

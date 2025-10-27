@@ -1,52 +1,69 @@
-using Lintellect.Cli.Services.Analyzers.CodeQL;
+using Lintellect.Cli.Interfaces;
+using Lintellect.Cli.Services.Analyzers;
 using Lintellect.Cli.Services.Git;
+using Lintellect.Shared.Extensions;
 using Lintellect.Shared.Models;
 
 namespace Lintellect.Cli.Services;
 
 internal class AnalysisOrchestrator(
     EProgrammingLanguage language,
-    bool enableCodeQL = false,
-    string? githubToken = null,
+    bool enableSemgrep = false,
     List<string>? exclusionPatterns = null)
 {
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "We need to catch all exceptions for robust error handling in analysis orchestration")]
     public async Task<AnalysisRequest> RunAsync(string path)
     {
         Console.WriteLine($"Initializing multi-analyzer for {language}...");
 
         var allFindings = new List<AnalyzerFindings>();
 
-        // Run CodeQL analysis if enabled
-        if (enableCodeQL)
+        // Run Semgrep analysis if enabled
+        if (enableSemgrep)
         {
-            Console.WriteLine("Running CodeQL security and quality analysis...");
+            Console.WriteLine("Running Semgrep security and quality analysis...");
             try
             {
-                var codeQLAnalyzer = CreateCodeQLAnalyzer();
-                if (codeQLAnalyzer is not null)
-                {
-                    var codeQLFindings = await codeQLAnalyzer.AnalyzeAsync(path, exclusionPatterns, githubToken).ConfigureAwait(false);
-                    allFindings.AddRange(codeQLFindings);
-                    Console.WriteLine($"✓ CodeQL analysis completed: {codeQLFindings.Count} finding(s)");
-                }
-                else
-                {
-                    Console.WriteLine($"CodeQL analysis not supported for {language}");
-                }
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("CodeQL is required"))
-            {
-                Console.WriteLine($"❌ CodeQL analysis failed: {ex.Message}");
-                Console.WriteLine("Continuing with other analyzers...");
+                var semgrepAnalyzer = new SemgrepAnalyzer(language);
+                var semgrepFindings = await semgrepAnalyzer.AnalyzeAsync(path).ConfigureAwait(false);
+                allFindings.AddRange(semgrepFindings);
+                Console.WriteLine($"✓ Semgrep analysis completed: {semgrepFindings.Count} finding(s)");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️ CodeQL analysis failed: {ex.Message}");
+                Console.WriteLine($"⚠️ Semgrep analysis failed: {ex.Message}");
                 Console.WriteLine("Continuing with other analyzers...");
-                throw;
             }
         }
+
+        if (_codeAnalyzer is null)
+        {
+            Console.WriteLine($"No code analyzer available for language: {language}. Skipping code analysis.");
+            return new AnalysisRequest
+            {
+                Language = language,
+                Findings = allFindings
+            };
+        }
+
+        var languageSpecificFindings = await _codeAnalyzer.AnalyzeAsync(path).ConfigureAwait(false);
+        allFindings.AddRange(languageSpecificFindings);
+
+        if (exclusionPatterns != null && exclusionPatterns.Count > 0)
+        {
+            var filteredFindings = allFindings.Where(finding =>
+                !FilePatternMatcher.ShouldExclude(finding.FilePath, exclusionPatterns)).ToList();
+
+            var excludedCount = allFindings.Count - filteredFindings.Count;
+            if (excludedCount > 0)
+            {
+                Console.WriteLine($"Semgrep analysis: {excludedCount} finding(s) excluded by file patterns");
+            }
+
+            allFindings = filteredFindings;
+        }
+
 
         // Extract Git information
         Console.WriteLine("Extracting Git information...");
@@ -75,21 +92,20 @@ internal class AnalysisOrchestrator(
         };
     }
 
-    private CodeQLAnalyzerBase? CreateCodeQLAnalyzer()
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1859:Use concrete types when possible for improved performance", Justification = "Reserved for later")]
+    private readonly ICodeAnalyzer? _codeAnalyzer = language switch
     {
-        return language switch
-        {
-            EProgrammingLanguage.CSharp => new CodeQLCSharpAnalyzer(),
-            EProgrammingLanguage.Python => new CodeQLPythonAnalyzer(),
-            EProgrammingLanguage.Java => new CodeQLJavaAnalyzer(),
-            EProgrammingLanguage.JavaScript => new CodeQLJavaScriptAnalyzer(),
-            EProgrammingLanguage.TypeScript => new CodeQLTypeScriptAnalyzer(),
-            EProgrammingLanguage.Go => new CodeQLGoAnalyzer(),
-            EProgrammingLanguage.Ruby => new CodeQLRubyAnalyzer(),
-            EProgrammingLanguage.PHP => new CodeQLPhpAnalyzer(),
-            EProgrammingLanguage.Swift => new CodeQLSwiftAnalyzer(),
-            EProgrammingLanguage.Kotlin => new CodeQLKotlinAnalyzer(),
-            _ => null
-        };
-    }
+        EProgrammingLanguage.CSharp => new Analyzers.Csharp.CSharpAnalyzer(),
+        EProgrammingLanguage.Unknown => null,
+        EProgrammingLanguage.Python => null,
+        EProgrammingLanguage.Java => null,
+        EProgrammingLanguage.JavaScript => null,
+        EProgrammingLanguage.TypeScript => null,
+        EProgrammingLanguage.Go => null,
+        EProgrammingLanguage.Ruby => null,
+        EProgrammingLanguage.PHP => null,
+        EProgrammingLanguage.Swift => null,
+        EProgrammingLanguage.Kotlin => null,
+        _ => throw new NotSupportedException($"No analyzer for {language}")
+    };
 }

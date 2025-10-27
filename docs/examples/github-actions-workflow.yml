@@ -31,7 +31,7 @@ jobs:
         run: |
           dotnet tool install --global Lintellect
 
-      # Example 1: Basic C# Analysis with AI Features (CodeQL enabled by default)
+      # Example 1: Basic C# Analysis with AI Features (Semgrep disabled by default)
       - name: Basic C# Analysis
         run: |
           Lintellect analyze \
@@ -42,35 +42,31 @@ jobs:
         env:
           LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
           LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Example 2: C# Analysis with Explicit CodeQL (redundant but shows the option)
-      - name: C# Analysis with Explicit CodeQL
+      # Example 2: C# Analysis with Semgrep (MIT-licensed security analysis)
+      - name: C# Analysis with Semgrep
         run: |
           Lintellect analyze \
             --language "csharp" \
-            --enable-codeql \
-            --github-token "${{ secrets.GITHUB_TOKEN }}" \
+            --enable-semgrep \
             --enable-summary-comment \
             --enable-inline-suggestions
         env:
           LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
           LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Example 3: C# Analysis WITHOUT CodeQL (AI features only)
-      - name: C# Analysis without CodeQL
+      # Example 3: C# Analysis WITHOUT Semgrep (AI features only)
+      - name: C# Analysis without Semgrep
         run: |
           Lintellect analyze \
             --language "csharp" \
-            --enable-codeql false \
+            --enable-semgrep false \
             --enable-summary-comment \
             --enable-inline-suggestions \
             --enable-description-summary
         env:
           LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
           LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
-          # Note: GITHUB_TOKEN not required when CodeQL is disabled
 
       # Example 4: Multi-Language Analysis with Exclusions
       - name: Multi-Language Analysis with File Exclusions
@@ -94,7 +90,7 @@ jobs:
         run: |
           Lintellect analyze \
             --language "python" \
-            --enable-codeql \
+            --enable-semgrep \
             --exclude "**/__pycache__/**" \
             --exclude "**/venv/**" \
             --exclude "**/node_modules/**" \
@@ -109,7 +105,7 @@ jobs:
         run: |
           Lintellect analyze \
             --language "javascript" \
-            --enable-codeql \
+            --enable-semgrep \
             --exclude "**/node_modules/**" \
             --exclude "**/dist/**" \
             --exclude "**/build/**" \
@@ -125,7 +121,7 @@ jobs:
         run: |
           Lintellect analyze \
             --language "java" \
-            --enable-codeql \
+            --enable-semgrep \
             --exclude "**/target/**" \
             --exclude "**/build/**" \
             --exclude "**/out/**" \
@@ -144,7 +140,7 @@ jobs:
         run: |
           Lintellect analyze \
             --language "go" \
-            --enable-codeql \
+            --enable-semgrep \
             --exclude "**/vendor/**" \
             --exclude "**/testdata/**" \
             --enable-summary-comment
@@ -158,7 +154,7 @@ jobs:
         run: |
           Lintellect analyze \
             --language "csharp" \
-            --enable-codeql \
+            --enable-semgrep \
             --exclude "**/bin/**" \
             --exclude "**/obj/**" \
             --exclude "**/test/**" \
@@ -178,7 +174,7 @@ jobs:
         run: |
           Lintellect analyze \
             --language "ruby" \
-            --enable-codeql \
+            --enable-semgrep \
             --exclude "**/vendor/**" \
             --exclude "**/tmp/**" \
             --exclude "**/log/**" \
@@ -193,7 +189,7 @@ jobs:
         run: |
           Lintellect analyze \
             --language "php" \
-            --enable-codeql \
+            --enable-semgrep \
             --exclude "**/vendor/**" \
             --exclude "**/node_modules/**" \
             --exclude "**/storage/**" \
@@ -208,7 +204,7 @@ jobs:
         run: |
           Lintellect analyze \
             --language "swift" \
-            --enable-codeql \
+            --enable-semgrep \
             --exclude "**/DerivedData/**" \
             --exclude "**/build/**" \
             --exclude "**/Pods/**" \
@@ -223,7 +219,7 @@ jobs:
         run: |
           Lintellect analyze \
             --language "kotlin" \
-            --enable-codeql \
+            --enable-semgrep \
             --exclude "**/build/**" \
             --exclude "**/.gradle/**" \
             --exclude "**/out/**" \
