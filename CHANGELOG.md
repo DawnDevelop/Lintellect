@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [CLI v0.0.5] - 2025-10-27
+
+### Added
+
+- semgrep
+- added static csharp analyzer
+
+### Changed
+
+- Removed CodeQL because of licensing issues
+
+### Fixed
+
+- cli.csproj
+
 ## [CLI v0.0.4] - 2025-10-27
 
 ### Added
