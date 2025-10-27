@@ -6,20 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
 ## [CLI v0.0.5] - 2025-10-27
 
 ### Added
-- TBD
+
+- semgrep
+- added static csharp analyzer
 
 ### Changed
-- TBD
+
+- Removed CodeQL because of licensing issues
 
 ### Fixed
-- TBD
 
-### Security
-- TBD
-
+- cli.csproj
 
 ## [CLI v0.0.4] - 2025-10-27
 
