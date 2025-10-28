@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Infrastructure.Services.Git.AzureDevops;
 using Lintellect.Api.Infrastructure.Services.Git.GitHub;
@@ -11,7 +12,7 @@ namespace Lintellect.Api.Infrastructure.Services.Git;
 public sealed class GitClientFactory(ILogger<GitHubClientService> logger) : IGitClientFactory
 {
     private readonly ILogger<GitHubClientService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
+    private readonly ConcurrentDictionary<string, IGitClient> _clientCache = new();
     public IGitClient CreateClient(AnalysisRequest analysisRequest)
     {
         return analysisRequest.GitProvider switch
@@ -28,13 +29,26 @@ public sealed class GitClientFactory(ILogger<GitHubClientService> logger) : IGit
         var orgUri = new Uri(analysisRequest.AzureDevOpsOrgUrl!);
 
         _logger.LogInformation("Creating Azure DevOps client for organization: {OrgUrl}", orgUri);
-        return new AzureDevopsClientService(analysisRequest.DevopsPat!, orgUri);
+
+        var client = _clientCache.GetOrAdd(analysisRequest.DevopsPat!, _ =>
+        {
+            _logger.LogInformation("Caching Azure DevOps client for PAT.");
+            return new AzureDevopsClientService(analysisRequest.DevopsPat!, orgUri);
+        });
+
+        return (AzureDevopsClientService)client;
     }
 
     private GitHubClientService CreateGitHubClient(AnalysisRequest analysisRequest)
     {
         // Validation is handled by FluentValidation at the request level
         _logger.LogInformation("Creating GitHub client");
-        return new GitHubClientService(analysisRequest.GitHubToken!, _logger);
+        var client = _clientCache.GetOrAdd(analysisRequest.GitHubToken!, _ =>
+        {
+            _logger.LogInformation("Caching Azure DevOps client for PAT.");
+            return new GitHubClientService(analysisRequest.GitHubToken!, _logger);
+        });
+
+        return (GitHubClientService)client;
     }
 }

@@ -33,6 +33,8 @@ internal sealed class CSharpAnalyzer : ICodeAnalyzer
             x => System.Diagnostics.Debug.WriteLine($"[MSBuild] {x.Diagnostic.Message}"
         ));
 
+        // Get the repository root directory (solution directory)
+        var repositoryRoot = Path.GetDirectoryName(Path.GetFullPath(solutionPath))!;
 
         var solution = await workspace.OpenSolutionAsync(solutionPath).ConfigureAwait(false);
 
@@ -79,7 +81,7 @@ internal sealed class CSharpAnalyzer : ICodeAnalyzer
                     {
                         RuleId = d.Id,
                         Message = d.GetMessage(CultureInfo.InvariantCulture),
-                        FilePath = NormalizePath(span.Path),
+                        FilePath = GetRelativePath(span.Path, repositoryRoot),
                         Line = span.StartLinePosition.Line + 1,
                         Severity = d.Severity.ToString()
                     });
@@ -110,9 +112,25 @@ internal sealed class CSharpAnalyzer : ICodeAnalyzer
         });
     }
 
-    private static string NormalizePath(string path)
+    /// <summary>
+    /// Converts an absolute file path to a relative path from the repository root.
+    /// </summary>
+    private static string GetRelativePath(string filePath, string repositoryRoot)
     {
-        return Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar);
+        var fullPath = Path.GetFullPath(filePath);
+        var fullRoot = Path.GetFullPath(repositoryRoot);
+
+        // Use Path.GetRelativePath to convert absolute to relative
+        var relativePath = Path.GetRelativePath(fullRoot, fullPath);
+
+        // Normalize to forward slashes for consistency with Git
+        relativePath = relativePath.Replace('\\', '/');
+        if (!relativePath.StartsWith('/'))
+        {
+            relativePath = "/" + relativePath;
+        }
+
+        return relativePath;
     }
 
     private static ImmutableArray<DiagnosticAnalyzer> LoadExternalAnalyzers()
@@ -121,7 +139,7 @@ internal sealed class CSharpAnalyzer : ICodeAnalyzer
         var analyzerDir = Path.Combine(baseDir, "analyzers", "dotnet", "cs");
         if (!Directory.Exists(analyzerDir))
         {
-            return ImmutableArray<DiagnosticAnalyzer>.Empty;
+            return [];
         }
 
         var loader = new AnalyzerAssemblyLoader();

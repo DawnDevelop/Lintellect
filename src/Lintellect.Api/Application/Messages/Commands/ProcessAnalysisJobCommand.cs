@@ -23,22 +23,36 @@ public sealed class ProcessAnalysisJobCommandHandler(
 {
     public async ValueTask<PullRequestAnalysisReportModel> Handle(ProcessAnalysisJobCommand request, CancellationToken cancellationToken)
     {
-        // Step 1: Get and filter diffs
-        var diffs = await GetFilteredDiffsAsync(request.AnalysisRequest, cancellationToken);
+        // Step 1: Get and filter diffs and findings
+        var analysisRequest = request.AnalysisRequest;
+
+        var diffs = await GetFilteredDiffsAsync(analysisRequest, cancellationToken);
+
+        // Apply file exclusions if specified
+        if (analysisRequest.FileExclusions != null && analysisRequest.FileExclusions.Count > 0)
+        {
+            var filteredFiles = FilePatternMatcher.FilterFiles(diffs.Keys, analysisRequest.FileExclusions);
+            diffs = filteredFiles.ToDictionary(file => file, file => diffs[file]);
+        }
+
+        // Filter findings to only include those for files that exist in diffs
+        analysisRequest.Findings = [.. analysisRequest.Findings.Where(finding =>
+            diffs.ContainsKey(finding.FilePath))];
+
 
         // Step 2: Prepare analyzer and custom instructions
         var analyzer = analyzerResolver.GetAnalyzerService(EAnalyzers.AIFoundry);
-        var customInstructions = await prService.GetCustomInstructionsAsync(request.AnalysisRequest);
-        var aiAnalyzerModel = new AnalyzerServiceModel(request.AnalysisRequest, customInstructions ?? string.Empty);
+        var customInstructions = await prService.GetCustomInstructionsAsync(analysisRequest);
+        var aiAnalyzerModel = new AnalyzerServiceModel(analysisRequest, customInstructions ?? string.Empty);
 
         // Step 3: Execute analysis tasks in parallel
-        var analysisResults = await ExecuteAnalysisTasksAsync(analyzer, aiAnalyzerModel, diffs, request.AnalysisRequest, cancellationToken);
+        var analysisResults = await ExecuteAnalysisTasksAsync(analyzer, aiAnalyzerModel, diffs, analysisRequest, cancellationToken);
 
         // Step 4: Post results to PR
-        await PostResultsToPullRequestAsync(prService, request.AnalysisRequest, analysisResults, cancellationToken);
+        await PostResultsToPullRequestAsync(prService, analysisRequest, analysisResults, cancellationToken);
 
         // Step 5: Return report
-        return BuildAnalysisReport(request.AnalysisRequest, analysisResults, diffs);
+        return BuildAnalysisReport(analysisRequest, analysisResults, diffs);
     }
 
     private async Task<Dictionary<string, string>> GetFilteredDiffsAsync(AnalysisRequest analysisRequest, CancellationToken cancellationToken)
@@ -49,13 +63,6 @@ public sealed class ProcessAnalysisJobCommandHandler(
             contextLines: 3,
             maxNewFileLines: 50,
             maxLinesPerFile: 1000);
-
-        // Apply file exclusions if specified
-        if (analysisRequest.FileExclusions != null && analysisRequest.FileExclusions.Count > 0)
-        {
-            var filteredFiles = FilePatternMatcher.FilterFiles(diffs.Keys, analysisRequest.FileExclusions);
-            diffs = filteredFiles.ToDictionary(file => file, file => diffs[file]);
-        }
 
         return diffs;
     }

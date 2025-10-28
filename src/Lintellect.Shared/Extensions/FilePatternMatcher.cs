@@ -194,4 +194,33 @@ public static class FilePatternMatcher
             ? filePaths
             : filePaths.Where(filePath => !ShouldExclude(filePath, exclusionPatterns));
     }
+
+    /// <summary>
+    /// Checks if an absolute file path ends with a relative path pattern.
+    /// This is useful for matching absolute paths from analyzers with relative paths from Git diffs.
+    /// </summary>
+    /// <param name="absolutePath">The absolute file path (e.g., C:\repo\src\MyFile.cs)</param>
+    /// <param name="relativePath">The relative file path (e.g., src/MyFile.cs)</param>
+    /// <returns>True if the absolute path ends with the relative path, false otherwise</returns>
+    public static bool PathEndsWithRelative(string absolutePath, string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(absolutePath) || string.IsNullOrWhiteSpace(relativePath))
+        {
+            return false;
+        }
+
+        // Normalize path separators to forward slashes
+        var normalizedAbsolute = absolutePath.Replace('\\', '/');
+        var normalizedRelative = relativePath.Replace('\\', '/').TrimStart('/');
+
+        // Ensure we're matching at path boundaries to avoid partial matches
+        // For example: "src/Utils/Helper.cs" should not match "tests/src/Utils/Helper.cs"
+        if (normalizedAbsolute.EndsWith("/" + normalizedRelative, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        // Handle case where the relative path is the entire absolute path (rare but possible)
+        return normalizedAbsolute.Equals(normalizedRelative, StringComparison.OrdinalIgnoreCase);
+    }
 }

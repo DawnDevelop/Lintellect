@@ -2,7 +2,7 @@ using Lintellect.Cli.Services.Analyzers;
 using Lintellect.Shared.Models;
 using Shouldly;
 
-namespace Lintellect.Cli.UnitTests.Tests;
+namespace Lintellect.Cli.UnitTests.Tests.Analyzers;
 
 [TestFixture]
 public class SemgrepAnalyzerTests
