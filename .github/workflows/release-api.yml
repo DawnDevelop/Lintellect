@@ -1,6 +1,7 @@
 name: Release API
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "api/v*"
