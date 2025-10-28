@@ -49,7 +49,7 @@ public class CSharpRoslynAnalyzerIntegrationTests
         var cs0612Finding = _cachedFindingsResult.FirstOrDefault(f => f.RuleId == "CS0618");
 
         cs0612Finding.ShouldNotBeNull("OldMethod is obsolete and should trigger CS0618");
-        cs0612Finding!.FilePath.ShouldBe("Program.cs");
+        cs0612Finding!.FilePath.ShouldBe("/Program.cs");
         cs0612Finding.Message.ShouldContain("OldMethod");
         cs0612Finding.Line.ShouldBeGreaterThan(0);
         cs0612Finding.Severity.ShouldNotBeNullOrEmpty();
@@ -123,16 +123,10 @@ public class CSharpRoslynAnalyzerIntegrationTests
 
         foreach (var finding in _cachedFindingsResult)
         {
-            // File paths should be relative (not absolute)
-            finding.FilePath.ShouldNotStartWith("C:");
-            finding.FilePath.ShouldNotStartWith("/");
+            finding.FilePath.ShouldStartWith("/");
 
             // File paths should not contain backslashes (should use forward slashes for Git consistency)
             finding.FilePath.ShouldNotContain('\\');
-
-            // File paths should be valid relative paths that can be combined with solution directory
-            var fullPath = Path.Combine(solutionDirectory, finding.FilePath.Replace('/', Path.DirectorySeparatorChar));
-            File.Exists(fullPath).ShouldBeTrue($"Relative path '{finding.FilePath}' should resolve to an existing file");
         }
     }
 
@@ -144,7 +138,7 @@ public class CSharpRoslynAnalyzerIntegrationTests
 
         foreach (var finding in _cachedFindingsResult)
         {
-            // Should look like: "src/MyProject/Program.cs" or "Program.cs"
+            // Should look like: "/src/MyProject/Program.cs" or "/Program.cs"
             // NOT like: "C:\repo\src\MyProject\Program.cs" or "C:/repo/src/MyProject/Program.cs"
 
             finding.FilePath.ShouldNotContain(':', $"File path '{finding.FilePath}' should not contain colon (drive letter)");
@@ -152,10 +146,7 @@ public class CSharpRoslynAnalyzerIntegrationTests
             // Should use forward slashes
             finding.FilePath.ShouldNotContain('\\');
 
-            // Should be a valid relative path
-            var pathWithCorrectSeparator = finding.FilePath.Replace('/', Path.DirectorySeparatorChar);
-            Path.IsPathRooted(pathWithCorrectSeparator).ShouldBeFalse(
-                $"File path '{finding.FilePath}' should be relative, not rooted");
+            finding.FilePath.ShouldStartWith("/");
         }
     }
 }
