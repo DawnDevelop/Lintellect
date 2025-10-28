@@ -241,6 +241,8 @@ jobs:
         build-binaries,
         generate-release-notes,
       ]
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -251,11 +253,17 @@ jobs:
         with:
           path: ./binaries
 
+      - name: Write release notes to file
+        run: |
+          cat > release-notes.md << 'RELEASE_NOTES_EOF'
+          ${{ needs.generate-release-notes.outputs.release-notes }}
+          RELEASE_NOTES_EOF
+
       - name: Create release with GitHub CLI
         run: |
           gh release create ${{ github.ref_name }} \
             --title "Lintellect API v${{ needs.extract-version.outputs.version }}" \
-            --notes "${{ needs.generate-release-notes.outputs.release-notes }}" \
+            --notes-file release-notes.md \
             ./binaries/lintellect-api-linux-x64/lintellect-api-${{ needs.extract-version.outputs.version }}-linux-x64.tar.gz \
             ./binaries/lintellect-api-win-x64/lintellect-api-${{ needs.extract-version.outputs.version }}-win-x64.zip
         env:
