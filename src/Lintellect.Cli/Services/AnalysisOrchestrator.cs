@@ -37,18 +37,15 @@ internal class AnalysisOrchestrator(
             }
         }
 
-        if (_codeAnalyzer is null)
+        if (_codeAnalyzer is not null)
+        {
+            var languageSpecificFindings = await _codeAnalyzer.AnalyzeAsync(path).ConfigureAwait(false);
+            allFindings.AddRange(languageSpecificFindings);
+        }
+        else
         {
             Console.WriteLine($"No code analyzer available for language: {language}. Skipping code analysis.");
-            return new AnalysisRequest
-            {
-                Language = language,
-                Findings = allFindings
-            };
         }
-
-        var languageSpecificFindings = await _codeAnalyzer.AnalyzeAsync(path).ConfigureAwait(false);
-        allFindings.AddRange(languageSpecificFindings);
 
         if (exclusionPatterns != null && exclusionPatterns.Count > 0)
         {

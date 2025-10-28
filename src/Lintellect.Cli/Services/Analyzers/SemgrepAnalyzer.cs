@@ -160,7 +160,6 @@ internal class SemgrepAnalyzer(EProgrammingLanguage language) : ICodeAnalyzer
                 return (false, "", "Failed to start process");
             }
 
-            Console.WriteLine($"WorkingDirectory: {startInfo.WorkingDirectory}");
             var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
             var error = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
             await process.WaitForExitAsync().ConfigureAwait(false);
