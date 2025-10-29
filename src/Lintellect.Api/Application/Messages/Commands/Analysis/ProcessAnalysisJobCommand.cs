@@ -1,11 +1,13 @@
+using Lintellect.Api.Application.Common.Interfaces;
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
 using Lintellect.Api.Infrastructure.Services.Git;
 using Lintellect.Shared.Extensions;
 using Lintellect.Shared.Models;
 using Mediator;
+using Microsoft.EntityFrameworkCore;
 
-namespace Lintellect.Api.Application.Messages.Commands;
+namespace Lintellect.Api.Application.Messages.Commands.Analysis;
 
 /// <summary>
 /// Command to process an analysis job following CleanArchitecture pattern.
@@ -18,13 +20,35 @@ public sealed record ProcessAnalysisJobCommand(
 /// Handler for ProcessAnalysisJobCommand following CleanArchitecture pattern.
 /// </summary>
 public sealed class ProcessAnalysisJobCommandHandler(
+    IApplicationDbContext context,
     PullRequestService prService,
     IAnalyzerServiceResolver analyzerResolver) : IRequestHandler<ProcessAnalysisJobCommand, PullRequestAnalysisReportModel>
 {
     public async ValueTask<PullRequestAnalysisReportModel> Handle(ProcessAnalysisJobCommand request, CancellationToken cancellationToken)
     {
-        // Step 1: Get and filter diffs and findings
         var analysisRequest = request.AnalysisRequest;
+
+        // Step 0: Check for duplicate analysis job with same PullRequestId and GitProvider
+        if (await CheckForDuplicateAnalysisAsync(analysisRequest, cancellationToken))
+        {
+            return new PullRequestAnalysisReportModel
+            {
+                AnalysisResult = analysisRequest,
+                Summary = "Duplicate analysis job detected. This pull request has already been analyzed.",
+                DetailedAnalysis = string.Empty,
+                DiffStatistics = new DiffStatistics
+                {
+                    FilesChanged = 0,
+                    LinesAdded = 0,
+                    LinesRemoved = 0
+                },
+                AnalyzerUsed = EAnalyzers.AIFoundry.ToString(),
+                AnalyzedAt = DateTimeOffset.UtcNow,
+                InlineSuggestions = null
+            };
+        }
+
+        // Step 1: Get and filter diffs and findings
 
         var diffs = await GetFilteredDiffsAsync(analysisRequest, cancellationToken);
 
@@ -284,6 +308,24 @@ public sealed class ProcessAnalysisJobCommandHandler(
             LinesAdded = linesAdded,
             LinesRemoved = linesRemoved
         };
+    }
+
+    private async Task<bool> CheckForDuplicateAnalysisAsync(AnalysisRequest analysisRequest, CancellationToken cancellationToken)
+    {
+
+        var pullRequestId = analysisRequest.GitInfo!.PullRequestId;
+        var gitProvider = analysisRequest.GitProvider.ToString();
+
+        // Query for existing analysis jobs with the same PullRequestId and GitProvider
+        var existingJob = await context.AnalysisJobs
+            .Where(job =>
+                job.AnalysisRequest!.RootElement.GetProperty(nameof(GitInfo)).GetProperty(nameof(GitInfo.PullRequestId)).GetInt32() == pullRequestId &&
+                job.AnalysisRequest!.RootElement.GetProperty(nameof(analysisRequest.GitProvider)).GetString() == gitProvider)
+            .OrderByDescending(job => job.Created)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return existingJob != null;
+
     }
 }
 

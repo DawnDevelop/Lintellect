@@ -1,5 +1,6 @@
 using FluentValidation.TestHelper;
 using Lintellect.Api.Application.Interfaces;
+using Lintellect.Api.Application.Messages.Commands.Analysis;
 
 namespace Lintellect.Api.UnitTests.Application.Validators;
 

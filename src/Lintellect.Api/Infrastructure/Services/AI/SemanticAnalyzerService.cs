@@ -3,20 +3,24 @@ using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
 using Lintellect.Api.Infrastructure.Extensions;
 using Lintellect.Api.Infrastructure.Services.AI.Prompts;
+using Lintellect.Shared.Models;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
+using ModelContextProtocol.Client;
 
 namespace Lintellect.Api.Infrastructure.Services.AI;
 
 /// <summary>
 /// Analyzer service using Semantic Kernel (AIFoundry) for code analysis.
 /// </summary>
-public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : IAnalyzerService
+public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMcpServiceResolver resolver) : IAnalyzerService
 {
     private readonly SemanticAnalyzerOptions _options = options ?? throw new ArgumentNullException(nameof(options));
     private readonly PromptTemplateService _templateService = new();
     private readonly AnalysisPromptBuilder _promptBuilder = new();
+
+    private static FunctionChoiceBehavior FunctionChoiceBehavior => FunctionChoiceBehavior.Auto(options: new() { AllowParallelCalls = true, AllowConcurrentInvocation = true });
 
     // <inheritdoc/>
     public async Task<string> AnalyzeAsync(
@@ -24,7 +28,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
         Dictionary<string, string> diffs,
         CancellationToken cancellationToken = default)
     {
-        var kernel = CreateKernel(_options);
+        var kernel = await CreateKernelAsync(_options, analysisResult.AnalysisResult.McpServer);
         var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
 
         var systemPrompt = _templateService.RenderLanguageTemplate(
@@ -42,6 +46,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
         {
             MaxTokens = _options.MaxTokens,
             Temperature = _options.Temperature,
+            FunctionChoiceBehavior = FunctionChoiceBehavior,
             ResponseFormat = "text" // Use text for detailed markdown analysis
         };
 
@@ -49,8 +54,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
             chatHistory,
             executionSettings: executionSettings,
             kernel: kernel,
-            cancellationToken: cancellationToken)
-            ;
+            cancellationToken: cancellationToken);
 
         return response.Content ?? "No analysis generated.";
     }
@@ -61,7 +65,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
         List<string> changedFilePaths,
         CancellationToken cancellationToken = default)
     {
-        var kernel = CreateKernel(_options);
+        var kernel = await CreateKernelAsync(_options);
         var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
 
         var systemPrompt = _templateService.RenderTemplate(AvailablePrompts.GeneralPrompts[GeneralPromptTemplates.CodeOwnerSystemPrompt]);
@@ -83,6 +87,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
         {
             MaxTokens = _options.MaxTokens,
             Temperature = 0.2, // Lower temperature for more precise suggestions
+            FunctionChoiceBehavior = FunctionChoiceBehavior,
             ResponseFormat = "json_object" // Request JSON output for structured parsing
         };
 
@@ -107,7 +112,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
         Dictionary<string, string> diffs,
         CancellationToken cancellationToken = default)
     {
-        var kernel = CreateKernel(_options);
+        var kernel = await CreateKernelAsync(_options, analysisResult.AnalysisResult.McpServer);
         var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
 
         var systemPrompt = _templateService.RenderLanguageTemplate(
@@ -138,7 +143,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
         Dictionary<string, string> diffs,
         CancellationToken cancellationToken = default)
     {
-        var kernel = CreateKernel(_options);
+        var kernel = await CreateKernelAsync(_options, analysisResult.AnalysisResult.McpServer);
         var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
 
         var systemPrompt = _templateService.RenderLanguageTemplate(
@@ -164,8 +169,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
             chatHistory,
             executionSettings: executionSettings,
             kernel: kernel,
-            cancellationToken: cancellationToken)
-            ;
+            cancellationToken: cancellationToken);
 
         if (string.IsNullOrWhiteSpace(response.Content))
         {
@@ -180,7 +184,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
     /// Creates a new Kernel instance with the specified options.
     /// This allows for per-request configuration in the future.
     /// </summary>
-    private static Kernel CreateKernel(SemanticAnalyzerOptions options)
+    private async Task<Kernel> CreateKernelAsync(SemanticAnalyzerOptions options, List<EMcpServer>? mcpServers = null)
     {
         var builder = Kernel.CreateBuilder();
 
@@ -209,6 +213,49 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options) : I
                      options.TokenCredential);
         }
 
-        return builder.Build();
+        var chatCompletionService = builder.Build();
+
+        if (mcpServers is null || mcpServers.Count == 0)
+        {
+            return chatCompletionService;
+        }
+
+        foreach (var mcpServer in mcpServers)
+        {
+            var config = resolver.GetMcpService(mcpServer)?.GetMcpConfig();
+
+            if (config is null)
+            {
+                continue;
+            }
+
+            var tools = await McpFunctionToolsAsync(config);
+
+            chatCompletionService.Plugins.AddFromFunctions(config.Name, tools);
+        }
+
+
+        return chatCompletionService;
+    }
+
+
+    private static async Task<IEnumerable<KernelFunction>> McpFunctionToolsAsync(McpConfig config)
+    {
+        List<KernelFunction> tools = [];
+
+        var httpTransport = new HttpClientTransport(new HttpClientTransportOptions()
+        {
+            Endpoint = new Uri(config.Url),
+            Name = config.Name,
+            TransportMode = HttpTransportMode.AutoDetect,
+            AdditionalHeaders = config.AdditionalHeaders
+        });
+        var client = await McpClient.CreateAsync(httpTransport);
+        await foreach (var tool in client.EnumerateToolsAsync())
+        {
+            tools.Add(tool.AsKernelFunction());
+        }
+
+        return tools;
     }
 }

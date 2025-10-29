@@ -128,6 +128,14 @@ internal class StaticAnalysisCommand : Command
             Aliases = { "-semgrep", "-es" }
         };
 
+        var mcpServer = new Option<EMcpServer[]>("--mcp-server")
+        {
+            Description = "MCP (Model Context Protocol) server to use for additional context (default: None)",
+            DefaultValueFactory = _ => [],
+            Aliases = { "-mcp" },
+            AllowMultipleArgumentsPerToken = true
+        };
+
 
         Options.Add(solution);
         Options.Add(serviceUrl);
@@ -146,6 +154,8 @@ internal class StaticAnalysisCommand : Command
 
         Options.Add(enableSemgrep);
 
+        Options.Add(mcpServer);
+
         SetAction(async (parseResult) =>
         {
             Console.WriteLine("Starting static analysis...");
@@ -160,6 +170,7 @@ internal class StaticAnalysisCommand : Command
             var azureDevOpsOrgUrlValue = parseResult.GetValue(azureDevOpsOrgUrl);
             var githubTokenValue = parseResult.GetValue(githubToken);
             var enableSemgrepValue = parseResult.GetValue(enableSemgrep);
+            var mcpServerValue = parseResult.GetValue(mcpServer);
 
             Console.WriteLine($"Configuration:");
             Console.WriteLine($"  Solution Path: {path}");
@@ -171,6 +182,7 @@ internal class StaticAnalysisCommand : Command
             Console.WriteLine($"  Azure DevOps Org URL: {azureDevOpsOrgUrlValue ?? "Not provided"}");
             Console.WriteLine($"  GitHub Token: {(string.IsNullOrEmpty(githubTokenValue) ? "Not provided" : "***")}");
             Console.WriteLine($"  Semgrep Analysis: {(enableSemgrepValue ? "Enabled" : "Disabled")}");
+            Console.WriteLine($"  MCP Server: {mcpServerValue}");
 
             Console.WriteLine();
 
@@ -186,6 +198,9 @@ internal class StaticAnalysisCommand : Command
             analysisResult.EnableSummaryComment = parseResult.GetValue(enableSummaryComment);
             analysisResult.FileExclusions = [.. exclusionPatterns];
             analysisResult.EnableAzureDevopsCodeOwners = parseResult.GetValue(enableCodeOwners);
+
+            var mcpServers = mcpServerValue ?? [];
+            analysisResult.McpServer = [.. mcpServers];
 
             // Set Git provider credentials
             analysisResult.DevopsPat = devopsPatValue;

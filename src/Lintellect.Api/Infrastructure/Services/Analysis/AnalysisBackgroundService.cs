@@ -1,12 +1,12 @@
 using System.Text.Json;
-using Lintellect.Api.Application.Messages.Commands;
+using Lintellect.Api.Application.Messages.Commands.Analysis;
 using Lintellect.Api.Domain.Entities;
 using Lintellect.Api.Domain.Enums;
 using Lintellect.Api.Infrastructure.Telemetry;
 using Lintellect.Shared.Models;
 using Mediator;
 
-namespace Lintellect.Api.Infrastructure.Services;
+namespace Lintellect.Api.Infrastructure.Services.Analysis;
 
 /// <summary>
 /// Background service that processes analysis jobs from the queue.

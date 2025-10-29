@@ -11,6 +11,7 @@ namespace Lintellect.Api.Infrastructure.Persistence;
 public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options), IApplicationDbContext
 {
     public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
+    public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -22,6 +23,10 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
         modelBuilder.Ignore<Domain.Events.AnalysisJobStartedEvent>();
         modelBuilder.Ignore<AnalysisJobCompletedEvent>();
         modelBuilder.Ignore<AnalysisJobFailedEvent>();
+        modelBuilder.Ignore<WebhookEventReceivedEvent>();
+        modelBuilder.Ignore<WebhookEventProcessingEvent>();
+        modelBuilder.Ignore<WebhookEventCompletedEvent>();
+        modelBuilder.Ignore<WebhookEventFailedEvent>();
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
     }

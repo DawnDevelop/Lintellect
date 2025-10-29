@@ -1,7 +1,7 @@
 using FluentValidation;
 using Lintellect.Api.Domain.Enums;
 
-namespace Lintellect.Api.Application.Messages.Commands;
+namespace Lintellect.Api.Application.Messages.Commands.Analysis;
 
 /// <summary>
 /// Validator for UpdateAnalysisJobStatusCommand following CleanArchitecture pattern.

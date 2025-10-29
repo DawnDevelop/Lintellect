@@ -18,6 +18,8 @@ public class AnalysisRequest
 
     public bool EnableAzureDevopsCodeOwners { get; set; } = false;
 
+    public List<EMcpServer> McpServer { get; set; } = [];
+
     // Git provider credentials - configured per request
     public string? DevopsPat { get; set; }
     public string? AzureDevOpsOrgUrl { get; set; }

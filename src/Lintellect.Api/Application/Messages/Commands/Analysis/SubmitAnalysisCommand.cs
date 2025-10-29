@@ -1,10 +1,10 @@
 using Lintellect.Api.Application.Common.Interfaces;
 using Lintellect.Api.Domain.Entities;
-using Lintellect.Api.Infrastructure.Services;
+using Lintellect.Api.Infrastructure.Services.Analysis;
 using Lintellect.Shared.Models;
 using Mediator;
 
-namespace Lintellect.Api.Application.Messages.Commands;
+namespace Lintellect.Api.Application.Messages.Commands.Analysis;
 
 /// <summary>
 /// Command to submit a new analysis job following CleanArchitecture pattern.

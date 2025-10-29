@@ -33,6 +33,7 @@ builder.Services.Configure<AuthorizationOptions>(x => x.ApiKey = builder.Configu
 builder.Services.AddSingleton<ApiKeyEndpointFilter>();
 
 builder.Services.AddAnalyzerServices(builder.Configuration);
+
 builder.Services.AddGitClients(builder.Configuration);
 builder.Services.AddResiliencePolicies();
 builder.Services.AddApplicationServices();
@@ -71,6 +72,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 });
 
 app.MapAnalysisApi();
+app.MapAzureDevopsWebhooksApi();
 
 await app.RunAsync();
 

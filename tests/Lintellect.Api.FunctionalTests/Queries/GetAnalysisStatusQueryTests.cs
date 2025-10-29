@@ -1,3 +1,4 @@
+using Lintellect.Api.Application.Messages.Commands.Analysis;
 using Mediator;
 
 namespace Lintellect.Api.functionaltests.Queries;
