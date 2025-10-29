@@ -1,8 +1,6 @@
 using System.Text.Json;
-using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models.Webhooks;
 using Lintellect.Api.Domain.Entities;
-using Lintellect.Api.Infrastructure.Services.Git;
 using Mediator;
 
 namespace Lintellect.Api.Application.Messages.Commands.Webhooks;
@@ -14,9 +12,9 @@ public sealed record ProcessCommentWebhookEventCommand(WebhookEvent WebhookEvent
 /// Processes webhook events and triggers appropriate actions.
 /// </summary>
 public sealed class ProcessWebhookEventCommandHandler(
-    ILogger<ProcessWebhookEventCommandHandler> logger,
-    IAnalyzerServiceResolver analyzerResolver,
-    PullRequestService prservice
+    ILogger<ProcessWebhookEventCommandHandler> logger
+    //,IAnalyzerServiceResolver analyzerResolver,
+    //PullRequestService prservice
     ) : IRequestHandler<ProcessCommentWebhookEventCommand>
 {
     public async ValueTask<Unit> Handle(ProcessCommentWebhookEventCommand request, CancellationToken cancellationToken)
