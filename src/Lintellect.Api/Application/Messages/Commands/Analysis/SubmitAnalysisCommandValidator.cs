@@ -64,24 +64,10 @@ public sealed class SubmitAnalysisCommandValidator : AbstractValidator<SubmitAna
                 }
             });
 
-        // Validate Azure DevOps credentials format if provided
-        When(x => x.AnalysisRequest != null && (!string.IsNullOrWhiteSpace(x.AnalysisRequest.DevopsPat) || !string.IsNullOrWhiteSpace(x.AnalysisRequest.AzureDevOpsOrgUrl)), () =>
-        {
-            RuleFor(x => x.AnalysisRequest.DevopsPat)
-                .NotEmpty()
-                .WithMessage("DevopsPat is required when Azure DevOps credentials are provided.");
-
-            RuleFor(x => x.AnalysisRequest.AzureDevOpsOrgUrl)
-                .NotEmpty()
-                .WithMessage("AzureDevOpsOrgUrl is required when Azure DevOps credentials are provided.")
+        // If Azure DevOps org URL is provided (by request or config), ensure it is a valid URI when present in the request
+        When(x => x.AnalysisRequest != null && !string.IsNullOrWhiteSpace(x.AnalysisRequest.AzureDevOpsOrgUrl), () => RuleFor(x => x.AnalysisRequest.AzureDevOpsOrgUrl)
                 .Must(BeValidUri)
-                .WithMessage("AzureDevOpsOrgUrl must be a valid absolute URI (e.g., https://dev.azure.com/yourorg).");
-        });
-
-        // Validate GitHub credentials format if provided
-        When(x => x.AnalysisRequest != null && !string.IsNullOrWhiteSpace(x.AnalysisRequest.GitHubToken), () => RuleFor(x => x.AnalysisRequest.GitHubToken)
-                .NotEmpty()
-                .WithMessage("GitHubToken cannot be empty if provided."));
+                .WithMessage("AzureDevOpsOrgUrl must be a valid absolute URI (e.g., https://dev.azure.com/yourorg)."));
 
         // Validate that at least one AI feature is enabled
         RuleFor(x => x.AnalysisRequest)
@@ -94,17 +80,6 @@ public sealed class SubmitAnalysisCommandValidator : AbstractValidator<SubmitAna
 
     private async Task<(bool IsValid, List<string> ErrorMessages)> ValidateGitCredentialsAsync(Shared.Models.AnalysisRequest request, CancellationToken cancellationToken)
     {
-        // Check if we have at least one complete set of credentials
-        var hasAzureDevOpsCredentials = !string.IsNullOrWhiteSpace(request.DevopsPat) &&
-                                   !string.IsNullOrWhiteSpace(request.AzureDevOpsOrgUrl);
-
-        var hasGitHubCredentials = !string.IsNullOrWhiteSpace(request.GitHubToken);
-
-        if (!hasAzureDevOpsCredentials && !hasGitHubCredentials)
-        {
-            return (false, ["No Git provider credentials provided. Please provide either Azure DevOps PAT and Org URL, or GitHub token."]);
-        }
-
         try
         {
             // Test the actual connection and permissions
@@ -123,7 +98,7 @@ public sealed class SubmitAnalysisCommandValidator : AbstractValidator<SubmitAna
         }
         catch (Exception ex)
         {
-            return (false, [$"Permission validation failed: {ex.Message}"]);
+            return (false, [$"Credential validation failed: {ex.Message}"]);
         }
     }
 

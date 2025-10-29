@@ -20,8 +20,8 @@ public class AnalysisRequest
 
     public List<EMcpServer> McpServer { get; set; } = [];
 
-    // Git provider credentials - configured per request
-    public string? DevopsPat { get; set; }
+    // Git provider credentials - single consolidated token for CLI overrides
+    public string? AccessToken { get; set; }
+
     public string? AzureDevOpsOrgUrl { get; set; }
-    public string? GitHubToken { get; set; }
 }

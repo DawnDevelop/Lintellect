@@ -20,6 +20,12 @@ public static class ConfigureServices
 {
     public static IServiceCollection AddGitClients(this IServiceCollection services, IConfiguration configuration)
     {
+        // Bind single-tenant git credentials (optional)
+        services.Configure<GitCredentialsOptions>(configuration.GetSection("GitCredentials"));
+
+        // Resolver that prefers request overrides, falls back to configured defaults
+        services.AddScoped<ICredentialResolver, CredentialResolver>();
+
         // Register the factory for creating Git clients with dynamic credentials
         services.AddScoped<IGitClientFactory, GitClientFactory>();
 

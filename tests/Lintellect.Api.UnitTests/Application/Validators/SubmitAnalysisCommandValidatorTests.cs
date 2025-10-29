@@ -122,20 +122,21 @@ public class SubmitAnalysisCommandValidatorTests
     {
         // Arrange
         var request = AnalysisRequestBuilder.ValidRequest();
-        request.GitHubToken = null;
-        request.DevopsPat = null;
+        request.AccessToken = null;
         request.AzureDevOpsOrgUrl = null;
         var command = new SubmitAnalysisCommand(request);
 
         _mockGitClientFactory.CreateClient(Arg.Any<AnalysisRequest>())
             .Returns(_mockGitClient);
 
+        _mockGitClient.HasSufficientPermissionsAsync(Arg.Any<AnalysisRequest>())
+            .Returns([new(true)]);
+
         // Act
         var result = await _validator.TestValidateAsync(command);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.AnalysisRequest)
-            .WithErrorMessage("No Git provider credentials provided. Please provide either Azure DevOps PAT and Org URL, or GitHub token.");
+        result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Test]
@@ -168,8 +169,7 @@ public class SubmitAnalysisCommandValidatorTests
     {
         // Arrange
         var request = AnalysisRequestBuilder.ValidRequest();
-        request.GitHubToken = null;
-        request.DevopsPat = "test-pat";
+        request.AccessToken = null;
         request.AzureDevOpsOrgUrl = "invalid-url";
         var command = new SubmitAnalysisCommand(request);
 

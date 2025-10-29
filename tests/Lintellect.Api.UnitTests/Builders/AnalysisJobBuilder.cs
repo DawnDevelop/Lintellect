@@ -10,7 +10,7 @@ public sealed class AnalysisJobBuilder
         GitInfo = new GitInfo(123, "commit123", "TestRepo", EGitInfoType.PullRequest, "TestProject"),
         Language = EProgrammingLanguage.CSharp,
         GitProvider = EGitProvider.GitHub,
-        GitHubToken = "test-token",
+        AccessToken = "test-token",
         EnableSummaryComment = true,
         EnableDescriptionSummary = true,
         EnableInlineSuggestions = true,

@@ -10,7 +10,7 @@ public sealed class AnalysisRequestBuilder
         GitInfo = new GitInfo(123, "commit123", "TestRepo", EGitInfoType.PullRequest, "TestProject"),
         Language = EProgrammingLanguage.CSharp,
         GitProvider = EGitProvider.GitHub,
-        GitHubToken = "test-token",
+        AccessToken = "test-token",
         EnableSummaryComment = true,
         EnableDescriptionSummary = true,
         EnableInlineSuggestions = true,
@@ -67,23 +67,22 @@ public sealed class AnalysisRequestBuilder
         return this;
     }
 
-    public AnalysisRequestBuilder WithGitHubToken(string token)
+    public AnalysisRequestBuilder WithAccessToken(string token)
     {
-        _request.GitHubToken = token;
+        _request.AccessToken = token;
         return this;
     }
 
-    public AnalysisRequestBuilder WithAzureDevOpsCredentials(string pat, string orgUrl)
+    public AnalysisRequestBuilder WithAzureDevOpsCredentials(string accessToken, string orgUrl)
     {
-        _request.DevopsPat = pat;
+        _request.AccessToken = accessToken;
         _request.AzureDevOpsOrgUrl = orgUrl;
         return this;
     }
 
     public AnalysisRequestBuilder WithNoCredentials()
     {
-        _request.GitHubToken = null;
-        _request.DevopsPat = null;
+        _request.AccessToken = null;
         _request.AzureDevOpsOrgUrl = null;
         return this;
     }
