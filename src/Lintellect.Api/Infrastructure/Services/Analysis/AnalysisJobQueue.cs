@@ -1,7 +1,7 @@
 using System.Threading.Channels;
 using Lintellect.Api.Domain.Entities;
 
-namespace Lintellect.Api.Infrastructure.Services;
+namespace Lintellect.Api.Infrastructure.Services.Analysis;
 
 /// <summary>
 /// Channel-based job queue for analysis jobs following CleanArchitecture pattern.

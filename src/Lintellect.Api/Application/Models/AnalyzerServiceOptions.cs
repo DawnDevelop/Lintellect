@@ -2,6 +2,7 @@ using Azure.Core;
 
 namespace Lintellect.Api.Application.Models;
 
+
 /// <summary>
 /// Configuration options for the Claude analyzer service.
 /// </summary>
@@ -26,6 +27,7 @@ public sealed class ClaudeAnalyzerOptions
     /// Temperature for response generation (0.0 to 1.0).
     /// </summary>
     public double Temperature { get; set; } = 0.7;
+
 }
 
 /// <summary>

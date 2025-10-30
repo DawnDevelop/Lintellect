@@ -2,7 +2,7 @@ using Lintellect.Api.Application.Common.Interfaces;
 using Lintellect.Api.Domain.Enums;
 using Mediator;
 
-namespace Lintellect.Api.Application.Messages.Commands;
+namespace Lintellect.Api.Application.Messages.Commands.Analysis;
 
 /// <summary>
 /// Command to update analysis job status following CleanArchitecture pattern.

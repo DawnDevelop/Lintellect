@@ -1,3 +1,5 @@
+using Lintellect.Api.Application.Messages.Commands.Analysis;
+using Lintellect.Api.Infrastructure.Services.Analysis;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lintellect.Api.UnitTests.Application.Commands;

@@ -5,9 +5,11 @@ using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
 using Lintellect.Api.Infrastructure.Persistence;
 using Lintellect.Api.Infrastructure.Resilience;
-using Lintellect.Api.Infrastructure.Services;
 using Lintellect.Api.Infrastructure.Services.AI;
+using Lintellect.Api.Infrastructure.Services.AI.MCPs;
+using Lintellect.Api.Infrastructure.Services.Analysis;
 using Lintellect.Api.Infrastructure.Services.Git;
+using Lintellect.Api.Infrastructure.Services.Webhooks;
 using Lintellect.Api.Infrastructure.Telemetry;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -18,6 +20,12 @@ public static class ConfigureServices
 {
     public static IServiceCollection AddGitClients(this IServiceCollection services, IConfiguration configuration)
     {
+        // Bind single-tenant git credentials (optional)
+        services.Configure<GitCredentialsOptions>(configuration.GetSection("GitCredentials"));
+
+        // Resolver that prefers request overrides, falls back to configured defaults
+        services.AddScoped<ICredentialResolver, CredentialResolver>();
+
         // Register the factory for creating Git clients with dynamic credentials
         services.AddScoped<IGitClientFactory, GitClientFactory>();
 
@@ -51,7 +59,9 @@ public static class ConfigureServices
                 (sp, key) =>
                 {
                     var options = sp.GetRequiredService<IOptions<ClaudeAnalyzerOptions>>().Value;
-                    return new ClaudeAnalyzerService(options);
+                    var mcpServiceResolver = sp.GetRequiredService<IMcpServiceResolver>();
+
+                    return new ClaudeAnalyzerService(options, mcpServiceResolver);
                 });
         }
 
@@ -76,12 +86,14 @@ public static class ConfigureServices
                 (sp, key) =>
                 {
                     var options = sp.GetRequiredService<IOptions<SemanticAnalyzerOptions>>().Value;
-                    return new SemanticAnalyzerService(options);
+                    var mcpResolver = sp.GetRequiredService<IMcpServiceResolver>();
+                    return new SemanticAnalyzerService(options, mcpResolver);
                 });
         }
 
         // Register the resolver that picks the right analyzer based on configuration
         services.AddScoped<IAnalyzerServiceResolver, AnalyzerServiceResolver>();
+        services.AddScoped<IMcpServiceResolver, McpServiceResolver>();
 
         return services;
     }
@@ -121,9 +133,13 @@ public static class ConfigureServices
         // Register DbContext interface (DbContext is registered by Aspire)
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
 
-        // Register background services
+        // Register background services for analysis
         services.AddSingleton<AnalysisJobQueue>();
         services.AddHostedService<AnalysisBackgroundService>();
+
+        // Register background services for webhooks
+        services.AddSingleton<WebhookJobQueue>();
+        services.AddHostedService<WebhookBackgroundService>();
 
         // Register metrics
         services.AddSingleton<AnalysisMetrics>();

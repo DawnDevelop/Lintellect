@@ -1,6 +1,6 @@
 using FluentValidation;
 
-namespace Lintellect.Api.Application.Messages.Commands;
+namespace Lintellect.Api.Application.Messages.Commands.Analysis;
 
 /// <summary>
 /// Validator for CompleteAnalysisJobCommand following CleanArchitecture pattern.

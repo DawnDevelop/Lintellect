@@ -15,9 +15,8 @@ public sealed class AnalysisJobConfigurationTests
         {
             Language = EProgrammingLanguage.CSharp,
             GitProvider = EGitProvider.AzureDevops,
-            DevopsPat = "sensitive-pat-token",
+            AccessToken = "sensitive-token",
             AzureDevOpsOrgUrl = "https://dev.azure.com/sensitive-org",
-            GitHubToken = "sensitive-github-token",
             GitInfo = new GitInfo(123, "commit123", "owner/repo"),
             Findings =
             [
@@ -33,11 +32,9 @@ public sealed class AnalysisJobConfigurationTests
 
         // Assert
         sanitizedJson.ShouldNotBeNull();
-        sanitizedJson.ShouldNotContain("sensitive-pat-token");
-        sanitizedJson.ShouldNotContain("sensitive-github-token");
+        sanitizedJson.ShouldNotContain("sensitive-token");
         sanitizedJson.ShouldNotContain("sensitive-org");
-        sanitizedJson.ShouldNotContain("DevopsPat");
-        sanitizedJson.ShouldNotContain("GitHubToken");
+        sanitizedJson.ShouldNotContain("AccessToken");
         sanitizedJson.ShouldNotContain("AzureDevOpsOrgUrl");
 
         // Verify non-sensitive data is preserved
@@ -76,8 +73,7 @@ public sealed class AnalysisJobConfigurationTests
         result.ShouldNotBeNull();
         result.ShouldContain("Language");
         result.ShouldContain("Findings");
-        result.ShouldNotContain("DevopsPat");
-        result.ShouldNotContain("GitHubToken");
+        result.ShouldNotContain("AccessToken");
         result.ShouldNotContain("AzureDevOpsOrgUrl");
     }
 

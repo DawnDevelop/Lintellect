@@ -35,13 +35,13 @@ public sealed class TestDataBuilder
 
     public TestDataBuilder WithGitHubCredentials()
     {
-        _request.GitHubToken = "mock-github-token";
+        _request.AccessToken = "mock-github-token";
         return this;
     }
 
     public TestDataBuilder WithAzureDevOpsCredentials()
     {
-        _request.DevopsPat = "mock-pat";
+        _request.AccessToken = "mock-pat";
         _request.AzureDevOpsOrgUrl = "https://dev.azure.com/testorg";
         return this;
     }
@@ -84,8 +84,7 @@ public sealed class TestDataBuilder
 
     public TestDataBuilder WithNoCredentials()
     {
-        _request.GitHubToken = null;
-        _request.DevopsPat = null;
+        _request.AccessToken = null;
         _request.AzureDevOpsOrgUrl = null;
         return this;
     }

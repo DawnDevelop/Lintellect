@@ -9,6 +9,7 @@ namespace Lintellect.Api.Application.Common.Interfaces;
 public interface IApplicationDbContext
 {
     DbSet<AnalysisJob> AnalysisJobs { get; }
+    DbSet<WebhookEvent> WebhookEvents { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

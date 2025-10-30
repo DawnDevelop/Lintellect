@@ -1,7 +1,7 @@
 using Lintellect.Api.Application.Common.Interfaces;
 using Mediator;
 
-namespace Lintellect.Api.Application.Messages.Commands;
+namespace Lintellect.Api.Application.Messages.Commands.Analysis;
 
 /// <summary>
 /// Command to complete analysis job with results following CleanArchitecture pattern.

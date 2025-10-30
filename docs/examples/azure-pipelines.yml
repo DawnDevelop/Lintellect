@@ -3,7 +3,14 @@ trigger: none # Trigger on every pull request by setting build validation inside
 # Environment Variables Required:
 # - LINTELLECT_API_URL: Your Lintellect API endpoint URL
 # - LINTELLECT_API_KEY: Your Lintellect API key
-# - GITHUB_TOKEN: GitHub Personal Access Token (REQUIRED - CodeQL is enabled by default)
+# - GITHUB_TOKEN: GitHub Personal Access Token (REQUIRED when CodeQL is enabled)
+#
+# Credential model (single-tenant):
+# - Webhook-triggered flows: API uses server-side credentials from configuration/environment.
+#   Configure on the API host:
+#     AZURE_DEVOPS_ORG_URL, AZURE_DEVOPS_PAT (for Azure DevOps)
+#     GITHUB_TOKEN (for GitHub)
+# - CLI-triggered flows: you may override with a per-run token via command options or env.
 #
 # Optional Environment Variables:
 # - AZURE_DEVOPS_PAT: Azure DevOps Personal Access Token (for Azure DevOps integration)
@@ -46,6 +53,7 @@ stages:
             env:
               LINTELLECT_API_URL: $(LINTELLECT_API_URL)
               LINTELLECT_API_KEY: $(LINTELLECT_API_KEY)
+              # Optional for CLI overrides; webhook flows use server-side creds
               GITHUB_TOKEN: $(GITHUB_TOKEN)
 
           # Example 2: C# Analysis with Explicit CodeQL (redundant but shows the option)

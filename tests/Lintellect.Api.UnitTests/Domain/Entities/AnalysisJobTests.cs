@@ -13,9 +13,8 @@ public sealed class AnalysisJobTests
         {
             Language = EProgrammingLanguage.CSharp,
             GitProvider = EGitProvider.AzureDevops,
-            DevopsPat = "sensitive-pat-token",
+            AccessToken = "sensitive-token",
             AzureDevOpsOrgUrl = "https://dev.azure.com/sensitive-org",
-            GitHubToken = "sensitive-github-token",
             GitInfo = new GitInfo(123, "commit123", "owner/repo"),
             Findings =
             [
@@ -31,11 +30,9 @@ public sealed class AnalysisJobTests
 
         // The domain entity stores the original data - sanitization happens at the EF Core level
         var jsonString = analysisJob.AnalysisRequest.RootElement.GetRawText();
-        jsonString.ShouldContain("sensitive-pat-token");
-        jsonString.ShouldContain("sensitive-github-token");
+        jsonString.ShouldContain("sensitive-token");
         jsonString.ShouldContain("sensitive-org");
-        jsonString.ShouldContain("DevopsPat");
-        jsonString.ShouldContain("GitHubToken");
+        jsonString.ShouldContain("AccessToken");
         jsonString.ShouldContain("AzureDevOpsOrgUrl");
     }
 
@@ -47,9 +44,8 @@ public sealed class AnalysisJobTests
         {
             Language = EProgrammingLanguage.Python,
             GitProvider = EGitProvider.GitHub,
-            DevopsPat = "secret-pat",
             AzureDevOpsOrgUrl = "https://dev.azure.com/secret",
-            GitHubToken = "secret-token",
+            AccessToken = "secret-token",
             EnableSummaryComment = true,
             EnableInlineSuggestions = false
         };
@@ -65,7 +61,6 @@ public sealed class AnalysisJobTests
 
         // Verify sensitive fields are not accessible
         var jsonString = JsonSerializer.Serialize(sanitized);
-        jsonString.ShouldNotContain("secret-pat");
         jsonString.ShouldNotContain("secret-token");
         jsonString.ShouldNotContain("secret");
     }

@@ -18,10 +18,12 @@ internal sealed class ClaudeAnalyzerService : IAnalyzerService
     private readonly PromptTemplateService _templateService;
     private readonly AnthropicClient _client;
     private readonly IAsyncPolicy _retryPolicy;
+    private readonly IMcpServiceResolver _mcpServiceResolver;
 
-    public ClaudeAnalyzerService(ClaudeAnalyzerOptions options)
+    public ClaudeAnalyzerService(ClaudeAnalyzerOptions options, IMcpServiceResolver mcpServiceResolver)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
+        _mcpServiceResolver = mcpServiceResolver ?? throw new ArgumentNullException(nameof(mcpServiceResolver));
         _templateService = new PromptTemplateService();
         _client = new AnthropicClient(_options.ApiKey!);
 
@@ -77,6 +79,7 @@ internal sealed class ClaudeAnalyzerService : IAnalyzerService
                     { "customInstructions", analysisResult.CopilotInstructionsPrompt }
                 });
 
+
             var userPrompt = BuildUserPrompt(diffs, analysisResult.AnalysisResult);
 
             var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
@@ -111,6 +114,7 @@ internal sealed class ClaudeAnalyzerService : IAnalyzerService
                     { "customInstructions", analysisResult.CopilotInstructionsPrompt }
                 });
 
+
             var userPrompt = BuildUserPrompt(diffs, analysisResult.AnalysisResult);
 
             var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
@@ -143,7 +147,7 @@ internal sealed class ClaudeAnalyzerService : IAnalyzerService
         });
     }
 
-    private async Task<string> SendClaudeMessageAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken)
+    private async Task<string> SendClaudeMessageAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken, List<EMcpServer>? mcpServers = null)
     {
         var parameter = new MessageParameters
         {
@@ -151,27 +155,58 @@ internal sealed class ClaudeAnalyzerService : IAnalyzerService
             MaxTokens = _options.MaxTokens,
             Temperature = (decimal?)_options.Temperature,
             Stream = false,
+            MCPServers = BuildMcpServerConfigs(mcpServers ?? []),
+            ToolChoice = new ToolChoice()
+            {
+                Type = ToolChoiceType.Auto
+            },
             System = [
                 new(systemPrompt, new CacheControl(){
-                        TTL = CacheDuration.OneHour
-                    })
+                    TTL = CacheDuration.OneHour
+                })
             ],
             Messages =
             [
                 new()
-                    {
-                        Role = RoleType.User,
-                        Content = [
-                            new TextContent() {
-                                Text = userPrompt
-                            }
-                        ]
-                    }
+                {
+                    Role = RoleType.User,
+                    Content = [
+                        new TextContent() {
+                            Text = userPrompt
+                        }
+                    ]
+                }
             ]
         };
 
         var message = await _client.Messages.GetClaudeMessageAsync(parameter, cancellationToken);
         return message.ContentBlock?.Text ?? string.Empty;
+    }
+
+    private List<MCPServer> BuildMcpServerConfigs(List<EMcpServer> mcpServers)
+    {
+        var servers = new List<MCPServer>();
+        foreach (var item in mcpServers)
+        {
+            var mcp = _mcpServiceResolver.GetMcpService(item);
+            if (mcp is not null)
+            {
+                var config = mcp.GetMcpConfig();
+                servers.Add(new()
+                {
+                    AuthorizationToken = config.AuthToken,
+                    Name = config.Name,
+                    ToolConfiguration = new MCPToolConfiguration()
+                    {
+                        Enabled = true,
+                    },
+                    Url = config.Url
+                });
+            }
+
+        }
+
+        return servers;
     }
 
     /// <summary>

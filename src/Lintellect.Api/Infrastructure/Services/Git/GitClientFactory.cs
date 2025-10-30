@@ -7,11 +7,12 @@ using Lintellect.Shared.Models;
 namespace Lintellect.Api.Infrastructure.Services.Git;
 
 /// <summary>
-/// Factory for creating Git clients with dynamic credentials from AnalysisRequest.
+/// Factory for creating Git clients using credentials resolved at runtime.
 /// </summary>
-public sealed class GitClientFactory(ILogger<GitHubClientService> logger) : IGitClientFactory
+public sealed class GitClientFactory(ILogger<GitHubClientService> logger, ICredentialResolver credentialResolver) : IGitClientFactory
 {
     private readonly ILogger<GitHubClientService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly ICredentialResolver _credentialResolver = credentialResolver ?? throw new ArgumentNullException(nameof(credentialResolver));
     private readonly ConcurrentDictionary<string, IGitClient> _clientCache = new();
     public IGitClient CreateClient(AnalysisRequest analysisRequest)
     {
@@ -25,15 +26,19 @@ public sealed class GitClientFactory(ILogger<GitHubClientService> logger) : IGit
 
     private AzureDevopsClientService CreateAzureDevOpsClient(AnalysisRequest analysisRequest)
     {
-        // Validation is handled by FluentValidation at the request level
-        var orgUri = new Uri(analysisRequest.AzureDevOpsOrgUrl!);
+        var (token, orgUri) = _credentialResolver.Resolve(analysisRequest);
+
+        if (string.IsNullOrWhiteSpace(token) || orgUri is null)
+        {
+            throw new InvalidOperationException("Azure DevOps credentials are not configured. Provide DevopsPat/AzureDevOpsOrgUrl in request or set GitCredentials:AzureDevOps in configuration.");
+        }
 
         _logger.LogInformation("Creating Azure DevOps client for organization: {OrgUrl}", orgUri);
 
-        var client = _clientCache.GetOrAdd(analysisRequest.DevopsPat!, _ =>
+        var client = _clientCache.GetOrAdd(token!, _ =>
         {
             _logger.LogInformation("Caching Azure DevOps client for PAT.");
-            return new AzureDevopsClientService(analysisRequest.DevopsPat!, orgUri);
+            return new AzureDevopsClientService(token!, orgUri);
         });
 
         return (AzureDevopsClientService)client;
@@ -41,12 +46,18 @@ public sealed class GitClientFactory(ILogger<GitHubClientService> logger) : IGit
 
     private GitHubClientService CreateGitHubClient(AnalysisRequest analysisRequest)
     {
-        // Validation is handled by FluentValidation at the request level
+        var (token, _) = _credentialResolver.Resolve(analysisRequest);
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            throw new InvalidOperationException("GitHub token is not configured. Provide GitHubToken in request or set GitCredentials:GitHub in configuration.");
+        }
+
         _logger.LogInformation("Creating GitHub client");
-        var client = _clientCache.GetOrAdd(analysisRequest.GitHubToken!, _ =>
+        var client = _clientCache.GetOrAdd(token!, _ =>
         {
             _logger.LogInformation("Caching Azure DevOps client for PAT.");
-            return new GitHubClientService(analysisRequest.GitHubToken!, _logger);
+            return new GitHubClientService(token!, _logger);
         });
 
         return (GitHubClientService)client;

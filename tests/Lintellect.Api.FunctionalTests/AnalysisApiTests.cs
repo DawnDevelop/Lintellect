@@ -1,3 +1,5 @@
+using Lintellect.Api.Application.Messages.Commands.Analysis;
+
 namespace Lintellect.Api.functionaltests;
 
 [TestFixture]
