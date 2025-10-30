@@ -136,6 +136,14 @@ internal class StaticAnalysisCommand : Command
             AllowMultipleArgumentsPerToken = true
         };
 
+        var aianalyzer = new Option<EAnalyzers>("--ai-analyzer")
+        {
+            Description = "AI analyzer to use (default: AIFoundry)",
+            DefaultValueFactory = _ => EAnalyzers.AIFoundry,
+            Aliases = { "-ai", "-analyzer" },
+            AllowMultipleArgumentsPerToken = false
+        };
+
 
         Options.Add(solution);
         Options.Add(serviceUrl);
@@ -155,6 +163,7 @@ internal class StaticAnalysisCommand : Command
         Options.Add(enableSemgrep);
 
         Options.Add(mcpServer);
+        Options.Add(aianalyzer);
 
         SetAction(async (parseResult) =>
         {
@@ -201,7 +210,7 @@ internal class StaticAnalysisCommand : Command
 
             var mcpServers = mcpServerValue ?? [];
             analysisResult.McpServer = [.. mcpServers];
-
+            analysisResult.AIAnalyzer = parseResult.GetValue(aianalyzer);
             // Set Git provider credentials
             // Consolidated token model: prefer explicit GitHub token, else Azure DevOps PAT
             analysisResult.AccessToken = !string.IsNullOrWhiteSpace(githubTokenValue)

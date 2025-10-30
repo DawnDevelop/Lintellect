@@ -9,7 +9,8 @@ internal enum LanguagePromptTemplates
 
 internal enum GeneralPromptTemplates
 {
-    CodeOwnerSystemPrompt
+    CodeOwnerSystemPrompt,
+    GlobalInstructionsPrompt
 }
 
 internal static class AvailablePrompts
@@ -25,5 +26,6 @@ internal static class AvailablePrompts
     internal static readonly Dictionary<GeneralPromptTemplates, string> GeneralPrompts = new()
     {
         { GeneralPromptTemplates.CodeOwnerSystemPrompt, "CodeOwnerSystemPrompt" },
+        { GeneralPromptTemplates.GlobalInstructionsPrompt, "GlobalInstructionsPrompt" }
     };
 }

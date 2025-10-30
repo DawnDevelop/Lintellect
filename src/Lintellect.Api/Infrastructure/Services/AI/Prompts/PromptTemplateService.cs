@@ -33,11 +33,21 @@ internal sealed class PromptTemplateService
     /// <param name="language">Programming language enum</param>
     /// <param name="variables">Dictionary of variable names to values for interpolation</param>
     /// <returns>Rendered template with variables replaced</returns>
-    public string RenderLanguageTemplate(LanguagePromptTemplates languagePromptTemplate, EProgrammingLanguage language, Dictionary<string, string>? variables = null)
+    public string RenderLanguageTemplate(
+        LanguagePromptTemplates languagePromptTemplate,
+        EProgrammingLanguage language,
+        Dictionary<string, string>? variables = null,
+        bool enableGlobalInstructions = false)
     {
         var templateName = AvailablePrompts.LanguagePrompts[languagePromptTemplate];
-
         var template = LoadLanguageTemplate(templateName, language);
+
+        if (enableGlobalInstructions)
+        {
+            var globalInstructionsName = AvailablePrompts.GeneralPrompts[GeneralPromptTemplates.GlobalInstructionsPrompt];
+            var globalInstructionsPrompt = RenderTemplate(globalInstructionsName);
+            template = $"{globalInstructionsPrompt}\n\n{template}";
+        }
 
         return variables is null || variables.Count == 0 ? template : ReplaceVariables(template, variables);
     }

@@ -17,10 +17,10 @@ builder.AddServiceDefaults();
 builder.Services.AddOpenApi();
 builder.Logging.ClearProviders();
 
-builder.Services.AddControllers().AddJsonOptions(options =>
+builder.Services.ConfigureHttpJsonOptions(options =>
 {
-    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-    options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
 });
 
 builder.Services.AddLogging(x => x.AddConsole());

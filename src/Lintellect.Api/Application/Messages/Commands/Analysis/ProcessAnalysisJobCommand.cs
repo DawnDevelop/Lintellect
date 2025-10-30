@@ -42,7 +42,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
                     LinesAdded = 0,
                     LinesRemoved = 0
                 },
-                AnalyzerUsed = EAnalyzers.AIFoundry.ToString(),
+                AnalyzerUsed = analysisRequest.AIAnalyzer.ToString(),
                 AnalyzedAt = DateTimeOffset.UtcNow,
                 InlineSuggestions = null
             };
@@ -65,7 +65,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
 
         // Step 2: Prepare analyzer and custom instructions
-        var analyzer = analyzerResolver.GetAnalyzerService(EAnalyzers.AIFoundry);
+        var analyzer = analyzerResolver.GetAnalyzerService(analysisRequest.AIAnalyzer);
         var customInstructions = await prService.GetCustomInstructionsAsync(analysisRequest);
         var aiAnalyzerModel = new AnalyzerServiceModel(analysisRequest, customInstructions ?? string.Empty);
 
@@ -98,6 +98,29 @@ public sealed class ProcessAnalysisJobCommandHandler(
         AnalysisRequest analysisRequest,
         CancellationToken cancellationToken)
     {
+
+        if (analyzer is IBatchAnalyzerService batchAnalyzer)
+        {
+            var codeOwnersContent = analysisRequest.EnableAzureDevopsCodeOwners
+                ? await prService.GetCodeOwnersFileAsync(analysisRequest)
+                : null;
+
+            var batchedResult = await batchAnalyzer.RunBatchedAnalysisAsync(
+                aiAnalyzerModel,
+                diffs,
+                codeOwnersContent,
+                [.. diffs.Keys],
+                cancellationToken);
+
+            return new AnalysisResults
+            {
+                Summary = batchedResult.Summary,
+                DetailedAnalysis = batchedResult.DetailedAnalysis,
+                InlineSuggestions = batchedResult.InlineSuggestions,
+                CodeOwners = batchedResult.CodeOwners
+            };
+        }
+
         var tasks = new List<Task>();
         var summaryTask = CreateSummaryTaskIfEnabled(analyzer, aiAnalyzerModel, diffs, analysisRequest, cancellationToken);
         var detailedAnalysisTask = CreateDetailedAnalysisTaskIfEnabled(analyzer, aiAnalyzerModel, diffs, analysisRequest, cancellationToken);
@@ -158,7 +181,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
         CancellationToken cancellationToken)
     {
         return analysisRequest.EnableSummaryComment
-            ? analyzer.AnalyzeAsync(aiAnalyzerModel, diffs, cancellationToken)
+            ? analyzer.GetDetailedAnalysisAsync(aiAnalyzerModel, diffs, cancellationToken)
             : null;
     }
 
@@ -252,7 +275,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
             Summary = results.Summary,
             DetailedAnalysis = results.DetailedAnalysis,
             DiffStatistics = BuildDiffStatistics(diffs),
-            AnalyzerUsed = EAnalyzers.AIFoundry.ToString(),
+            AnalyzerUsed = analysisRequest.AIAnalyzer.ToString(),
             AnalyzedAt = DateTimeOffset.UtcNow,
             InlineSuggestions = results.InlineSuggestions.Count != 0 ? "Inline suggestions posted" : null
         };

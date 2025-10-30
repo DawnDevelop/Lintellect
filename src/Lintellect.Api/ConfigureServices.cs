@@ -11,6 +11,7 @@ using Lintellect.Api.Infrastructure.Services.Analysis;
 using Lintellect.Api.Infrastructure.Services.Git;
 using Lintellect.Api.Infrastructure.Services.Webhooks;
 using Lintellect.Api.Infrastructure.Telemetry;
+using Lintellect.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -42,7 +43,7 @@ public static class ConfigureServices
         Action<SemanticAnalyzerOptions>? configureSemanticOptions = null)
     {
         // Only register Claude if configured
-        var claudeApiKey = configuration.GetValue<string>("ClaudeApiKey") ??
+        var claudeApiKey = configuration.GetValue<string>("CLAUDE_API_KEY") ??
                           configuration.GetSection("ClaudeAnalyzer:ApiKey").Value;
 
         if (!string.IsNullOrWhiteSpace(claudeApiKey))
@@ -66,9 +67,9 @@ public static class ConfigureServices
         }
 
         // Only register Semantic (AIFoundry) if configured
-        var semanticApiKey = configuration.GetValue<string>("SemanticApiKey") ??
+        var semanticApiKey = configuration.GetValue<string>("SEMANTIC_API_KEY") ??
                             configuration.GetSection("SemanticAnalyzer:ApiKey").Value;
-        var semanticEndpoint = configuration.GetValue<string>("SemanticEndpoint") ??
+        var semanticEndpoint = configuration.GetValue<string>("SEMANTIC_ENDPOINT") ??
                               configuration.GetSection("SemanticAnalyzer:Endpoint").Value;
 
         if (!string.IsNullOrWhiteSpace(semanticApiKey) || !string.IsNullOrWhiteSpace(semanticEndpoint))
@@ -87,12 +88,16 @@ public static class ConfigureServices
                 {
                     var options = sp.GetRequiredService<IOptions<SemanticAnalyzerOptions>>().Value;
                     var mcpResolver = sp.GetRequiredService<IMcpServiceResolver>();
-                    return new SemanticAnalyzerService(options, mcpResolver);
+                    var logger = sp.GetRequiredService<ILogger<SemanticAnalyzerService>>();
+                    return new SemanticAnalyzerService(options, mcpResolver, logger);
                 });
         }
 
         // Register the resolver that picks the right analyzer based on configuration
         services.AddScoped<IAnalyzerServiceResolver, AnalyzerServiceResolver>();
+
+        services.AddKeyedSingleton<IMcpService, Context7McpService>(EMcpServer.Context7);
+        services.AddKeyedSingleton<IMcpService, MicrosoftDocsMcpService>(EMcpServer.MicrosoftDocs);
         services.AddScoped<IMcpServiceResolver, McpServiceResolver>();
 
         return services;

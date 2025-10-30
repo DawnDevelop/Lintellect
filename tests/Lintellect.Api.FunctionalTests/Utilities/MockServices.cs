@@ -110,7 +110,7 @@ public sealed class MockAnalyzerServiceResolver : IAnalyzerServiceResolver
 /// </summary>
 public sealed class MockAnalyzerService : IAnalyzerService
 {
-    public Task<string> AnalyzeAsync(AnalyzerServiceModel analysisResult, Dictionary<string, string> diffs, CancellationToken cancellationToken = default)
+    public Task<string> GetDetailedAnalysisAsync(AnalyzerServiceModel analysisResult, Dictionary<string, string> diffs, CancellationToken cancellationToken = default)
     {
         return Task.FromResult("Mock detailed analysis");
     }

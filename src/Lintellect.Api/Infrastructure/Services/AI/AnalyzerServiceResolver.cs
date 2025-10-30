@@ -1,5 +1,5 @@
 using Lintellect.Api.Application.Interfaces;
-using Lintellect.Api.Application.Models;
+using Lintellect.Shared.Models;
 
 namespace Lintellect.Api.Infrastructure.Services.AI;
 

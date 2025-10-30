@@ -20,6 +20,8 @@ public class AnalysisRequest
 
     public List<EMcpServer> McpServer { get; set; } = [];
 
+    public EAnalyzers AIAnalyzer { get; set; } = EAnalyzers.AIFoundry;
+
     // Git provider credentials - single consolidated token for CLI overrides
     public string? AccessToken { get; set; }
 

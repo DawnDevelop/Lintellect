@@ -1,4 +1,4 @@
-namespace Lintellect.Api.Application.Models;
+namespace Lintellect.Shared.Models;
 
 public enum EAnalyzers
 {
