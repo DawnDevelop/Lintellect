@@ -4,55 +4,62 @@ This document explains how to configure Git provider credentials for the DevOps 
 
 ## Overview
 
-The DevOps PR Analyzer now supports dynamic Git provider credentials that are passed via the `AnalysisRequest` instead of being configured at the application level. This allows users to configure different credentials per analysis request, making it suitable for CI/CD pipelines where different repositories may use different Git providers.
+The DevOps PR Analyzer uses application-level Git provider credentials configured via configuration files or environment variables. This approach is designed for single-tenant deployments where all analysis requests use the same Git provider credentials.
 
-The system uses a factory pattern (`IGitClientFactory`) to create Git clients with dynamic credentials, eliminating the need for static configuration and providing better security and flexibility.
+The system uses a factory pattern (`IGitClientFactory`) to create Git clients with credentials resolved from application configuration, providing a secure and centralized credential management approach.
 
 ## Supported Git Providers
 
 - **Azure DevOps**: Requires Personal Access Token (PAT) and Organization URL
 - **GitHub**: Requires Personal Access Token (PAT)
 
-## CLI Usage
+## Configuration
 
-### Azure DevOps
+Git provider credentials must be configured at the application level. The API service will use these credentials for all analysis requests.
 
-```bash
-dotnet run -- analyze \
-  --solution ./MyProject.sln \
-  --language CSharp \
-  --api-url https://your-api-url.com \
-  --api-key your-api-key \
-  --devops-pat your-azure-devops-pat \
-  --azure-devops-org-url https://dev.azure.com/yourorg
-```
+### Application Configuration (appsettings.json)
 
-### GitHub
-
-```bash
-dotnet run -- analyze \
-  --solution ./MyProject.sln \
-  --language CSharp \
-  --api-url https://your-api-url.com \
-  --api-key your-api-key \
-  --github-token your-github-pat
+```json
+{
+  "GitCredentials": {
+    "AzureDevOps": {
+      "Pat": "your-azure-devops-pat",
+      "OrgUrl": "https://dev.azure.com/yourorg"
+    },
+    "GitHub": {
+      "Token": "your-github-pat"
+    }
+  }
+}
 ```
 
 ### Environment Variables
 
-You can also use environment variables for security:
+You can also configure credentials using environment variables:
 
 ```bash
-export DEVOPS_PAT="your-azure-devops-pat"
+export AZURE_DEVOPS_PAT="your-azure-devops-pat"
 export AZURE_DEVOPS_ORG_URL="https://dev.azure.com/yourorg"
 export GITHUB_TOKEN="your-github-pat"
+```
 
-dotnet run -- analyze --solution ./MyProject.sln --language CSharp
+The API service will automatically read these environment variables and use them if not specified in `appsettings.json`.
+
+## CLI Usage
+
+The CLI no longer accepts credential parameters. Credentials must be configured on the API service side.
+
+```bash
+dotnet run -- analyze \
+  --solution ./MyProject.sln \
+  --language CSharp \
+  --api-url https://your-api-url.com \
+  --api-key your-api-key
 ```
 
 ## API Usage
 
-When submitting analysis requests via the API, include the Git provider credentials in the request:
+When submitting analysis requests via the API, credentials are automatically resolved from the application configuration. Do not include credentials in the request body:
 
 ```json
 {
@@ -64,13 +71,10 @@ When submitting analysis requests via the API, include the Git provider credenti
     "pullRequestId": 123
   },
   "gitProvider": "GitHub",
-  "devopsPat": "your-azure-devops-pat",
-  "azureDevOpsOrgUrl": "https://dev.azure.com/yourorg",
-  "githubToken": "your-github-pat",
   "enableSummaryComment": true,
   "enableInlineSuggestions": true,
   "enableDescriptionSummary": true,
-  "enableCodeOwners": false
+  "enableAzureDevopsCodeOwners": false
 }
 ```
 
@@ -124,13 +128,14 @@ The system performs comprehensive validation of Git provider credentials:
 
 GitHub natively supports CODEOWNERS files, so no additional implementation is needed. The `AddCodeOwnersToPr` method will log that GitHub handles this natively and return successfully.
 
-## Migration from Static Configuration
+## Migration from Per-Request Credentials
 
-If you were previously using static configuration in `appsettings.json`, you can now:
+If you were previously passing credentials per request (via CLI arguments or in the API request body), you must now:
 
-1. Remove the static Git provider configuration from your API settings
-2. Pass credentials via the CLI or API request
-3. Use environment variables for secure credential management
+1. Configure credentials in the API service's `appsettings.json` or via environment variables
+2. Remove credential arguments from CLI commands
+3. Remove credential fields from API request bodies
+4. Ensure the API service has access to the required Git provider credentials
 
 ## Troubleshooting
 
@@ -142,7 +147,5 @@ If you were previously using static configuration in `appsettings.json`, you can
 
 ### Error Messages
 
-- `"DevopsPAT is required for Azure DevOps provider"`: Provide a valid Azure DevOps PAT
-- `"AzureDevOpsOrgUrl is required for Azure DevOps provider"`: Provide a valid organization URL
-- `"GitHubToken is required for GitHub provider"`: Provide a valid GitHub PAT
-- `"AzureDevOpsOrgUrl must be a valid absolute URI"`: Ensure the URL is properly formatted
+- `"Azure DevOps credentials are not configured. Populate GitCredentials:AzureDevOps in configuration."`: Configure Azure DevOps credentials in `appsettings.json` or via `AZURE_DEVOPS_PAT` and `AZURE_DEVOPS_ORG_URL` environment variables
+- `"GitHub token is not configured. Populate GitCredentials:GitHub in configuration."`: Configure GitHub credentials in `appsettings.json` or via `GITHUB_TOKEN` environment variable

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Lintellect.Api.Application.Common.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -8,15 +9,18 @@ namespace Lintellect.Api.Apis.Infrastructure;
 public class CustomExceptionHandler : IExceptionHandler
 {
     private readonly Dictionary<Type, Func<HttpContext, Exception, Task>> _exceptionHandlers;
+    private readonly ILogger<CustomExceptionHandler> _logger;
 
-    public CustomExceptionHandler()
+    public CustomExceptionHandler(ILogger<CustomExceptionHandler> logger)
     {
+        _logger = logger;
+
         // Register known exception types and handlers.
         _exceptionHandlers = new()
-            {
-                { typeof(ValidationException), HandleValidationException },
-                { typeof(UnauthorizedAccessException), HandleUnauthorizedAccessException },
-            };
+        {
+            { typeof(ValidationException), HandleValidationException },
+            { typeof(UnauthorizedAccessException), HandleUnauthorizedAccessException },
+        };
     }
 
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
@@ -29,7 +33,8 @@ public class CustomExceptionHandler : IExceptionHandler
             return true;
         }
 
-        return false;
+        await HandleUnknownException(httpContext, exception);
+        return true;
     }
 
     private async Task HandleValidationException(HttpContext httpContext, Exception ex)
@@ -54,6 +59,30 @@ public class CustomExceptionHandler : IExceptionHandler
             Status = StatusCodes.Status401Unauthorized,
             Title = "Unauthorized",
             Type = "https://tools.ietf.org/html/rfc7235#section-3.1"
+        });
+    }
+
+    private async Task HandleUnknownException(HttpContext httpContext, Exception exception)
+    {
+        _logger.LogError(exception, "Unhandled exception occurred.");
+
+        if (httpContext.Response.HasStarted)
+        {
+            _logger.LogWarning("The response has already started, unable to write error response.");
+            return;
+        }
+
+        httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+
+        await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = StatusCodes.Status500InternalServerError,
+            Title = "Internal Server Error",
+            Detail = "An unexpected error occurred. Please try again later.",
+            Extensions =
+            {
+                ["traceId"] = Activity.Current?.Id ?? httpContext.TraceIdentifier
+            }
         });
     }
 

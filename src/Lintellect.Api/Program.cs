@@ -61,7 +61,7 @@ if (app.Environment.IsDevelopment())
 
 await app.MigrateAsync();
 
-app.UseExceptionHandler(options => { });
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
 // Map health check endpoints

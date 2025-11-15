@@ -13,10 +13,4 @@ public interface IMcpServiceResolver
     /// <param name="serverType">The MCP server type.</param>
     /// <returns>The MCP service instance.</returns>
     IMcpService? GetMcpService(EMcpServer serverType);
-
-    /// <summary>
-    /// Gets all available MCP services.
-    /// </summary>
-    /// <returns>Collection of available MCP services.</returns>
-    IEnumerable<IMcpService> GetAvailableMcpServices();
 }

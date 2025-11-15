@@ -21,12 +21,12 @@ public sealed class ClaudeAnalyzerOptions
     /// <summary>
     /// Maximum tokens for the response.
     /// </summary>
-    public int MaxTokens { get; set; } = 4096;
+    public int MaxTokens { get; set; } = 40960;
 
     /// <summary>
     /// Temperature for response generation (0.0 to 1.0).
     /// </summary>
-    public double Temperature { get; set; } = 0.7;
+    public double Temperature { get; set; } = 0.5;
 
 }
 

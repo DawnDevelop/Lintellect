@@ -18,6 +18,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
 {
     private readonly ClaudeAnalyzerOptions _options;
     private readonly PromptTemplateService _templateService;
+    private readonly PromptBuilder _promptBuilder;
     private readonly AnthropicClient _client;
     private readonly IAsyncPolicy _retryPolicy;
     private readonly IMcpServiceResolver _mcpServiceResolver;
@@ -27,6 +28,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _mcpServiceResolver = mcpServiceResolver ?? throw new ArgumentNullException(nameof(mcpServiceResolver));
         _templateService = new PromptTemplateService();
+        _promptBuilder = new PromptBuilder();
         _client = new AnthropicClient(_options.ApiKey!);
 
         // Configure retry policy for Claude API calls
@@ -57,7 +59,8 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
                     { "customInstructions", analysisResult.CopilotInstructionsPrompt }
                 });
 
-            var userPrompt = BuildUserPrompt(diffs, analysisResult.AnalysisResult);
+            // Use optimized prompt builder with truncation and prioritization
+            var userPrompt = _promptBuilder.BuildAnalysisPrompt(analysisResult.AnalysisResult, diffs);
 
             return await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
         });
@@ -81,8 +84,8 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
                     { "customInstructions", analysisResult.CopilotInstructionsPrompt }
                 });
 
-
-            var userPrompt = BuildUserPrompt(diffs, analysisResult.AnalysisResult);
+            // Use optimized prompt builder with truncation, prioritization, and filtered findings
+            var userPrompt = _promptBuilder.BuildInlineSuggestionsPrompt(analysisResult.AnalysisResult, diffs);
 
             var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
 
@@ -117,7 +120,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
                 });
 
 
-            var userPrompt = BuildUserPrompt(diffs, analysisResult.AnalysisResult);
+            var userPrompt = _promptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs);
 
             var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
 
@@ -166,7 +169,10 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
             var detailedSystem = _templateService.RenderLanguageTemplate(
                 LanguagePromptTemplates.DetailedAnalysisSystemPrompt,
                 analysisResult.AnalysisResult.Language,
-                new Dictionary<string, string> { { "customInstructions", analysisResult.CopilotInstructionsPrompt } });
+                new Dictionary<string, string>
+                {
+                    { "customInstructions", analysisResult.CopilotInstructionsPrompt }
+                });
 
             var inlineSystem = _templateService.RenderLanguageTemplate(
                 LanguagePromptTemplates.InlineSuggestionsSystemPrompt,
@@ -182,25 +188,38 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
                 analysisResult.AnalysisResult.Language,
                 new Dictionary<string, string> { { "customInstructions", analysisResult.CopilotInstructionsPrompt } });
 
-            var analysisUser = BuildUserPrompt(diffs, analysisResult.AnalysisResult);
+            // Use optimized prompt builders with truncation and prioritization
+            var analysisUser = _promptBuilder.BuildAnalysisPrompt(analysisResult.AnalysisResult, diffs);
+            var inlineUser = _promptBuilder.BuildInlineSuggestionsPrompt(analysisResult.AnalysisResult, diffs);
+            var summaryUser = _promptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs);
 
-            var codeownersSystem = _templateService.RenderTemplate("CodeOwnerSystemPrompt");
-            var codeownersUser = $"CODEOWNERS file content:\n{codeOwnerFileContent}\n\nChanged files:\n{string.Join("\n", changedFilePaths)}";
+            var codeownersSystem = _templateService.RenderTemplate(AvailablePrompts.GeneralPrompts[GeneralPromptTemplates.CodeOwnerSystemPrompt]);
+            // Optimize CODEOWNERS prompt - more concise format
+            var codeownersUser = $"CODEOWNERS:\n{codeOwnerFileContent}\n\nChanged files: {string.Join(", ", changedFilePaths)}";
 
             var commonMcp = BuildMcpServerConfigs(analysisResult.AnalysisResult.McpServer ?? []);
 
             var requests = new List<BatchRequest>();
 
             // Create batch requests based on enabled features
-            var idDetailedAnalysis = BuildDescriptionSummaryRequest(detailedSystem, analysisUser, commonMcp);
-            var idInlineSuggestions = BuildInlineRequest(inlineSystem, analysisUser, commonMcp);
-            var idSummary = BuildSummaryCommentRequest(summarySystem, analysisUser, commonMcp);
+            var idDescriptionSummary = BuildDescriptionSummaryRequest(detailedSystem, analysisUser, commonMcp);
+            var idInlineSuggestions = BuildInlineRequest(inlineSystem, inlineUser, commonMcp);
+            var idSummary = BuildSummaryCommentRequest(summarySystem, summaryUser, commonMcp);
             var idCodeOwners = BuildCodeOwnersRequest(codeownersSystem, codeownersUser, commonMcp);
+
+
+            var tokenCount = await _client.Messages.CountMessageTokensAsync(new()
+            {
+                Messages = idDescriptionSummary.MessageParameters.Messages,
+                Tools = idDescriptionSummary.MessageParameters.Tools,
+                Model = idDescriptionSummary.MessageParameters.Model,
+                System = idDescriptionSummary.MessageParameters.System
+            });
 
             // EnableSummaryComment = detailed analysis comment on PR
             if (analysisResult.AnalysisResult.EnableSummaryComment)
             {
-                requests.Add(idDetailedAnalysis);
+                requests.Add(idDescriptionSummary);
             }
 
             if (analysisResult.AnalysisResult.EnableInlineSuggestions)
@@ -249,10 +268,10 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
                     continue;
                 }
 
-                detailed = result.CustomId == idDetailedAnalysis.CustomId ? result.Result.Message.ContentBlock?.Text ?? string.Empty : detailed;
-                inlineRaw = result.CustomId == idInlineSuggestions.CustomId ? result.Result.Message.ContentBlock?.Text ?? string.Empty : inlineRaw;
-                summary = result.CustomId == idSummary.CustomId ? result.Result.Message.ContentBlock?.Text ?? string.Empty : summary;
-                codeownersRaw = result.CustomId == idCodeOwners.CustomId ? result.Result.Message.ContentBlock?.Text ?? string.Empty : codeownersRaw;
+                detailed = result.CustomId == idDescriptionSummary.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : detailed;
+                inlineRaw = result.CustomId == idInlineSuggestions.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : inlineRaw;
+                summary = result.CustomId == idSummary.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : summary;
+                codeownersRaw = result.CustomId == idCodeOwners.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : codeownersRaw;
             }
 
             // Parse inline suggestions
@@ -287,23 +306,52 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         });
     }
 
+    /// <summary>
+    /// Creates a MessageParameters object with common settings for batch requests.
+    /// </summary>
+    private MessageParameters CreateMessageParameters(string systemPrompt, string userPrompt, List<MCPServer>? mcpServers = null)
+    {
+        mcpServers ??= [];
+
+        var messageParams = new MessageParameters
+        {
+            PromptCaching = PromptCacheType.AutomaticToolsAndSystem,
+            Model = _options.Model,
+            MaxTokens = _options.MaxTokens,
+            Temperature = (decimal?)_options.Temperature,
+            Stream = false,
+            ToolChoice = new ToolChoice { Type = ToolChoiceType.Auto },
+            Tools = [],
+            System = [new(systemPrompt, new CacheControl { TTL = CacheDuration.OneHour })],
+            Messages = [new Message { Role = RoleType.User, Content = [new TextContent { Text = userPrompt }] }]
+        };
+
+        // Only set MCPServers if list is not empty (Claude API rejects empty lists)
+        messageParams.MCPServers ??= [];
+        foreach (var mcp in mcpServers)
+        {
+            messageParams.MCPServers.Add(new()
+            {
+                Name = mcp.Name,
+                Url = mcp.Url,
+                AuthorizationToken = mcp.AuthorizationToken,
+                ToolConfiguration = new MCPToolConfiguration()
+                {
+                    Enabled = true,
+                    AllowedTools = [$"{mcp.Name}"]
+                }
+            });
+        }
+
+        return messageParams;
+    }
+
     private BatchRequest BuildCodeOwnersRequest(string codeownersSystem, string codeownersUser, List<MCPServer> commonMcp)
     {
         return new()
         {
             CustomId = Guid.NewGuid().ToString(),
-            MessageParameters = new MessageParameters
-            {
-                PromptCaching = PromptCacheType.AutomaticToolsAndSystem,
-                Model = _options.Model,
-                MaxTokens = _options.MaxTokens,
-                Temperature = (decimal?)_options.Temperature,
-                Stream = false,
-                MCPServers = commonMcp,
-                ToolChoice = new ToolChoice { Type = ToolChoiceType.Auto },
-                System = [new(codeownersSystem, new CacheControl { TTL = CacheDuration.OneHour })],
-                Messages = [new Message { Role = RoleType.User, Content = [new TextContent { Text = codeownersUser }] }]
-            }
+            MessageParameters = CreateMessageParameters(codeownersSystem, codeownersUser, commonMcp)
         };
     }
 
@@ -312,18 +360,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         return new()
         {
             CustomId = Guid.NewGuid().ToString(),
-            MessageParameters = new MessageParameters
-            {
-                PromptCaching = PromptCacheType.AutomaticToolsAndSystem,
-                Model = _options.Model,
-                MaxTokens = _options.MaxTokens,
-                Temperature = (decimal?)_options.Temperature,
-                Stream = false,
-                MCPServers = commonMcp,
-                ToolChoice = new ToolChoice { Type = ToolChoiceType.Auto },
-                System = [new(summarySystem, new CacheControl { TTL = CacheDuration.OneHour })],
-                Messages = [new Message { Role = RoleType.User, Content = [new TextContent { Text = summaryUser }] }]
-            }
+            MessageParameters = CreateMessageParameters(summarySystem, summaryUser, commonMcp)
         };
     }
 
@@ -332,18 +369,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         return new()
         {
             CustomId = Guid.NewGuid().ToString(),
-            MessageParameters = new MessageParameters
-            {
-                PromptCaching = PromptCacheType.AutomaticToolsAndSystem,
-                Model = _options.Model,
-                MaxTokens = _options.MaxTokens,
-                Temperature = (decimal?)_options.Temperature,
-                Stream = false,
-                MCPServers = commonMcp,
-                ToolChoice = new ToolChoice { Type = ToolChoiceType.Auto },
-                System = [new(inlineSystem, new CacheControl { TTL = CacheDuration.OneHour })],
-                Messages = [new Message { Role = RoleType.User, Content = [new TextContent { Text = inlineUser }] }]
-            },
+            MessageParameters = CreateMessageParameters(inlineSystem, inlineUser, commonMcp)
         };
     }
 
@@ -352,52 +378,17 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         return new()
         {
             CustomId = Guid.NewGuid().ToString(),
-            MessageParameters = new MessageParameters
-            {
-                PromptCaching = PromptCacheType.AutomaticToolsAndSystem,
-                Model = _options.Model,
-                MaxTokens = _options.MaxTokens,
-                Temperature = (decimal?)_options.Temperature,
-                Stream = false,
-                MCPServers = commonMcp,
-                ToolChoice = new ToolChoice { Type = ToolChoiceType.Auto },
-                System = [new(detailedSystem, new CacheControl { TTL = CacheDuration.OneHour })],
-                Messages = [new Message { Role = RoleType.User, Content = [new TextContent { Text = detailedUser }] }],
-            }
+            MessageParameters = CreateMessageParameters(detailedSystem, detailedUser, commonMcp)
         };
     }
 
     private async Task<string> SendClaudeMessageAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken, List<EMcpServer>? mcpServers = null)
     {
-        var parameter = new MessageParameters
-        {
-            Model = _options.Model,
-            MaxTokens = _options.MaxTokens,
-            Temperature = (decimal?)_options.Temperature,
-            Stream = false,
-            MCPServers = BuildMcpServerConfigs(mcpServers ?? []),
-            ToolChoice = new ToolChoice()
-            {
-                Type = ToolChoiceType.Auto
-            },
-            System = [
-                new(systemPrompt, new CacheControl(){
-                    TTL = CacheDuration.OneHour
-                })
-            ],
-            Messages =
-            [
-                new()
-                {
-                    Role = RoleType.User,
-                    Content = [
-                        new TextContent() {
-                            Text = userPrompt
-                        }
-                    ]
-                }
-            ]
-        };
+        var mcpServerConfigs = BuildMcpServerConfigs(mcpServers ?? []);
+
+        // For non-batch requests, we don't use PromptCaching
+        var parameter = CreateMessageParameters(systemPrompt, userPrompt, mcpServerConfigs);
+        parameter.PromptCaching = PromptCacheType.None; // Remove prompt caching for single messages
 
         var message = await _client.Messages.GetClaudeMessageAsync(parameter, cancellationToken);
         return message.ContentBlock?.Text ?? string.Empty;
@@ -427,28 +418,6 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         }
 
         return servers;
-    }
-
-    /// <summary>
-    /// Builds the user prompt from diffs and analysis result.
-    /// </summary>
-    private static string BuildUserPrompt(Dictionary<string, string> diffs, AnalysisRequest analysisRequest)
-    {
-        var prompt = new System.Text.StringBuilder();
-        prompt.AppendLine($"Pull Request: {analysisRequest.GitInfo?.ProjectName}/{analysisRequest.GitInfo?.RepositoryName} #{analysisRequest.GitInfo?.PullRequestId}");
-        prompt.AppendLine($"Language: {analysisRequest.Language}");
-        prompt.AppendLine();
-
-        foreach (var (filePath, diff) in diffs)
-        {
-            prompt.AppendLine($"File: {filePath}");
-            prompt.AppendLine("```diff");
-            prompt.AppendLine(diff);
-            prompt.AppendLine("```");
-            prompt.AppendLine();
-        }
-
-        return prompt.ToString();
     }
 
     public Task<string> GetDetailedAnalysis(AnalyzerServiceModel analysisResult, Dictionary<string, string> diffs, CancellationToken cancellationToken = default)

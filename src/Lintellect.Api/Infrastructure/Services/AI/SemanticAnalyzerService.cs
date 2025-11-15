@@ -18,7 +18,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
 {
     private readonly SemanticAnalyzerOptions _options = options ?? throw new ArgumentNullException(nameof(options));
     private readonly PromptTemplateService _templateService = new();
-    private readonly AnalysisPromptBuilder _promptBuilder = new();
+    private readonly PromptBuilder _promptBuilder = new();
     private readonly ILogger<SemanticAnalyzerService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
     private static FunctionChoiceBehavior FunctionChoiceBehavior => FunctionChoiceBehavior.Auto(options: new() { AllowParallelCalls = true, AllowConcurrentInvocation = true });
@@ -240,6 +240,8 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
 
         if (!string.IsNullOrWhiteSpace(options.ApiKey))
         {
+
+
             _logger.LogDebug("Using ApiKey authentication for Azure OpenAI chat completion");
             builder.AddAzureOpenAIChatCompletion(
                      deploymentName: options.DeploymentName,

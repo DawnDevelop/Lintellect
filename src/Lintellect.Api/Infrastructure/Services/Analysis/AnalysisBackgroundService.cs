@@ -1,9 +1,7 @@
-using System.Text.Json;
 using Lintellect.Api.Application.Messages.Commands.Analysis;
 using Lintellect.Api.Domain.Entities;
 using Lintellect.Api.Domain.Enums;
 using Lintellect.Api.Infrastructure.Telemetry;
-using Lintellect.Shared.Models;
 using Mediator;
 
 namespace Lintellect.Api.Infrastructure.Services.Analysis;
@@ -60,10 +58,10 @@ public sealed class AnalysisBackgroundService(
     private async Task ProcessJobAsync(AnalysisJob job, CancellationToken cancellationToken)
     {
         var startTime = DateTimeOffset.UtcNow;
-        var analyzerType = "Unknown";
+        var analyzerType = job.AnalyzerUsed ?? "Unknown";
 
         // Get CLI analysis result from JsonDocument
-        var cliAnalysisResult = job.AnalysisRequest?.Deserialize<AnalysisRequest>();
+        var cliAnalysisResult = job.AnalysisRequest;
 
         logger.LogInformation("Processing job {JobId} for {Project}/{Repository} PR #{PullRequest}",
             job.Id,
@@ -91,10 +89,12 @@ public sealed class AnalysisBackgroundService(
                 StartedAt: DateTimeOffset.UtcNow),
                 timeoutCts.Token);
 
+            var analysisRequest = job.CreateAnalysisRequestSnapshot();
+
             // Perform actual analysis using Mediator command
             var analysisReport = await mediator.Send(new ProcessAnalysisJobCommand(
                 job.Id,
-                cliAnalysisResult!),
+                analysisRequest),
                 timeoutCts.Token);
 
             // Update job with real results using Mediator
@@ -103,12 +103,11 @@ public sealed class AnalysisBackgroundService(
                 analysisReport.Summary ?? "No summary generated",
                 analysisReport.DetailedAnalysis ?? "No detailed analysis generated",
                 "Inline suggestions would be posted to PR", // This is handled by the orchestrator
-                analysisReport.AnalyzerUsed ?? "Unknown"),
+               analyzerType),
                 timeoutCts.Token);
 
             // Record successful completion
             var duration = (DateTimeOffset.UtcNow - startTime).TotalSeconds;
-            analyzerType = analysisReport.AnalyzerUsed ?? "Unknown";
             metrics.RecordJobCompleted(analyzerType, duration);
 
             logger.LogInformation("Successfully processed job {JobId}", job.Id);

@@ -33,19 +33,6 @@ public sealed class TestDataBuilder
         return this;
     }
 
-    public TestDataBuilder WithGitHubCredentials()
-    {
-        _request.AccessToken = "mock-github-token";
-        return this;
-    }
-
-    public TestDataBuilder WithAzureDevOpsCredentials()
-    {
-        _request.AccessToken = "mock-pat";
-        _request.AzureDevOpsOrgUrl = "https://dev.azure.com/testorg";
-        return this;
-    }
-
     public TestDataBuilder WithEnabledFeatures()
     {
         _request.EnableSummaryComment = true;
@@ -82,13 +69,6 @@ public sealed class TestDataBuilder
         return this;
     }
 
-    public TestDataBuilder WithNoCredentials()
-    {
-        _request.AccessToken = null;
-        _request.AzureDevOpsOrgUrl = null;
-        return this;
-    }
-
     public TestDataBuilder WithNoFeaturesEnabled()
     {
         _request.EnableSummaryComment = false;
@@ -109,7 +89,6 @@ public sealed class TestDataBuilder
             .WithValidGitInfo()
             .WithGitProvider(EGitProvider.GitHub)
             .WithLanguage(EProgrammingLanguage.CSharp)
-            .WithGitHubCredentials()
             .WithEnabledFeatures()
             .WithFindings()
             .Build();
@@ -121,7 +100,6 @@ public sealed class TestDataBuilder
             .WithInvalidGitInfo()
             .WithGitProvider(EGitProvider.GitHub)
             .WithLanguage(EProgrammingLanguage.CSharp)
-            .WithNoCredentials()
             .WithNoFeaturesEnabled()
             .Build();
     }

@@ -246,7 +246,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
         }
     }
 
-    private async Task PostInlineSuggestionsAsync(
+    private static async Task PostInlineSuggestionsAsync(
         PullRequestService prService,
         AnalysisRequest analysisRequest,
         List<InlineSuggestion> suggestions)
@@ -335,15 +335,19 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
     private async Task<bool> CheckForDuplicateAnalysisAsync(AnalysisRequest analysisRequest, CancellationToken cancellationToken)
     {
+        if (analysisRequest.GitInfo == null)
+        {
+            return false;
+        }
 
-        var pullRequestId = analysisRequest.GitInfo!.PullRequestId;
-        var gitProvider = analysisRequest.GitProvider.ToString();
+        var pullRequestId = analysisRequest.GitInfo.PullRequestId;
+        var gitProvider = analysisRequest.GitProvider;
 
         // Query for existing analysis jobs with the same PullRequestId and GitProvider
         var existingJob = await context.AnalysisJobs
             .Where(job =>
-                job.AnalysisRequest!.RootElement.GetProperty(nameof(GitInfo)).GetProperty(nameof(GitInfo.PullRequestId)).GetInt32() == pullRequestId &&
-                job.AnalysisRequest!.RootElement.GetProperty(nameof(analysisRequest.GitProvider)).GetString() == gitProvider)
+                job.AnalysisRequest!.GitInfo!.PullRequestId == pullRequestId &&
+                job.AnalysisRequest!.GitProvider == gitProvider)
             .OrderByDescending(job => job.Created)
             .FirstOrDefaultAsync(cancellationToken);
 
