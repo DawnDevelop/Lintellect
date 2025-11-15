@@ -7,7 +7,7 @@ namespace Lintellect.Api.Infrastructure.Services.AI.Prompts;
 /// Builder for creating structured analysis prompts from analysis results and diffs.
 /// Separates prompt construction logic from the analyzer service.
 /// </summary>
-internal sealed class AnalysisPromptBuilder
+internal sealed class PromptBuilder
 {
     private readonly PromptTemplateService _templateService = new();
 
@@ -18,10 +18,8 @@ internal sealed class AnalysisPromptBuilder
     {
         var sections = new[]
         {
-            BuildHeader(),
             BuildStaticAnalysisSection(analysisResult),
-            BuildCodeChangesSection(diffs),
-            BuildInstructions()
+            BuildCodeChangesSection(diffs, analysisResult, maxFiles: 12, maxLinesPerFile: 40),
         };
 
         return _templateService.BuildPrompt(sections);
@@ -32,12 +30,14 @@ internal sealed class AnalysisPromptBuilder
     /// </summary>
     public string BuildInlineSuggestionsPrompt(AnalysisRequest analysisResult, Dictionary<string, string> diffs)
     {
+        // Get prioritized files to ensure findings match the files shown in diffs
+        var prioritizedFiles = PrioritizeFiles(diffs, [.. analysisResult.Findings], maxFiles: 10);
+        var includedFilePaths = prioritizedFiles.Select(kvp => kvp.Key).ToHashSet();
+
         var sections = new[]
         {
-            BuildInlineSuggestionsHeader(),
-            BuildCodeChangesForReview(diffs),
-            BuildStaticAnalyzerFindingsSection(analysisResult),
-            BuildInlineSuggestionsInstructions()
+            BuildCodeChangesForReview(diffs, analysisResult, maxFiles: 10, maxLinesPerFile: 100),
+            BuildStaticAnalyzerFindingsSection(analysisResult, includedFilePaths),
         };
 
         return _templateService.BuildPrompt(sections);
@@ -90,10 +90,6 @@ internal sealed class AnalysisPromptBuilder
         return builder.ToString();
     }
 
-    private static string BuildHeader()
-    {
-        return "# Pull Request Analysis Request";
-    }
 
     private static string BuildStaticAnalysisSection(AnalysisRequest analysisResult)
     {
@@ -112,9 +108,9 @@ internal sealed class AnalysisPromptBuilder
         builder.AppendLine();
 
         AppendFindingsByCategory(builder, "?? Errors (Must Fix)", errors, includeCodeBlock: true);
-        AppendFindingsByCategory(builder, "?? Warnings (Should Fix)", warnings.Take(25).ToList(), includeCodeBlock: false, warnings.Count);
+        AppendFindingsByCategory(builder, "?? Warnings (Should Fix)", [.. warnings.Take(25)], includeCodeBlock: false, warnings.Count);
 
-        if (info.Count is > 0 and <= 15)
+        if (info.Count is > 0 and <= 10)
         {
             AppendFindingsByCategory(builder, "?? Informational Messages", info, includeCodeBlock: false);
         }
@@ -140,16 +136,17 @@ internal sealed class AnalysisPromptBuilder
         {
             builder.AppendLine($"- **{finding.RuleId}** at `{finding.FilePath}:{finding.Line}`");
 
-            if (includeCodeBlock)
+            // Always show messages inline (no code blocks) - saves tokens and improves readability
+            // Truncate very long messages to first sentence or 150 chars
+            var message = finding.Message;
+            if (message.Length > 150)
             {
-                builder.AppendLine("  ```");
-                builder.AppendLine($"  {finding.Message}");
-                builder.AppendLine("  ```");
+                var firstSentence = message.Split(new[] { '.', '!', '?' }, 2, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim();
+                message = firstSentence != null && firstSentence.Length < message.Length - 50
+                    ? firstSentence + "."
+                    : message[..150].Trim() + "...";
             }
-            else
-            {
-                builder.AppendLine($"  {finding.Message}");
-            }
+            builder.AppendLine($"  {message}");
         }
 
         if (totalCount.HasValue && totalCount.Value > findings.Count)
@@ -160,7 +157,11 @@ internal sealed class AnalysisPromptBuilder
         builder.AppendLine();
     }
 
-    private static string BuildCodeChangesSection(Dictionary<string, string> diffs)
+    private static string BuildCodeChangesSection(
+        Dictionary<string, string> diffs,
+        AnalysisRequest? analysisResult,
+        int maxFiles,
+        int maxLinesPerFile)
     {
         var builder = new StringBuilder();
         builder.AppendLine("## Code Changes");
@@ -174,15 +175,17 @@ internal sealed class AnalysisPromptBuilder
         builder.AppendLine($"**Files Modified**: {diffs.Count}");
         builder.AppendLine();
 
-        var diffsToShow = diffs.Take(15).ToList();
-        foreach (var (filePath, diff) in diffsToShow)
+        // Prioritize files based on findings: errors > warnings > info > none
+        var prioritizedFiles = PrioritizeFiles(diffs, analysisResult?.Findings.ToList() ?? [], maxFiles);
+
+        foreach (var (filePath, diff) in prioritizedFiles)
         {
             builder.AppendLine($"### ?? `{filePath}`");
             builder.AppendLine("```diff");
 
             var diffLines = diff.Split('\n');
-            var truncatedDiff = diffLines.Length > 100
-                ? string.Join('\n', diffLines.Take(100)) + "\n... (truncated)"
+            var truncatedDiff = diffLines.Length > maxLinesPerFile
+                ? string.Join('\n', diffLines.Take(maxLinesPerFile)) + "\n... (truncated)"
                 : diff;
 
             builder.AppendLine(truncatedDiff);
@@ -190,45 +193,60 @@ internal sealed class AnalysisPromptBuilder
             builder.AppendLine();
         }
 
-        if (diffs.Count > 15)
+        if (diffs.Count > prioritizedFiles.Count)
         {
-            builder.AppendLine($"... and {diffs.Count - 15} more files changed");
+            builder.AppendLine($"... and {diffs.Count - prioritizedFiles.Count} more files changed");
         }
 
         return builder.ToString();
     }
 
-    private static string BuildInstructions()
+    /// <summary>
+    /// Prioritizes files based on findings severity: errors > warnings > info > none.
+    /// Returns top N files with findings prioritized first.
+    /// </summary>
+    private static List<KeyValuePair<string, string>> PrioritizeFiles(
+        Dictionary<string, string> diffs,
+        List<AnalyzerFindings> findings,
+        int maxFiles)
     {
-        return """
-            ---
-            **Instructions**: Please provide a comprehensive code review following the structured format. 
-            Include code examples for suggested fixes and make your review ready to post as a DevOps PR comment.
-            """;
+        if (findings.Count == 0 || diffs.Count <= maxFiles)
+        {
+            return diffs.Take(maxFiles).ToList();
+        }
+
+        // Group findings by file and calculate priority score
+        var fileScores = new Dictionary<string, int>();
+        foreach (var finding in findings.Where(f => diffs.ContainsKey(f.FilePath)))
+        {
+            if (!fileScores.ContainsKey(finding.FilePath))
+            {
+                fileScores[finding.FilePath] = 0;
+            }
+
+            // Score: errors=10, warnings=5, info=1
+            fileScores[finding.FilePath] += finding.Severity.Equals("Error", StringComparison.OrdinalIgnoreCase) ? 10
+                : finding.Severity.Equals("Warning", StringComparison.OrdinalIgnoreCase) ? 5
+                : finding.Severity.Equals("Info", StringComparison.OrdinalIgnoreCase) ? 1
+                : 0;
+        }
+
+        // Sort files: high score first, then by name for consistency
+        var prioritized = diffs
+            .OrderByDescending(kvp => fileScores.GetValueOrDefault(kvp.Key, 0))
+            .ThenBy(kvp => kvp.Key)
+            .Take(maxFiles)
+            .ToList();
+
+        return prioritized;
     }
 
-    private static string BuildInlineSuggestionsHeader()
-    {
-        return """
-            # Generate Inline Code Suggestions
-            
-            ## Your Task:
-            Review ALL code changes in the diffs below and generate actionable inline suggestions.
-            This includes:
-            1. Fixes for the static analyzer findings listed below
-            2. **Your own independent code review** - identify issues the static analyzers may have missed:
-               - Security vulnerabilities
-               - Performance issues
-               - Logic errors or bugs
-               - Code smells and anti-patterns
-               - Missing error handling
-               - Potential null reference issues
-               - Best practice violations
-               - Code quality improvements
-            """;
-    }
 
-    private static string BuildCodeChangesForReview(Dictionary<string, string> diffs)
+    private static string BuildCodeChangesForReview(
+        Dictionary<string, string> diffs,
+        AnalysisRequest? analysisResult,
+        int maxFiles,
+        int maxLinesPerFile)
     {
         if (diffs.Count == 0)
         {
@@ -238,40 +256,20 @@ internal sealed class AnalysisPromptBuilder
         var builder = new StringBuilder();
         builder.AppendLine("## Code Changes to Review (Priority: Review Every Line):");
         builder.AppendLine();
-        builder.AppendLine("### IMPORTANT: Line Number Format in Diffs");
-        builder.AppendLine();
-        builder.AppendLine("**Format:** `PREFIX LINENUMBER:CODE_CONTENT`");
-        builder.AppendLine();
-        builder.AppendLine("**Examples:**");
-        builder.AppendLine("- `+42:    var userName = GetUserName();`");
-        builder.AppendLine("  - Prefix: `+` (added line)");
-        builder.AppendLine("  - Line Number: `42` ? **Use this for your JSON `line` field**");
-        builder.AppendLine("  - Code: `    var userName = GetUserName();` ? **Use this for your JSON `suggestedCode` field**");
-        builder.AppendLine();
-        builder.AppendLine("- `-15:    var oldCode = \"remove\";`");
-        builder.AppendLine("  - Prefix: `-` (removed line)");
-        builder.AppendLine("  - Line Number: `15`");
-        builder.AppendLine("  - Code: `    var oldCode = \"remove\";`");
-        builder.AppendLine();
-        builder.AppendLine("- ` 20:    var unchanged = \"context\";`");
-        builder.AppendLine("  - Prefix: ` ` (space = unchanged context)");
-        builder.AppendLine("  - Line Number: `20`");
-        builder.AppendLine("  - Code: `    var unchanged = \"context\";`");
-        builder.AppendLine();
-        builder.AppendLine("**CRITICAL:** When creating suggestions:");
-        builder.AppendLine("1. Extract the line number (between prefix and colon) ? put in `line` field");
-        builder.AppendLine("2. Extract ONLY the code after the colon ? put in `suggestedCode` field");
-        builder.AppendLine("3. NEVER include the line number (e.g., `42:`) in your `suggestedCode`");
+        builder.AppendLine("**Note:** Diffs use format `PREFIX LINENUMBER:CODE`. Extract line number for `line` field and code (after colon) for `suggestedCode` field. See system prompt for detailed format instructions.");
         builder.AppendLine();
 
-        foreach (var (filePath, diff) in diffs)
+        // Prioritize files based on findings: errors > warnings > info > none
+        var prioritizedFiles = PrioritizeFiles(diffs, analysisResult?.Findings.ToList() ?? [], maxFiles);
+
+        foreach (var (filePath, diff) in prioritizedFiles)
         {
             builder.AppendLine($"### File: `{filePath}`");
             builder.AppendLine("```diff");
 
             var diffLines = diff.Split('\n');
-            var truncatedDiff = diffLines.Length > 100
-                ? string.Join('\n', diffLines.Take(100)) + "\n... (truncated)"
+            var truncatedDiff = diffLines.Length > maxLinesPerFile
+                ? string.Join('\n', diffLines.Take(maxLinesPerFile)) + "\n... (truncated)"
                 : diff;
 
             builder.AppendLine(truncatedDiff);
@@ -279,13 +277,28 @@ internal sealed class AnalysisPromptBuilder
             builder.AppendLine();
         }
 
+        if (diffs.Count > prioritizedFiles.Count)
+        {
+            builder.AppendLine($"... and {diffs.Count - prioritizedFiles.Count} more files changed");
+        }
+
         return builder.ToString();
     }
 
-    private static string BuildStaticAnalyzerFindingsSection(AnalysisRequest analysisResult)
+    private static string BuildStaticAnalyzerFindingsSection(
+        AnalysisRequest analysisResult,
+        HashSet<string>? includedFilePaths)
     {
-        var findingsByFile = analysisResult.Findings
-            .Where(f => !string.IsNullOrWhiteSpace(f.FilePath))
+        var findings = analysisResult.Findings
+            .Where(f => !string.IsNullOrWhiteSpace(f.FilePath));
+
+        // Filter to only include files present in the truncated diff section
+        if (includedFilePaths != null && includedFilePaths.Count > 0)
+        {
+            findings = findings.Where(f => includedFilePaths.Contains(f.FilePath));
+        }
+
+        var findingsByFile = findings
             .GroupBy(f => f.FilePath)
             .ToDictionary(g => g.Key, g => g.ToList());
 
@@ -301,14 +314,14 @@ internal sealed class AnalysisPromptBuilder
         builder.AppendLine("## Static Analyzer Findings (Reference Only - Also Review Beyond These):");
         builder.AppendLine();
 
-        foreach (var (filePath, findings) in findingsByFile)
+        foreach (var (filePath, fileFindings) in findingsByFile)
         {
             builder.AppendLine($"### File: `{filePath}`");
 
-            foreach (var finding in findings.OrderBy(f => f.Line))
+            foreach (var finding in fileFindings.OrderBy(f => f.Line))
             {
                 builder.AppendLine($"- **Line {finding.Line}** - [{finding.Severity}] {finding.RuleId}");
-                builder.AppendLine($"  Message: {finding.Message}");
+                builder.AppendLine($"  Message: {finding.Message[..150]}");
                 builder.AppendLine();
             }
         }
@@ -316,34 +329,4 @@ internal sealed class AnalysisPromptBuilder
         return builder.ToString();
     }
 
-    private static string BuildInlineSuggestionsInstructions()
-    {
-        return """
-            ---
-            ## Generation Instructions:
-            Generate JSON with inline suggestions covering:
-            
-            **Priority 1: Critical Issues**
-            - Security vulnerabilities (SQL injection, XSS, authentication bypass, etc.)
-            - Null reference errors
-            - Resource leaks (unclosed streams, connections)
-            - Logical errors that could cause bugs
-            
-            **Priority 2: Static Analyzer Findings**
-            - Address errors and warnings from the static analysis
-            
-            **Priority 3: Best Practices & Quality**
-            - Performance optimizations
-            - Code readability improvements
-            - Proper error handling
-            - Following language/framework conventions
-            
-            For each suggestion, include:
-            - Exact file path and line number
-            - Clear explanation of the issue
-            - Corrected code that can be directly applied
-            
-            Focus on providing value - only suggest changes that meaningfully improve the code.
-            """;
-    }
 }

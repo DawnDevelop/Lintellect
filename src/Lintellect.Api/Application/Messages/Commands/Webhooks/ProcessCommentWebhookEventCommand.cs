@@ -20,7 +20,6 @@ public sealed class ProcessWebhookEventCommandHandler(
     public async ValueTask<Unit> Handle(ProcessCommentWebhookEventCommand request, CancellationToken cancellationToken)
     {
         var prCommentEvent = request.WebhookEvent.EventPayload.Deserialize<PullRequestCommentEvent>();
-
         if (prCommentEvent is null)
         {
             logger.LogError("Failed to deserialize PullRequestCommentEvent for webhook {WebhookId}",

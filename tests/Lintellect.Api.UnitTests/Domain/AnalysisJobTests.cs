@@ -21,6 +21,27 @@ public class AnalysisJobTests
     }
 
     [Test]
+    public void CreateAnalysisRequestSnapshot_ReturnsDeepCopy()
+    {
+        // Arrange
+        var job = new AnalysisJob(AnalysisRequestBuilder.ValidRequest());
+
+        // Act
+        var snapshot = job.CreateAnalysisRequestSnapshot();
+
+        // Assert
+        snapshot.ShouldNotBeSameAs(job.AnalysisRequest);
+        snapshot.Findings.ShouldNotBeSameAs(job.AnalysisRequest!.Findings);
+        snapshot.GitInfo.ShouldNotBeSameAs(job.AnalysisRequest!.GitInfo);
+
+        snapshot.FileExclusions.Add("new-file.cs");
+        snapshot.McpServer.Add(EMcpServer.CodeAnalysis);
+
+        job.AnalysisRequest!.FileExclusions.ShouldNotContain("new-file.cs");
+        job.AnalysisRequest.McpServer.ShouldNotContain(EMcpServer.CodeAnalysis);
+    }
+
+    [Test]
     public void Constructor_WithValidRequest_RaisesDomainEvent()
     {
         // Arrange

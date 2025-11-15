@@ -21,11 +21,16 @@ public static class ConfigureServices
 {
     public static IServiceCollection AddGitClients(this IServiceCollection services, IConfiguration configuration)
     {
-        // Bind single-tenant git credentials (optional)
         services.Configure<GitCredentialsOptions>(configuration.GetSection("GitCredentials"));
+        services.PostConfigure<GitCredentialsOptions>(options =>
+        {
+            options.AzureDevOps ??= new GitCredentialsOptions.AzureDevOpsCredentials();
+            options.AzureDevOps.Pat ??= configuration.GetValue<string>("AZURE_DEVOPS_PAT");
+            options.AzureDevOps.OrgUrl ??= configuration.GetValue<string>("AZURE_DEVOPS_ORG_URL");
 
-        // Resolver that prefers request overrides, falls back to configured defaults
-        services.AddScoped<ICredentialResolver, CredentialResolver>();
+            options.GitHub ??= new GitCredentialsOptions.GitHubCredentials();
+            options.GitHub.Token ??= configuration.GetValue<string>("GITHUB_TOKEN");
+        });
 
         // Register the factory for creating Git clients with dynamic credentials
         services.AddScoped<IGitClientFactory, GitClientFactory>();

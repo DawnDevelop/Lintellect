@@ -18,25 +18,4 @@ internal sealed class McpServiceResolver(IServiceProvider serviceProvider) : IMc
         var service = serviceProvider.GetKeyedService<IMcpService>(serverType);
         return service;
     }
-
-    public IEnumerable<IMcpService> GetAvailableMcpServices()
-    {
-        var availableServices = new List<IMcpService>();
-
-        foreach (var serverType in Enum.GetValues<EMcpServer>())
-        {
-            if (serverType == EMcpServer.None)
-            {
-                continue;
-            }
-
-            var service = GetMcpService(serverType);
-            if (service != null)
-            {
-                availableServices.Add(service);
-            }
-        }
-
-        return availableServices;
-    }
 }

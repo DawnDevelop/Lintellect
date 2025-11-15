@@ -10,7 +10,7 @@ namespace Lintellect.Api.Infrastructure.Services.AI.Prompts;
 /// </summary>
 internal sealed class PromptTemplateService
 {
-    private static string TemplateResourcePrefix => $"{typeof(AnalysisPromptBuilder).Namespace}.Templates";
+    private static string TemplateResourcePrefix => $"{typeof(PromptBuilder).Namespace}.Templates";
     private readonly Assembly _assembly = typeof(PromptTemplateService).Assembly;
 
     /// <summary>

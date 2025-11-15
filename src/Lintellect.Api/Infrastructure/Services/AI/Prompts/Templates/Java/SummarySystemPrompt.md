@@ -41,6 +41,3 @@ Structure your response as a concise PR summary in Markdown:
 
 Keep it concise (under 150 words) and actionable for DevOps teams.
 
-## Custom Project Instructions for this Analysis:
-
-{{customInstructions}}

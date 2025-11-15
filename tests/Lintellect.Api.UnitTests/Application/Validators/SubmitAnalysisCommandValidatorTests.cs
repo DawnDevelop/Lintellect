@@ -122,8 +122,6 @@ public class SubmitAnalysisCommandValidatorTests
     {
         // Arrange
         var request = AnalysisRequestBuilder.ValidRequest();
-        request.AccessToken = null;
-        request.AzureDevOpsOrgUrl = null;
         var command = new SubmitAnalysisCommand(request);
 
         _mockGitClientFactory.CreateClient(Arg.Any<AnalysisRequest>())
@@ -162,23 +160,6 @@ public class SubmitAnalysisCommandValidatorTests
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.AnalysisRequest)
             .WithErrorMessage("At least one AI analysis feature must be enabled (EnableAzureDevopsCodeOwners, EnableSummaryComment, EnableDescriptionSummary, or EnableInlineSuggestions).");
-    }
-
-    [Test]
-    public async Task Validate_WithInvalidAzureDevOpsUrl_ReturnsError()
-    {
-        // Arrange
-        var request = AnalysisRequestBuilder.ValidRequest();
-        request.AccessToken = null;
-        request.AzureDevOpsOrgUrl = "invalid-url";
-        var command = new SubmitAnalysisCommand(request);
-
-        // Act
-        var result = await _validator.TestValidateAsync(command);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.AnalysisRequest.AzureDevOpsOrgUrl)
-            .WithErrorMessage("AzureDevOpsOrgUrl must be a valid absolute URI (e.g., https://dev.azure.com/yourorg).");
     }
 
     [Test]

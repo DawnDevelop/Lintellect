@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added
+- DELETE endpoint for analysis history (`/api/analysis/history`) to allow deletion of analysis jobs by job ID
+- Deep copy snapshot method for AnalysisRequest to prevent mutation during background processing
+
+### Changed
+- **BREAKING**: Removed credential fields (`AccessToken`, `AzureDevOpsOrgUrl`) from `AnalysisRequest` model. Credentials are now only configured at the application level via configuration or environment variables
+- **BREAKING**: Changed `AnalysisRequest` storage from `JsonDocument` to EF Core owned entity for better type safety and queryability
+- Improved exception handling with comprehensive error responses for unhandled exceptions
+- Updated Claude analyzer default settings: `MaxTokens` increased to 40960, `Temperature` set to 0.5
+- Removed custom instructions placeholder (`{{customInstructions}}`) from all prompt templates
+- Simplified `IMcpServiceResolver` interface by removing `GetAvailableMcpServices()` method
+- Updated validation to remove checks for removed credential fields
+- Improved query performance by using direct property access instead of JSON path queries
+
+### Fixed
+- Fixed exception handler to properly handle all exceptions, not just registered types
+- Fixed analysis request snapshot creation to prevent shared reference mutations
+- Fixed query filtering to use strongly-typed properties instead of JSON navigation
+
+### Removed
+- `ICredentialResolver` interface and `CredentialResolver` implementation (credentials now resolved from configuration only)
+- `SanitizedAnalysisRequest` class (no longer needed with owned entity approach)
+- `AnalysisPromptBuilder` class (renamed to `PromptBuilder`)
+- Per-request credential override support (credentials must be configured at application level)
+
 ## [CLI v0.0.10] - 2025-10-28
 
 ### Added

@@ -211,12 +211,6 @@ internal class StaticAnalysisCommand : Command
             var mcpServers = mcpServerValue ?? [];
             analysisResult.McpServer = [.. mcpServers];
             analysisResult.AIAnalyzer = parseResult.GetValue(aianalyzer);
-            // Set Git provider credentials
-            // Consolidated token model: prefer explicit GitHub token, else Azure DevOps PAT
-            analysisResult.AccessToken = !string.IsNullOrWhiteSpace(githubTokenValue)
-                ? githubTokenValue
-                : (!string.IsNullOrWhiteSpace(devopsPatValue) ? devopsPatValue : null);
-            analysisResult.AzureDevOpsOrgUrl = azureDevOpsOrgUrlValue;
 
             Console.WriteLine();
             Console.WriteLine($"Analysis completed: {analysisResult.Findings.Count} finding(s) detected");

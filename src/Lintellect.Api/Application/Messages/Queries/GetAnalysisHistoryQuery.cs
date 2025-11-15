@@ -25,18 +25,12 @@ public sealed class GetAnalysisHistoryQueryHandler(IApplicationDbContext context
 
         if (!string.IsNullOrEmpty(request.ProjectName))
         {
-            query = query.Where(job => job.AnalysisRequest!.RootElement
-                .GetProperty("GitInfo")
-                .GetProperty("ProjectName")
-                .GetString() == request.ProjectName);
+            query = query.Where(job => job.AnalysisRequest!.GitInfo!.ProjectName == request.ProjectName);
         }
 
         if (!string.IsNullOrEmpty(request.RepositoryName))
         {
-            query = query.Where(job => job.AnalysisRequest!.RootElement
-                .GetProperty("GitInfo")
-                .GetProperty("RepositoryName")
-                .GetString() == request.RepositoryName);
+            query = query.Where(job => job.AnalysisRequest!.GitInfo!.RepositoryName == request.RepositoryName);
         }
 
         return await query

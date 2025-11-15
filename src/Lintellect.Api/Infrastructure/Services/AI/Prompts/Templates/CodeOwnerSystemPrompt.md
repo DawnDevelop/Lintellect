@@ -24,6 +24,7 @@ Background on CODEOWNERS:
 - IMPORTANT: Remove the @ sign from the start of usernames, team names, and email addresses in the output.
 
 Output format (required):
+- FOLLOW THIS EXACT FORMAT WITHOUT DEVIATIONS. REMOVE ANY MARKDOWN FORMATTING.
 
 ```json
 {

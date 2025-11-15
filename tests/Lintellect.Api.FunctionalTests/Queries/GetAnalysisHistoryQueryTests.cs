@@ -86,7 +86,7 @@ public class GetAnalysisHistoryQueryTests : Testing
 
         foreach (var job in result)
         {
-            var analysisRequest = JsonSerializer.Deserialize<AnalysisRequest>(job.AnalysisRequest!);
+            var analysisRequest = job.AnalysisRequest;
             analysisRequest.ShouldNotBeNull();
 
             analysisRequest.GitInfo.ShouldNotBeNull();

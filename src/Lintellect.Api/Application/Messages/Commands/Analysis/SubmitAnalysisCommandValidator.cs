@@ -64,11 +64,6 @@ public sealed class SubmitAnalysisCommandValidator : AbstractValidator<SubmitAna
                 }
             });
 
-        // If Azure DevOps org URL is provided (by request or config), ensure it is a valid URI when present in the request
-        When(x => x.AnalysisRequest != null && !string.IsNullOrWhiteSpace(x.AnalysisRequest.AzureDevOpsOrgUrl), () => RuleFor(x => x.AnalysisRequest.AzureDevOpsOrgUrl)
-                .Must(BeValidUri)
-                .WithMessage("AzureDevOpsOrgUrl must be a valid absolute URI (e.g., https://dev.azure.com/yourorg)."));
-
         // Validate that at least one AI feature is enabled
         RuleFor(x => x.AnalysisRequest)
             .Must(request => request != null && (request.EnableSummaryComment ||

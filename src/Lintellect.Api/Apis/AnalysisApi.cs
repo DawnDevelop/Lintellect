@@ -1,10 +1,8 @@
-using System.Text.Json;
 using Lintellect.Api.Apis.Authorization;
 using Lintellect.Api.Apis.Models;
 using Lintellect.Api.Application.Messages.Commands.Analysis;
 using Lintellect.Api.Application.Messages.Queries;
 using Lintellect.Api.Infrastructure.Services.Analysis;
-using Lintellect.Shared.Models;
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -33,6 +31,18 @@ public static class AnalysisApi
             .WithName("GetAnalysisHistory")
             .WithSummary("Get analysis history")
             .WithDescription("Get the history of analysis jobs with optional filtering.");
+
+        api.MapDelete("/history", async (
+                [FromServices] IMediator mediator,
+                Guid? jobId,
+                CancellationToken cancellationToken) =>
+            {
+                await mediator.Send(new DeleteAnalysisHistoryCommand(jobId ?? Guid.Empty), cancellationToken);
+                return TypedResults.NoContent();
+            })
+            .WithName("DeleteAnalysisHistory")
+            .WithSummary("Delete analysis history")
+            .WithDescription("Delete analysis job history by job ID.");
 
         return app;
     }
@@ -64,7 +74,7 @@ public static class AnalysisApi
         }
 
         // Get CLI analysis result from JsonDocument
-        var analysisResult = job.AnalysisRequest?.Deserialize<AnalysisRequest>();
+        var analysisResult = job.AnalysisRequest;
 
         return TypedResults.Ok(new AnalysisJobStatusResponse(
             job.Id,
@@ -97,7 +107,7 @@ public static class AnalysisApi
         var response = jobs.Select(job =>
         {
             // Get CLI analysis result from JsonDocument
-            var analysisResult = job.AnalysisRequest?.Deserialize<AnalysisRequest>(); ;
+            var analysisResult = job.AnalysisRequest;
 
             return new AnalysisJobStatusResponse(
                 job.Id,

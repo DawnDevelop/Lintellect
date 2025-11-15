@@ -73,12 +73,14 @@ The Aspire AppHost will automatically configure the environment. For custom conf
   "ClaudeAnalyzer": {
     "ApiKey": "your-claude-api-key"
   },
-  "GitHub": {
-    "Token": "your-github-token"
-  },
-  "AzureDevOps": {
-    "Pat": "your-pat-token",
-    "OrgUrl": "https://dev.azure.com/your-org"
+  "GitCredentials": {
+    "GitHub": {
+      "Token": "your-github-token"
+    },
+    "AzureDevOps": {
+      "Pat": "your-pat-token",
+      "OrgUrl": "https://dev.azure.com/your-org"
+    }
   }
 }
 ```
@@ -338,25 +340,42 @@ API-Key: your-api-key
 
 ### Git Provider Settings
 
+Git provider credentials are configured at the application level and used for all analysis requests.
+
 #### GitHub
 
 ```json
 {
-  "GitHub": {
-    "Token": "ghp_..."
+  "GitCredentials": {
+    "GitHub": {
+      "Token": "ghp_..."
+    }
   }
 }
+```
+
+Or via environment variable:
+```bash
+export GITHUB_TOKEN="ghp_..."
 ```
 
 #### Azure DevOps
 
 ```json
 {
-  "AzureDevOps": {
-    "Pat": "your-pat-token",
-    "OrgUrl": "https://dev.azure.com/your-org"
+  "GitCredentials": {
+    "AzureDevOps": {
+      "Pat": "your-pat-token",
+      "OrgUrl": "https://dev.azure.com/your-org"
+    }
   }
 }
+```
+
+Or via environment variables:
+```bash
+export AZURE_DEVOPS_PAT="your-pat-token"
+export AZURE_DEVOPS_ORG_URL="https://dev.azure.com/your-org"
 ```
 
 ### Key Components

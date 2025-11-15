@@ -1,4 +1,4 @@
-using System.Text.Json;
+using System.Linq;
 using Lintellect.Api.Domain.Common;
 using Lintellect.Api.Domain.Enums;
 using Lintellect.Api.Domain.Events;
@@ -19,20 +19,33 @@ public sealed class AnalysisJob : BaseAuditableEntity
     public string? DetailedAnalysis { get; private set; }
     public string? InlineSuggestions { get; private set; }
     public string? AnalyzerUsed { get; private set; }
-    public JsonDocument? AnalysisRequest { get; private set; } // PostgreSQL JSONB storage
+
+    public AnalysisRequest? AnalysisRequest { get; private set; }
 
     // Parameterless constructor for EF Core
     private AnalysisJob() { }
 
     public AnalysisJob(AnalysisRequest cliAnalysisResult)
     {
+        ArgumentNullException.ThrowIfNull(cliAnalysisResult);
+
         Status = AnalysisStatus.Pending;
-        AnalysisRequest = JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(cliAnalysisResult));
+        AnalysisRequest = CloneAnalysisRequest(cliAnalysisResult);
 
         AddDomainEvent(new AnalysisJobCreatedEvent(Id,
             cliAnalysisResult.GitInfo?.ProjectName ?? "Unknown",
             cliAnalysisResult.GitInfo?.RepositoryName ?? "Unknown",
             cliAnalysisResult.GitInfo?.PullRequestId ?? 0));
+    }
+
+    public AnalysisRequest CreateAnalysisRequestSnapshot()
+    {
+        if (AnalysisRequest is null)
+        {
+            throw new InvalidOperationException("Analysis request is not available for this job.");
+        }
+
+        return CloneAnalysisRequest(AnalysisRequest);
     }
 
     public void Start()
@@ -77,5 +90,41 @@ public sealed class AnalysisJob : BaseAuditableEntity
         ErrorMessage = errorMessage;
 
         AddDomainEvent(new AnalysisJobFailedEvent(Id, errorMessage));
+    }
+
+    private static AnalysisRequest CloneAnalysisRequest(AnalysisRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return new AnalysisRequest
+        {
+            Language = request.Language,
+            Findings = request.Findings?
+                .Select(finding => new AnalyzerFindings
+                {
+                    RuleId = finding.RuleId,
+                    Message = finding.Message,
+                    FilePath = finding.FilePath,
+                    Line = finding.Line,
+                    Severity = finding.Severity
+                })
+                .ToArray() ?? Array.Empty<AnalyzerFindings>(),
+            GitInfo = request.GitInfo is null
+                ? null
+                : new GitInfo(
+                    request.GitInfo.PullRequestId,
+                    request.GitInfo.CommitId,
+                    request.GitInfo.RepositoryName,
+                    request.GitInfo.Type,
+                    request.GitInfo.ProjectName),
+            GitProvider = request.GitProvider,
+            FileExclusions = request.FileExclusions is null ? [] : [.. request.FileExclusions],
+            EnableSummaryComment = request.EnableSummaryComment,
+            EnableInlineSuggestions = request.EnableInlineSuggestions,
+            EnableDescriptionSummary = request.EnableDescriptionSummary,
+            EnableAzureDevopsCodeOwners = request.EnableAzureDevopsCodeOwners,
+            McpServer = request.McpServer is null ? [] : [.. request.McpServer],
+            AIAnalyzer = request.AIAnalyzer
+        };
     }
 }
