@@ -49,8 +49,14 @@ jobs:
       - name: Build all projects
         run: dotnet build --no-restore --configuration Release
 
-      - name: Run all tests
+      - name: Run unit tests
         run: dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~FunctionalTests"
+
+      - name: Build functional tests
+        run: dotnet build tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj --no-restore --configuration Release
+
+      - name: Run functional tests
+        run: dotnet test tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj --no-build --configuration Release --verbosity normal
 
       - name: Run code analysis
         run: |

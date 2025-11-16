@@ -3,7 +3,7 @@ namespace Lintellect.Shared.Models;
 public class AnalysisRequest
 {
     public EProgrammingLanguage Language { get; set; }
-    public IReadOnlyCollection<AnalyzerFindings> Findings { get; set; } = [];
+    public List<AnalyzerFindings> Findings { get; set; } = [];
 
     public GitInfo? GitInfo { get; set; }
     public EGitProvider GitProvider { get; set; }

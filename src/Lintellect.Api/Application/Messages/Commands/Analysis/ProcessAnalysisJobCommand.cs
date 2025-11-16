@@ -60,8 +60,8 @@ public sealed class ProcessAnalysisJobCommandHandler(
         }
 
         // Filter findings to only include those for files that exist in diffs
-        analysisRequest.Findings = [.. analysisRequest.Findings.Where(finding =>
-            diffs.ContainsKey(finding.FilePath))];
+        analysisRequest.Findings = analysisRequest.Findings.Where(finding =>
+            diffs.ContainsKey(finding.FilePath)).ToList();
 
 
         // Step 2: Prepare analyzer and custom instructions
@@ -246,7 +246,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
         }
     }
 
-    private static async Task PostInlineSuggestionsAsync(
+    private async Task PostInlineSuggestionsAsync(
         PullRequestService prService,
         AnalysisRequest analysisRequest,
         List<InlineSuggestion> suggestions)
@@ -335,19 +335,16 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
     private async Task<bool> CheckForDuplicateAnalysisAsync(AnalysisRequest analysisRequest, CancellationToken cancellationToken)
     {
-        if (analysisRequest.GitInfo == null)
-        {
-            return false;
-        }
 
-        var pullRequestId = analysisRequest.GitInfo.PullRequestId;
-        var gitProvider = analysisRequest.GitProvider;
+        var pullRequestId = analysisRequest.GitInfo!.PullRequestId;
 
         // Query for existing analysis jobs with the same PullRequestId and GitProvider
         var existingJob = await context.AnalysisJobs
             .Where(job =>
-                job.AnalysisRequest!.GitInfo!.PullRequestId == pullRequestId &&
-                job.AnalysisRequest!.GitProvider == gitProvider)
+                job.AnalysisRequest != null &&
+                job.AnalysisRequest.GitInfo != null &&
+                job.AnalysisRequest.GitInfo.PullRequestId == pullRequestId &&
+                job.AnalysisRequest.GitProvider == analysisRequest.GitProvider)
             .OrderByDescending(job => job.Created)
             .FirstOrDefaultAsync(cancellationToken);
 

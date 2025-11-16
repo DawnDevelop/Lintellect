@@ -1,6 +1,5 @@
 name: Release CLI
 
-
 on:
   push:
     tags:
@@ -79,7 +78,7 @@ jobs:
       - name: Build CLI tests
         run: dotnet build tests/Lintellect.Cli.UnitTests/Lintellect.Cli.UnitTests.csproj --no-restore --configuration Release
 
-      - name: Run CLI tests
+      - name: Run CLI unit tests
         run: dotnet test tests/Lintellect.Cli.UnitTests/Lintellect.Cli.UnitTests.csproj --no-build --configuration Release --verbosity normal
 
       - name: Verify version in project file

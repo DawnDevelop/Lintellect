@@ -40,9 +40,6 @@ public class StaticAnalysisCommandTests
         optionNames.ShouldContain("--enable-inline-suggestions");
         optionNames.ShouldContain("--enable-description-summary");
         optionNames.ShouldContain("--enable-azure-devops-code-owners");
-        optionNames.ShouldContain("--devops-pat");
-        optionNames.ShouldContain("--azure-devops-org-url");
-        optionNames.ShouldContain("--github-token");
         optionNames.ShouldContain("--enable-semgrep");
     }
 
@@ -166,36 +163,6 @@ public class StaticAnalysisCommandTests
 
         // Assert
         defaultValue.ShouldBe(true);
-    }
-
-    [Test]
-    public void DevopsPatOption_ShouldHaveCorrectProperties()
-    {
-        // Arrange
-        var devopsPatOption = _command.Options.OfType<Option<string>>().First(o => o.Name == "--devops-pat");
-
-        // Assert
-        devopsPatOption.DefaultValueFactory.ShouldNotBeNull();
-    }
-
-    [Test]
-    public void AzureDevOpsOrgUrlOption_ShouldHaveCorrectProperties()
-    {
-        // Arrange
-        var azureDevOpsOrgUrlOption = _command.Options.OfType<Option<string>>().First(o => o.Name == "--azure-devops-org-url");
-
-        // Assert
-        azureDevOpsOrgUrlOption.DefaultValueFactory.ShouldNotBeNull();
-    }
-
-    [Test]
-    public void GitHubTokenOption_ShouldHaveCorrectProperties()
-    {
-        // Arrange
-        var githubTokenOption = _command.Options.OfType<Option<string>>().First(o => o.Name == "--github-token");
-
-        // Assert
-        githubTokenOption.DefaultValueFactory.ShouldNotBeNull();
     }
 
     [Test]

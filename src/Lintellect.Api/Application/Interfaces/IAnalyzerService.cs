@@ -55,6 +55,16 @@ public interface IAnalyzerService
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>JSON-formatted string containing parsed code ownership information, or null if analysis fails.</returns>
     Task<CodeOwnersResult?> GetCodeOwnersAsync(string codeOwnerFileContent, List<string> changedFilePaths, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Answers a question about the pull request using the provided question context and code diffs.
+    /// Uses a specialized question-answering prompt template optimized for conversational responses.
+    /// </summary>
+    /// <param name="analysisResult">The analysis result containing question context in CopilotInstructionsPrompt</param>
+    /// <param name="diffs">Dictionary of file paths to their compact diffs for context</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Answer to the question in Markdown format</returns>
+    Task<string> AnswerQuestionAsync(AnalyzerServiceModel analysisResult, string threadContext, string question, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

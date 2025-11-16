@@ -50,9 +50,8 @@ jobs:
       - name: Build solution
         run: dotnet build --no-restore --configuration Release
 
-        # TODO: remove Functional tests filter
       - name: Run unit tests
-        run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --logger trx --results-directory ./TestResults --filter "FullyQualifiedName!~FunctionalTests"
+        run: dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~FunctionalTests" --collect:"XPlat Code Coverage" --logger trx --results-directory ./TestResults
 
       - name: Upload test results
         if: always()
@@ -62,41 +61,44 @@ jobs:
           path: ./TestResults
           retention-days: 30
 
-  # integration-tests:
-  #   name: Integration Tests
-  #   runs-on: ubuntu-latest
-  #   needs: build-and-test
+  functional-tests:
+    name: Functional Tests
+    runs-on: ubuntu-latest
+    needs: build-and-test
 
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
 
-  #     - name: Setup .NET
-  #       uses: actions/setup-dotnet@v5
-  #       with:
-  #         dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-  #     - name: Cache NuGet packages
-  #       uses: actions/cache@v4
-  #       with:
-  #         path: ~/.nuget/packages
-  #         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-nuget-
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
-  #     - name: Restore dependencies
-  #       run: dotnet restore
+      - name: Restore dependencies
+        run: dotnet restore
 
-  #     - name: Run integration tests
-  #       run: dotnet test tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --logger trx --results-directory ./TestResults
+      - name: Build functional tests
+        run: dotnet build tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj --no-restore --configuration Release
 
-  #     - name: Upload test results
-  #       if: always()
-  #       uses: actions/upload-artifact@v5
-  #       with:
-  #         name: integration-test-results
-  #         path: ./TestResults
-  #         retention-days: 30
+      - name: Run functional tests
+        run: dotnet test tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --logger trx --results-directory ./TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: functional-test-results
+          path: ./TestResults
+          retention-days: 30
 
   code-quality:
     name: Code Quality
@@ -172,7 +174,7 @@ jobs:
   code-coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
-    needs: [build-and-test]
+    needs: [build-and-test, functional-tests]
 
     steps:
       - name: Checkout code
@@ -198,6 +200,15 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           path: ./TestResults
+          pattern: test-results
+          merge-multiple: true
+
+      - name: Download functional test results
+        uses: actions/download-artifact@v6
+        with:
+          path: ./TestResults
+          pattern: functional-test-results
+          merge-multiple: true
 
       - name: Install ReportGenerator
         run: dotnet tool install --global dotnet-reportgenerator-globaltool
@@ -224,7 +235,7 @@ jobs:
   docker-build:
     name: Docker Build Test
     runs-on: ubuntu-latest
-    needs: build-and-test
+    needs: [build-and-test, functional-tests]
 
     steps:
       - name: Checkout code
@@ -251,7 +262,14 @@ jobs:
     name: PR Validation
     runs-on: ubuntu-latest
     needs:
-      [build-and-test, code-quality, security-scan, code-coverage, docker-build]
+      [
+        build-and-test,
+        functional-tests,
+        code-quality,
+        security-scan,
+        code-coverage,
+        docker-build,
+      ]
     if: github.event_name == 'pull_request'
 
     steps:
@@ -269,67 +287,3 @@ jobs:
           echo "✅ Docker build successful"
           echo ""
           echo "PR is ready for review and merge!"
-
-  main-branch-build:
-    name: Main Branch Build
-    runs-on: ubuntu-latest
-    needs:
-      [build-and-test, code-quality, security-scan, code-coverage, docker-build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-
-      - name: Restore dependencies
-        run: dotnet restore
-
-      - name: Build all projects
-        run: dotnet build --no-restore --configuration Release
-
-      - name: Run all tests
-        run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --logger trx --results-directory ./TestResults --filter "FullyQualifiedName!~FunctionalTests"
-
-      - name: Build CLI package
-        run: dotnet pack src/Lintellect.Cli/Lintellect.Cli.csproj --no-build --configuration Release --output ./packages
-
-      - name: Upload CLI package
-        uses: actions/upload-artifact@v5
-        with:
-          name: cli-package
-          path: ./packages
-          retention-days: 7
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push API Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: src/Lintellect.Api/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/dawndevelop/lintellect-api:main
-            ghcr.io/dawndevelop/lintellect-api:edge
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Success notification
-        run: |
-          echo "✅ Main branch build completed successfully"
-          echo "✅ API Docker image pushed to registry"
-          echo "✅ CLI package built and uploaded"

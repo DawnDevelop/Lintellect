@@ -1,4 +1,3 @@
-using System.Linq;
 using Lintellect.Api.Domain.Common;
 using Lintellect.Api.Domain.Enums;
 using Lintellect.Api.Domain.Events;
@@ -108,7 +107,7 @@ public sealed class AnalysisJob : BaseAuditableEntity
                     Line = finding.Line,
                     Severity = finding.Severity
                 })
-                .ToArray() ?? Array.Empty<AnalyzerFindings>(),
+                .ToList() ?? new List<AnalyzerFindings>(),
             GitInfo = request.GitInfo is null
                 ? null
                 : new GitInfo(

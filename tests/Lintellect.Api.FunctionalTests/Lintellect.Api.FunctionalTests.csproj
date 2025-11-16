@@ -1,5 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <Sdk Name="Aspire.AppHost.Sdk" Version="13.0.0" />
+  
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Lintellect.Api.FunctionalTests</RootNamespace>
@@ -11,7 +12,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Aspire.Hosting.Testing" />
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit.Analyzers">
@@ -27,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Lintellect.Api\Lintellect.Api.csproj" />
+    <ProjectReference Include="..\..\src\Lintellect.Api\Lintellect.Api.csproj" IsAspireProjectResource="false" />
   </ItemGroup>
 
   <ItemGroup>

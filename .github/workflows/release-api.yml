@@ -79,13 +79,17 @@ jobs:
       - name: Build API
         run: dotnet build src/Lintellect.Api/Lintellect.Api.csproj --no-restore --configuration Release
 
-      - name: Build API tests
+      - name: Build API unit tests
         run: dotnet build tests/Lintellect.Api.UnitTests/Lintellect.Api.UnitTests.csproj --no-restore --configuration Release
 
-      - name: Run API tests
-        run: |
-          dotnet test tests/Lintellect.Api.UnitTests/Lintellect.Api.UnitTests.csproj --no-build --configuration Release --verbosity normal
-          # dotnet test tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj --no-build --configuration Release --verbosity normal
+      - name: Run API unit tests
+        run: dotnet test tests/Lintellect.Api.UnitTests/Lintellect.Api.UnitTests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: Build API functional tests
+        run: dotnet build tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj --no-restore --configuration Release
+
+      - name: Run API functional tests
+        run: dotnet test tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj --no-build --configuration Release --verbosity normal
 
       - name: Verify version in project file
         run: |

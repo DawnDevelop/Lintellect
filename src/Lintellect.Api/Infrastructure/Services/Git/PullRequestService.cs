@@ -1,7 +1,7 @@
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
+using Lintellect.Api.Application.Models.Git;
 using Lintellect.Shared.Models;
-using Microsoft.TeamFoundation.SourceControl.WebApi;
 
 namespace Lintellect.Api.Infrastructure.Services.Git;
 
@@ -133,7 +133,7 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
     /// <param name="analysisResult">Analysis result containing PR information.</param>
     /// <param name="comment">The comment text (supports Markdown).</param>
     /// <returns>The created comment thread.</returns>
-    public async Task<GitPullRequestCommentThread> AddCommentAsync(
+    public async Task<PullRequestCommentThread> AddCommentAsync(
         AnalysisRequest analysisResult,
         string comment)
     {
@@ -156,7 +156,7 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
     /// <param name="lineFrom">The starting line number for the inline comment.</param>
     /// <param name="lineTo">Optional: The ending line number. If null, defaults to lineFrom.</param>
     /// <returns>The created comment thread.</returns>
-    public async Task<GitPullRequestCommentThread> AddInlineSuggestionAsync(
+    public async Task<PullRequestCommentThread> AddInlineSuggestionAsync(
         AnalysisRequest analysisResult,
         string suggestedCode,
         string context,
@@ -185,7 +185,7 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
     /// <param name="textToAppend">The text to append (supports Markdown).</param>
     /// <param name="separator">Optional separator between existing description and new text.</param>
     /// <returns>The updated pull request.</returns>
-    public async Task<GitPullRequest> AppendToDescriptionAsync(
+    public async Task<PullRequest> AppendToDescriptionAsync(
         AnalysisRequest analysisResult,
         string textToAppend,
         string separator = "\n\n---\n\n")
@@ -221,4 +221,11 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
         );
     }
 
+    public async Task<PullRequestCommentThread> GetPullRequestThreadAsync(AnalysisRequest analysisResult, int threadId)
+    {
+        var client = _clientFactory.CreateClient(analysisResult);
+
+        return await client.GetPullRequestThreadContextAsync(analysisResult.GitInfo!.ProjectName!,
+            analysisResult.GitInfo.RepositoryName, analysisResult.GitInfo.PullRequestId, threadId);
+    }
 }

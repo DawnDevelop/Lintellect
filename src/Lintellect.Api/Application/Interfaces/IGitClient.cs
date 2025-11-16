@@ -1,6 +1,6 @@
 using Lintellect.Api.Application.Models;
+using Lintellect.Api.Application.Models.Git;
 using Lintellect.Shared.Models;
-using Microsoft.TeamFoundation.SourceControl.WebApi;
 
 namespace Lintellect.Api.Application.Interfaces;
 
@@ -41,7 +41,7 @@ public interface IGitClient
     /// <summary>
     /// Retrieves pull request metadata.
     /// </summary>
-    Task<GitPullRequest> GetPullRequestAsync(
+    Task<PullRequest> GetPullRequestAsync(
         string projectName,
         string repositoryName,
         int pullRequestId);
@@ -50,7 +50,7 @@ public interface IGitClient
     /// Retrieves custom instructions from the copilot-instructions.md file in the repository.
     /// Searches common locations: root, .github/, docs/, and .copilot/ directories.
     /// </summary>
-    /// <param name="projectName">The name or ID of the Azure DevOps project.</param>
+    /// <param name="projectName">The name or ID of the project/organization.</param>
     /// <param name="repositoryName">The name or ID of the repository.</param>
     /// <param name="branchName">The branch name (e.g., "main", "master"). If null, uses the default branch.</param>
     /// <returns>The content of the copilot-instructions.md file, or null if not found.</returns>
@@ -63,12 +63,12 @@ public interface IGitClient
     /// <summary>
     /// Creates a new comment thread on a pull request.
     /// </summary>
-    /// <param name="projectName">The name or ID of the Azure DevOps project.</param>
+    /// <param name="projectName">The name or ID of the project/organization.</param>
     /// <param name="repositoryName">The name or ID of the repository.</param>
     /// <param name="pullRequestId">The ID of the pull request.</param>
     /// <param name="comment">The comment text (supports Markdown).</param>
     /// <returns>The created comment thread.</returns>
-    Task<GitPullRequestCommentThread> CreateCommentAsync(
+    Task<PullRequestCommentThread> CreateCommentAsync(
         string projectName,
         string repositoryName,
         int pullRequestId,
@@ -77,7 +77,7 @@ public interface IGitClient
     /// <summary>
     /// Creates a new code change suggestion comment on a pull request.
     /// </summary>
-    /// <param name="projectName">The name or ID of the Azure DevOps project.</param>
+    /// <param name="projectName">The name or ID of the project/organization.</param>
     /// <param name="repositoryName">The name or ID of the repository.</param>
     /// <param name="pullRequestId">The ID of the pull request.</param>
     /// <param name="codeChange">The suggested code change.</param>
@@ -86,7 +86,7 @@ public interface IGitClient
     /// <param name="lineFrom">Optional: Starting line number for inline comment (requires filePath).</param>
     /// <param name="lineTo">Optional: Ending line number for inline comment. If null, defaults to lineFrom.</param>
     /// <returns>The created comment thread.</returns>
-    Task<GitPullRequestCommentThread> CreateCodeChangeCommentAsync(
+    Task<PullRequestCommentThread> CreateCodeChangeCommentAsync(
         string projectName,
         string repositoryName,
         int pullRequestId,
@@ -100,13 +100,13 @@ public interface IGitClient
     /// Updates the pull request description by appending text.
     /// Preserves existing description and adds the new content at the end.
     /// </summary>
-    /// <param name="projectName">The name or ID of the Azure DevOps project.</param>
+    /// <param name="projectName">The name or ID of the project/organization.</param>
     /// <param name="repositoryName">The name or ID of the repository.</param>
     /// <param name="pullRequestId">The ID of the pull request.</param>
     /// <param name="textToAppend">The text to append to the description (supports Markdown).</param>
     /// <param name="separator">Optional separator between existing description and new text (default: double newline).</param>
     /// <returns>The updated pull request.</returns>
-    Task<GitPullRequest> AppendToDescriptionAsync(
+    Task<PullRequest> AppendToDescriptionAsync(
         string projectName,
         string repositoryName,
         int pullRequestId,
@@ -134,4 +134,18 @@ public interface IGitClient
     /// <param name="analysisRequest">The analysis request containing Git information and credentials.</param>
     /// <returns>A task that represents the asynchronous operation to check permissions, returning detailed permission results for each required permission.</returns>
     Task<List<CheckPermissionResult>> HasSufficientPermissionsAsync(AnalysisRequest analysisRequest);
+
+
+    /// <summary>
+    /// Retrieves the context (thread and details) of a specific pull request comment thread.
+    /// </summary>
+    /// <param name="projectName">The name or ID of the project.</param>
+    /// <param name="repositoryName">The name or ID of the repository.</param>
+    /// <param name="pullRequestId">The unique identifier of the pull request.</param>
+    /// <param name="prCommentId">The unique identifier of the pull request comment thread.</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation. The task result contains 
+    /// the <see cref="PullRequestCommentThread"/> with details of the specified comment thread.
+    /// </returns>
+    Task<PullRequestCommentThread> GetPullRequestThreadContextAsync(string projectName, string repositoryName, int pullRequestId, int prCommentId);
 }

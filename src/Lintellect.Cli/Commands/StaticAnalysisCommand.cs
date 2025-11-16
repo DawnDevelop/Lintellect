@@ -95,31 +95,6 @@ internal class StaticAnalysisCommand : Command
             Aliases = { "-eac" }
         };
 
-        // Git provider credentials
-        var devopsPat = new Option<string>("--devops-pat")
-        {
-            Description = "Azure DevOps Personal Access Token (default: AZURE_DEVOPS_PAT environment variable)",
-            DefaultValueFactory = _ => Environment.GetEnvironmentVariable("AZURE_DEVOPS_PAT") ?? string.Empty,
-            Required = false,
-            Aliases = { "-pat" }
-        };
-
-        var azureDevOpsOrgUrl = new Option<string>("--azure-devops-org-url")
-        {
-            Description = "Azure DevOps Organization URL (e.g., https://dev.azure.com/yourorg) (default: ENDPOINT_URL_SYSTEMVSSCONNECTION environment variable)",
-            DefaultValueFactory = _ => Environment.GetEnvironmentVariable("ENDPOINT_URL_SYSTEMVSSCONNECTION") ?? string.Empty,
-            Required = false,
-            Aliases = { "-org" }
-        };
-
-        var githubToken = new Option<string>("--github-token")
-        {
-            Description = "GitHub Personal Access Token (optional, not required for Semgrep analysis) (default: GITHUB_TOKEN environment variable)",
-            DefaultValueFactory = _ => Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? string.Empty,
-            Required = false,
-            Aliases = { "-ghtoken" }
-        };
-
         // Semgrep analysis options
         var enableSemgrep = new Option<bool>("--enable-semgrep")
         {
@@ -156,10 +131,6 @@ internal class StaticAnalysisCommand : Command
         Options.Add(enableDescriptionSummary);
         Options.Add(enableCodeOwners);
 
-        Options.Add(devopsPat);
-        Options.Add(azureDevOpsOrgUrl);
-        Options.Add(githubToken);
-
         Options.Add(enableSemgrep);
 
         Options.Add(mcpServer);
@@ -175,9 +146,6 @@ internal class StaticAnalysisCommand : Command
             var serviceUrlValue = parseResult.GetValue(serviceUrl);
             var apiKeyValue = parseResult.GetValue(apiKey);
             var exclusionPatterns = parseResult.GetValue(exclusions) ?? [];
-            var devopsPatValue = parseResult.GetValue(devopsPat);
-            var azureDevOpsOrgUrlValue = parseResult.GetValue(azureDevOpsOrgUrl);
-            var githubTokenValue = parseResult.GetValue(githubToken);
             var enableSemgrepValue = parseResult.GetValue(enableSemgrep);
             var mcpServerValue = parseResult.GetValue(mcpServer);
 
@@ -187,9 +155,6 @@ internal class StaticAnalysisCommand : Command
             Console.WriteLine($"  API URL: {serviceUrlValue}");
             Console.WriteLine($"  API Key: {(string.IsNullOrEmpty(apiKeyValue) ? "Not provided" : "***")}");
             Console.WriteLine($"  Exclusions: {(exclusionPatterns.Length > 0 ? string.Join(", ", exclusionPatterns) : "None")}");
-            Console.WriteLine($"  DevOps PAT: {(string.IsNullOrEmpty(devopsPatValue) ? "Not provided" : "***")}");
-            Console.WriteLine($"  Azure DevOps Org URL: {azureDevOpsOrgUrlValue ?? "Not provided"}");
-            Console.WriteLine($"  GitHub Token: {(string.IsNullOrEmpty(githubTokenValue) ? "Not provided" : "***")}");
             Console.WriteLine($"  Semgrep Analysis: {(enableSemgrepValue ? "Enabled" : "Disabled")}");
             Console.WriteLine($"  MCP Server: {mcpServerValue}");
 

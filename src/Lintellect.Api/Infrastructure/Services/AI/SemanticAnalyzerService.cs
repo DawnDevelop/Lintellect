@@ -144,7 +144,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
             analysisResult.AnalysisResult.Language);
 
         var chatHistory = new ChatHistory(systemPrompt);
-        chatHistory.AddUserMessage(_promptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs));
+        chatHistory.AddUserMessage(PromptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs));
 
         var executionSettings = new AzureOpenAIPromptExecutionSettings
         {
@@ -161,6 +161,53 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
 
         var content = response.Content ?? "No summary generated.";
         _logger.LogInformation("Summary generated. ContentLength={ContentLength}", content.Length);
+        return content;
+    }
+
+    // <inheritdoc/>
+    public async Task<string> AnswerQuestionAsync(
+        AnalyzerServiceModel analysisResult,
+        string threadContext,
+        string question,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Answering question for PR. McpServers={McpServers}",
+            analysisResult.AnalysisResult.McpServer?.Count ?? 0);
+
+        var kernel = await CreateKernelAsync(_options, analysisResult.AnalysisResult.McpServer);
+        var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
+
+        var systemPrompt = _templateService.RenderTemplate(
+            AvailablePrompts.GeneralPrompts[GeneralPromptTemplates.QuestionAnsweringPrompt],
+            new Dictionary<string, string>
+            {
+                ["customInstructions"] = analysisResult.CopilotInstructionsPrompt,
+                ["threadContext"] = threadContext
+            });
+
+        var chatHistory = new ChatHistory(systemPrompt);
+        chatHistory.AddUserMessage($"""
+            this is my question:
+
+            {question}
+            """);
+
+        var executionSettings = new AzureOpenAIPromptExecutionSettings
+        {
+            MaxTokens = _options.MaxTokens,
+            Temperature = _options.Temperature,
+            FunctionChoiceBehavior = FunctionChoiceBehavior,
+            ResponseFormat = "text" // Use text for markdown answers
+        };
+
+        var response = await chatCompletionService.GetChatMessageContentAsync(
+            chatHistory,
+            executionSettings: executionSettings,
+            kernel: kernel,
+            cancellationToken: cancellationToken);
+
+        var content = response.Content ?? "No answer generated.";
+        _logger.LogInformation("Question answered. ContentLength={ContentLength}", content.Length);
         return content;
     }
 
