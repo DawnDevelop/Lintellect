@@ -69,14 +69,13 @@ public sealed class LintellectApiFixture : WebApplicationFactory<Program>
             services.AddScoped<IAnalyzerServiceResolver, MockAnalyzerServiceResolver>();
 
             // Remove background services for testing to avoid race conditions
-            // Tests should control when commands are executed, not background services
-            var analysisBackgroundService = services.FirstOrDefault(s => s.ServiceType == typeof(AnalysisBackgroundService));
+            var analysisBackgroundService = services.FirstOrDefault(s => s.ImplementationType == typeof(AnalysisBackgroundService));
             if (analysisBackgroundService != null)
             {
                 services.Remove(analysisBackgroundService);
             }
 
-            var webhookBackgroundService = services.FirstOrDefault(s => s.ServiceType == typeof(WebhookBackgroundService));
+            var webhookBackgroundService = services.FirstOrDefault(s => s.ImplementationType == typeof(WebhookBackgroundService));
             if (webhookBackgroundService != null)
             {
                 services.Remove(webhookBackgroundService);
