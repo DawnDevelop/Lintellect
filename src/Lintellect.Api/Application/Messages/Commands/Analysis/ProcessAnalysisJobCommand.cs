@@ -337,7 +337,6 @@ public sealed class ProcessAnalysisJobCommandHandler(
     {
 
         var pullRequestId = analysisRequest.GitInfo!.PullRequestId;
-        var gitProvider = analysisRequest.GitProvider.ToString();
 
         // Query for existing analysis jobs with the same PullRequestId and GitProvider
         var existingJob = await context.AnalysisJobs

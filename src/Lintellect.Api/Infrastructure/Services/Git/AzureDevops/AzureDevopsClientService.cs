@@ -251,7 +251,7 @@ public class AzureDevopsClientService : IGitClient
     /// <summary>
     /// Retrieves the actual text content of a file as a string from a commit.
     /// </summary>
-    public async Task<string?> GetFileTextAsync(string projectName, string repositoryName, string filePath, string commitId)
+    private async Task<string?> GetFileTextAsync(string projectName, string repositoryName, string filePath, string commitId)
     {
         return await GetFileTextAsync(projectName, repositoryName, filePath, commitId, useCommitId: true);
     }

@@ -86,13 +86,13 @@ public sealed class ProcessWebhookEventCommandHandler(
         // Extract question (remove mention if present)
         var question = ExtractQuestion(commentContent);
 
-        var threadContext = await pullRequestService.GetPullRequestThreadAsync(analysisRequest, int.Parse(prCommentEvent.Resource.PullRequest.Links.Threads.Href.Split('/').Last()));
+        var threadContext = await pullRequestService.GetPullRequestThreadAsync(analysisRequest, int.Parse(prCommentEvent.Resource.Comment.Links.Threads.Href.Split('/').Last()));
         var customInstructions = await pullRequestService.GetCustomInstructionsAsync(analysisRequest);
 
         var context = BuildQuestionContext(question, [.. threadContext.Comments], customInstructions);
 
         // Answer the question
-        await AnswerQuestionAsync(analysisRequest, question, context, cancellationToken);
+        await AnswerQuestionAsync(analysisRequest, context, question, cancellationToken);
     }
 
     private Task HandleGitHubCommentAsync(WebhookEvent webhookEvent, CancellationToken cancellationToken)

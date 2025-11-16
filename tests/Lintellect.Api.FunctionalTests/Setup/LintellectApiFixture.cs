@@ -2,6 +2,8 @@ using System.Data.Common;
 using Lintellect.Api.FunctionalTests.Mocks.AI;
 using Lintellect.Api.FunctionalTests.Mocks.Git;
 using Lintellect.Api.Infrastructure.Persistence;
+using Lintellect.Api.Infrastructure.Services.Analysis;
+using Lintellect.Api.Infrastructure.Services.Webhooks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -65,6 +67,20 @@ public sealed class LintellectApiFixture : WebApplicationFactory<Program>
             // Replace external services with mocks
             services.AddScoped<IGitClientFactory, MockGitClientFactory>();
             services.AddScoped<IAnalyzerServiceResolver, MockAnalyzerServiceResolver>();
+
+            // Remove background services for testing to avoid race conditions
+            // Tests should control when commands are executed, not background services
+            var analysisBackgroundService = services.FirstOrDefault(s => s.ServiceType == typeof(AnalysisBackgroundService));
+            if (analysisBackgroundService != null)
+            {
+                services.Remove(analysisBackgroundService);
+            }
+
+            var webhookBackgroundService = services.FirstOrDefault(s => s.ServiceType == typeof(WebhookBackgroundService));
+            if (webhookBackgroundService != null)
+            {
+                services.Remove(webhookBackgroundService);
+            }
         });
 
         builder.UseEnvironment("Testing");
