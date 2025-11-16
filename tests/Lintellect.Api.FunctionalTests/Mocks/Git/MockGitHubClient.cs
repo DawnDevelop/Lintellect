@@ -88,7 +88,7 @@ public sealed class MockGitClient : IGitClient
 
 
 
-    public Task<PullRequestCommentThread> GetPullRequestThreadContextAsync(string projectName, int pullRequestId, int prCommentId)
+    public Task<PullRequestCommentThread> GetPullRequestThreadContextAsync(string projectName, string repositoryName, int pullRequestId, int prCommentId)
     {
         return Task.FromResult(new PullRequestCommentThread
         {

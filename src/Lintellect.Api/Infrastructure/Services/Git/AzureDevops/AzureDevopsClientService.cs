@@ -802,7 +802,7 @@ public class AzureDevopsClientService : IGitClient
     }
 
 
-    public async Task<PullRequestCommentThread> GetPullRequestThreadContextAsync(string projectName, int pullRequestId, int prCommentId)
+    public async Task<PullRequestCommentThread> GetPullRequestThreadContextAsync(string projectName, string repositoryName, int pullRequestId, int prCommentId)
     {
         var gitClient = await GetHttpGitClient();
 

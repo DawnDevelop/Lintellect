@@ -226,6 +226,6 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
         var client = _clientFactory.CreateClient(analysisResult);
 
         return await client.GetPullRequestThreadContextAsync(analysisResult.GitInfo!.ProjectName!,
-            analysisResult.GitInfo.PullRequestId, threadId);
+            analysisResult.GitInfo.RepositoryName, analysisResult.GitInfo.PullRequestId, threadId);
     }
 }

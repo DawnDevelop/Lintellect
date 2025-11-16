@@ -222,18 +222,21 @@ public sealed class GitHubClientService : IGitClient
     }
 
 
-    public async Task<PullRequestCommentThread> GetPullRequestThreadContextAsync(string projectName, int pullRequestId, int prCommentId)
+    public async Task<PullRequestCommentThread> GetPullRequestThreadContextAsync(string projectName, string repositoryName, int pullRequestId, int prCommentId)
     {
-        // GitHub API does not have "thread" resources in the same way as Azure DevOps.
-        // prCommentId corresponds to the GitHub comment ID.
-        var comment = await _client.Issue.Comment.Get(projectName, pullRequestId.ToString(), prCommentId);
-
-        return new PullRequestCommentThread
+        try
         {
-            Id = (int)comment.Id,
-            Comments =
-            [
-                new PullRequestComment
+            // GitHub API does not have "thread" resources in the same way as Azure DevOps.
+            // prCommentId corresponds to the GitHub comment ID.
+            // To get a single issue comment, we only need owner, repo, and commentId (not the issue/PR number)
+            var comment = await _client.Issue.Comment.Get(projectName, repositoryName, prCommentId);
+
+            return new PullRequestCommentThread
+            {
+                Id = (int)comment.Id,
+                Comments =
+                [
+                    new PullRequestComment
                 {
                     Id = (int)comment.Id,
                     Content = comment.Body ?? string.Empty,
@@ -249,8 +252,14 @@ public sealed class GitHubClientService : IGitClient
                     LastUpdatedDate = comment.UpdatedAt?.UtcDateTime,
                     CommentType = CommentType.Text
                 }
-            ]
-        };
+                ]
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve GitHub PR #{PullRequestId} comment #{CommentId}", pullRequestId, prCommentId);
+            throw;
+        }
     }
 
     public async Task<PullRequestCommentThread> CreateCodeChangeCommentAsync(

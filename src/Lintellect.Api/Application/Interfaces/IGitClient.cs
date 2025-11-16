@@ -140,11 +140,12 @@ public interface IGitClient
     /// Retrieves the context (thread and details) of a specific pull request comment thread.
     /// </summary>
     /// <param name="projectName">The name or ID of the project.</param>
+    /// <param name="repositoryName">The name or ID of the repository.</param>
     /// <param name="pullRequestId">The unique identifier of the pull request.</param>
     /// <param name="prCommentId">The unique identifier of the pull request comment thread.</param>
     /// <returns>
     /// A task that represents the asynchronous operation. The task result contains 
     /// the <see cref="PullRequestCommentThread"/> with details of the specified comment thread.
     /// </returns>
-    Task<PullRequestCommentThread> GetPullRequestThreadContextAsync(string projectName, int pullRequestId, int prCommentId);
+    Task<PullRequestCommentThread> GetPullRequestThreadContextAsync(string projectName, string repositoryName, int pullRequestId, int prCommentId);
 }
