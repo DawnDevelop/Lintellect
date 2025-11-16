@@ -38,7 +38,8 @@ public sealed class AnalysisJobConfiguration : IEntityTypeConfiguration<Analysis
         {
             ar.ToJson(); // Maps to a JSON column
             ar.OwnsOne(a => a.GitInfo);
-            ar.OwnsMany(a => a.Findings);
+            // Findings is part of the JSON, ignore it as a navigation property
+            ar.Ignore(a => a.Findings);
         });
 
         // Configure indexes

@@ -18,8 +18,7 @@ internal sealed class PromptBuilder
     {
         var sections = new[]
         {
-            BuildStaticAnalysisSection(analysisResult),
-            BuildCodeChangesSection(diffs, analysisResult, maxFiles: 12, maxLinesPerFile: 40),
+            BuildStaticAnalysisSection(analysisResult)
         };
 
         return _templateService.BuildPrompt(sections);
@@ -46,7 +45,7 @@ internal sealed class PromptBuilder
     /// <summary>
     /// Builds a summary prompt.
     /// </summary>
-    public string BuildSummaryPrompt(AnalysisRequest analysisResult, Dictionary<string, string> diffs)
+    public static string BuildSummaryPrompt(AnalysisRequest analysisResult, Dictionary<string, string> diffs)
     {
         var builder = new StringBuilder();
 
@@ -157,50 +156,6 @@ internal sealed class PromptBuilder
         builder.AppendLine();
     }
 
-    private static string BuildCodeChangesSection(
-        Dictionary<string, string> diffs,
-        AnalysisRequest? analysisResult,
-        int maxFiles,
-        int maxLinesPerFile)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine("## Code Changes");
-
-        if (diffs.Count == 0)
-        {
-            builder.AppendLine("*No diffs available for review*");
-            return builder.ToString();
-        }
-
-        builder.AppendLine($"**Files Modified**: {diffs.Count}");
-        builder.AppendLine();
-
-        // Prioritize files based on findings: errors > warnings > info > none
-        var prioritizedFiles = PrioritizeFiles(diffs, analysisResult?.Findings.ToList() ?? [], maxFiles);
-
-        foreach (var (filePath, diff) in prioritizedFiles)
-        {
-            builder.AppendLine($"### ?? `{filePath}`");
-            builder.AppendLine("```diff");
-
-            var diffLines = diff.Split('\n');
-            var truncatedDiff = diffLines.Length > maxLinesPerFile
-                ? string.Join('\n', diffLines.Take(maxLinesPerFile)) + "\n... (truncated)"
-                : diff;
-
-            builder.AppendLine(truncatedDiff);
-            builder.AppendLine("```");
-            builder.AppendLine();
-        }
-
-        if (diffs.Count > prioritizedFiles.Count)
-        {
-            builder.AppendLine($"... and {diffs.Count - prioritizedFiles.Count} more files changed");
-        }
-
-        return builder.ToString();
-    }
-
     /// <summary>
     /// Prioritizes files based on findings severity: errors > warnings > info > none.
     /// Returns top N files with findings prioritized first.
@@ -212,7 +167,7 @@ internal sealed class PromptBuilder
     {
         if (findings.Count == 0 || diffs.Count <= maxFiles)
         {
-            return diffs.Take(maxFiles).ToList();
+            return [.. diffs.Take(maxFiles)];
         }
 
         // Group findings by file and calculate priority score

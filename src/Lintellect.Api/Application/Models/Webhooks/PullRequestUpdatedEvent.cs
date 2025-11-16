@@ -7,29 +7,29 @@ public record PullRequestUpdatedEvent(
     string EventType,
     string PublisherId,
     string Scope,
-    Message Message,
-    DetailedMessage DetailedMessage,
-    Resource Resource,
+    PullRequestUpdatedMessage Message,
+    PullRequestUpdatedDetailedMessage DetailedMessage,
+    PullRequestUpdatedResource Resource,
     string ResourceVersion,
-    ResourceContainers ResourceContainers,
+    PullRequestUpdatedResourceContainers ResourceContainers,
     DateTime CreatedDate
 );
 
 
-public record Account(
+public record PullRequestUpdatedAccount(
     string Id
 );
 
-public record Collection(
+public record PullRequestUpdatedCollection(
     string Id
 );
 
-public record Commit(
+public record PullRequestUpdatedCommit(
     string CommitId,
     string Url
 );
 
-public record CreatedBy(
+public record PullRequestUpdatedCreatedBy(
     string Id,
     string DisplayName,
     string UniqueName,
@@ -37,54 +37,54 @@ public record CreatedBy(
     string ImageUrl
 );
 
-public record DetailedMessage(
+public record PullRequestUpdatedDetailedMessage(
     string Text,
     string Html,
     string Markdown
 );
 
-public record LastMergeCommit(
+public record PullRequestUpdatedLastMergeCommit(
     string CommitId,
     string Url
 );
 
-public record LastMergeSourceCommit(
+public record PullRequestUpdatedLastMergeSourceCommit(
     string CommitId,
     string Url
 );
 
-public record LastMergeTargetCommit(
+public record PullRequestUpdatedLastMergeTargetCommit(
     string CommitId,
     string Url
 );
 
-public record Message(
+public record PullRequestUpdatedMessage(
     string Text,
     string Html,
     string Markdown
 );
 
-public record Project(
+public record PullRequestUpdatedProject(
     string Id,
     string Name,
     string Url,
     string State
 );
 
-public record Repository(
+public record PullRequestUpdatedRepository(
     string Id,
     string Name,
     string Url,
-    Project Project,
+    PullRequestUpdatedProject Project,
     string DefaultBranch,
     string RemoteUrl
 );
 
-public record Resource(
-    Repository Repository,
+public record PullRequestUpdatedResource(
+    PullRequestUpdatedRepository Repository,
     int PullRequestId,
     string Status,
-    CreatedBy CreatedBy,
+    PullRequestUpdatedCreatedBy CreatedBy,
     DateTime CreationDate,
     DateTime ClosedDate,
     string Title,
@@ -93,21 +93,21 @@ public record Resource(
     string TargetRefName,
     string MergeStatus,
     string MergeId,
-    LastMergeSourceCommit LastMergeSourceCommit,
-    LastMergeTargetCommit LastMergeTargetCommit,
-    LastMergeCommit LastMergeCommit,
-    IReadOnlyList<Reviewer> Reviewers,
-    IReadOnlyList<Commit> Commits,
+    PullRequestUpdatedLastMergeSourceCommit LastMergeSourceCommit,
+    PullRequestUpdatedLastMergeTargetCommit LastMergeTargetCommit,
+    PullRequestUpdatedLastMergeCommit LastMergeCommit,
+    IReadOnlyList<PullRequestUpdatedReviewer> Reviewers,
+    IReadOnlyList<PullRequestUpdatedCommit> Commits,
     string Url
 );
 
-public record ResourceContainers(
-    Collection Collection,
-    Account Account,
-    Project Project
+public record PullRequestUpdatedResourceContainers(
+    PullRequestUpdatedCollection Collection,
+    PullRequestUpdatedAccount Account,
+    PullRequestUpdatedProject Project
 );
 
-public record Reviewer(
+public record PullRequestUpdatedReviewer(
     object ReviewerUrl,
     int Vote,
     string Id,

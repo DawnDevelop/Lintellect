@@ -22,17 +22,18 @@ public sealed class CompleteAnalysisJobCommandHandler(IApplicationDbContext cont
     public async ValueTask<Unit> Handle(CompleteAnalysisJobCommand request, CancellationToken cancellationToken)
     {
         var job = await context.AnalysisJobs.FirstOrDefaultAsync(x => x.Id == request.JobId, cancellationToken);
-        if (job is not null)
+        if (job is null)
         {
-            job.Complete(
-                request.Summary,
-                request.DetailedAnalysis,
-                request.InlineSuggestions,
-                request.AnalyzerUsed);
-
-            await context.SaveChangesAsync(cancellationToken);
+            throw new InvalidOperationException($"Analysis job with ID {request.JobId} was not found.");
         }
 
+        job.Complete(
+            request.Summary,
+            request.DetailedAnalysis,
+            request.InlineSuggestions,
+            request.AnalyzerUsed);
+
+        await context.SaveChangesAsync(cancellationToken);
 
         return default;
     }

@@ -120,11 +120,39 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
                 });
 
 
-            var userPrompt = _promptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs);
+            var userPrompt = PromptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs);
 
             var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
 
             return response;
+        });
+    }
+
+    /// <summary>
+    /// Answers a question about the pull request using the question-answering prompt template.
+    /// </summary>
+    public async Task<string> AnswerQuestionAsync(
+        AnalyzerServiceModel analysisResult,
+        string threadContext,
+        string question,
+        CancellationToken cancellationToken = default)
+    {
+        return await _retryPolicy.ExecuteAsync(async () =>
+        {
+            var systemPrompt = _templateService.RenderTemplate(
+                AvailablePrompts.GeneralPrompts[GeneralPromptTemplates.QuestionAnsweringPrompt],
+                new Dictionary<string, string>
+                {
+                    { "customInstructions", analysisResult.CopilotInstructionsPrompt },
+                    { "threadContext", threadContext }
+                });
+
+
+            return await SendClaudeMessageAsync(systemPrompt, $"""
+            this is my question:
+
+            {question}
+            """, cancellationToken);
         });
     }
 
@@ -191,7 +219,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
             // Use optimized prompt builders with truncation and prioritization
             var analysisUser = _promptBuilder.BuildAnalysisPrompt(analysisResult.AnalysisResult, diffs);
             var inlineUser = _promptBuilder.BuildInlineSuggestionsPrompt(analysisResult.AnalysisResult, diffs);
-            var summaryUser = _promptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs);
+            var summaryUser = PromptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs);
 
             var codeownersSystem = _templateService.RenderTemplate(AvailablePrompts.GeneralPrompts[GeneralPromptTemplates.CodeOwnerSystemPrompt]);
             // Optimize CODEOWNERS prompt - more concise format

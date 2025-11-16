@@ -1,20 +1,20 @@
 using Lintellect.Api.Application.Messages.Commands.Analysis;
-using Mediator;
+using Lintellect.Api.Application.Messages.Queries;
+using Lintellect.Api.FunctionalTests.Utilities.Analysis;
+using static Lintellect.Api.FunctionalTests.Testing;
 
-namespace Lintellect.Api.functionaltests.Queries;
+namespace Lintellect.Api.FunctionalTests.QueryTests;
 
-[TestFixture]
-public class GetAnalysisHistoryQueryTests : Testing
+public class GetAnalysisHistoryQueryTests : BaseTestFixture
 {
     [Test]
     public async Task Handle_WithNoJobs_ReturnsEmptyList()
     {
         // Arrange
         var query = new GetAnalysisHistoryQuery(0, 10);
-        var mediator = await GetService<IMediator>();
 
         // Act
-        var result = await mediator.Send(query);
+        var result = await SendAsync(query);
 
         // Assert
         result.ShouldNotBeNull();
@@ -27,15 +27,14 @@ public class GetAnalysisHistoryQueryTests : Testing
         // Arrange
         var request = TestDataBuilder.ValidRequest();
         var submitCommand = new SubmitAnalysisCommand(request);
-        var mediator = await GetService<IMediator>();
 
         // Create a job
-        var jobId = await mediator.Send(submitCommand);
+        var jobId = await SendAsync(submitCommand);
 
         var query = new GetAnalysisHistoryQuery(0, 10);
 
         // Act
-        var result = await mediator.Send(query);
+        var result = await SendAsync(query);
 
         // Assert
         result.ShouldNotBeNull();
@@ -49,15 +48,14 @@ public class GetAnalysisHistoryQueryTests : Testing
         // Arrange
         var request = TestDataBuilder.ValidRequest();
         var submitCommand = new SubmitAnalysisCommand(request);
-        var mediator = await GetService<IMediator>();
 
         // Create a job
-        await mediator.Send(submitCommand);
+        await SendAsync(submitCommand);
 
         var query = new GetAnalysisHistoryQuery(0, 1);
 
         // Act
-        var result = await mediator.Send(query);
+        var result = await SendAsync(query);
 
         // Assert
         result.ShouldNotBeNull();
@@ -70,15 +68,14 @@ public class GetAnalysisHistoryQueryTests : Testing
         // Arrange
         var request = TestDataBuilder.ValidRequest();
         var submitCommand = new SubmitAnalysisCommand(request);
-        var mediator = await GetService<IMediator>();
 
         // Create a job
-        await mediator.Send(submitCommand);
+        await SendAsync(submitCommand);
 
         var query = new GetAnalysisHistoryQuery(0, 10, "TestProject", "TestRepo");
 
         // Act
-        var result = await mediator.Send(query);
+        var result = await SendAsync(query);
 
         // Assert
         result.ShouldNotBeNull();

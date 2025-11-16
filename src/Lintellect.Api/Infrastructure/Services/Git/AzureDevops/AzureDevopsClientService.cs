@@ -1,6 +1,7 @@
 using System.Text;
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
+using Lintellect.Api.Application.Models.Git;
 using Lintellect.Api.Infrastructure.Extensions;
 using Lintellect.Shared.Models;
 using Microsoft.TeamFoundation.Core.WebApi;
@@ -63,10 +64,11 @@ public class AzureDevopsClientService : IGitClient
     }
 
     /// <inheritdoc />
-    public async Task<GitPullRequest> GetPullRequestAsync(string projectName, string repositoryName, int pullRequestId)
+    public async Task<PullRequest> GetPullRequestAsync(string projectName, string repositoryName, int pullRequestId)
     {
         var gitClient = await GetHttpGitClient();
-        return await gitClient.GetPullRequestAsync(projectName, repositoryName, pullRequestId);
+        var azureDevOpsPr = await gitClient.GetPullRequestAsync(projectName, repositoryName, pullRequestId);
+        return MapToGenericPullRequest(azureDevOpsPr);
     }
 
     /// <inheritdoc />
@@ -173,12 +175,12 @@ public class AzureDevopsClientService : IGitClient
             top: 1000,
             baseVersionDescriptor: new GitBaseVersionDescriptor
             {
-                Version = pullRequest.TargetRefName.Replace("refs/heads/", string.Empty),
+                Version = pullRequest.TargetRefName?.Replace("refs/heads/", string.Empty) ?? string.Empty,
                 VersionType = GitVersionType.Branch
             },
             targetVersionDescriptor: new GitTargetVersionDescriptor
             {
-                Version = pullRequest.SourceRefName.Replace("refs/heads/", string.Empty),
+                Version = pullRequest.SourceRefName?.Replace("refs/heads/", string.Empty) ?? string.Empty,
                 VersionType = GitVersionType.Branch
             });
     }
@@ -234,8 +236,7 @@ public class AzureDevopsClientService : IGitClient
                 {
                     Version = versionIdentifier,
                     VersionType = useCommitId ? GitVersionType.Commit : GitVersionType.Branch
-                })
-                ;
+                });
 
             using var reader = new StreamReader(stream);
             return await reader.ReadToEndAsync();
@@ -265,7 +266,7 @@ public class AzureDevopsClientService : IGitClient
     /// <param name="baseCommitId">The base commit SHA (before changes).</param>
     /// <param name="targetCommitId">The target commit SHA (after changes).</param>
     /// <returns>A unified diff string showing the changes, or null if unable to generate.</returns>
-    public async Task<string?> GetFileDiffAsync(string projectName, string repositoryName, string filePath, string baseCommitId, string targetCommitId)
+    private async Task<string?> GetFileDiffAsync(string projectName, string repositoryName, string filePath, string baseCommitId, string targetCommitId)
     {
         var baseContent = await GetFileTextAsync(projectName, repositoryName, filePath, baseCommitId);
         var targetContent = await GetFileTextAsync(projectName, repositoryName, filePath, targetCommitId);
@@ -287,12 +288,12 @@ public class AzureDevopsClientService : IGitClient
             top: 1000,
             baseVersionDescriptor: new GitBaseVersionDescriptor
             {
-                Version = pullRequest.TargetRefName.Replace("refs/heads/", string.Empty),
+                Version = pullRequest.TargetRefName?.Replace("refs/heads/", string.Empty),
                 VersionType = GitVersionType.Branch
             },
             targetVersionDescriptor: new GitTargetVersionDescriptor
             {
-                Version = pullRequest.SourceRefName.Replace("refs/heads/", string.Empty),
+                Version = pullRequest.SourceRefName?.Replace("refs/heads/", string.Empty),
                 VersionType = GitVersionType.Branch
             })
             ;
@@ -354,12 +355,12 @@ public class AzureDevopsClientService : IGitClient
             top: 1000,
             baseVersionDescriptor: new GitBaseVersionDescriptor
             {
-                Version = pullRequest.TargetRefName.Replace("refs/heads/", string.Empty),
+                Version = pullRequest.TargetRefName?.Replace("refs/heads/", string.Empty) ?? string.Empty,
                 VersionType = GitVersionType.Branch
             },
             targetVersionDescriptor: new GitTargetVersionDescriptor
             {
-                Version = pullRequest.SourceRefName.Replace("refs/heads/", string.Empty),
+                Version = pullRequest.SourceRefName?.Replace("refs/heads/", string.Empty) ?? string.Empty,
                 VersionType = GitVersionType.Branch
             })
             ;
@@ -429,7 +430,7 @@ public class AzureDevopsClientService : IGitClient
     }
 
     /// <inheritdoc />
-    public async Task<GitPullRequestCommentThread> CreateCommentAsync(
+    public async Task<PullRequestCommentThread> CreateCommentAsync(
         string projectName,
         string repositoryName,
         int pullRequestId,
@@ -444,22 +445,22 @@ public class AzureDevopsClientService : IGitClient
                 new Comment
                 {
                     Content = comment,
-                    CommentType = CommentType.Text
+                    CommentType = Microsoft.TeamFoundation.SourceControl.WebApi.CommentType.Text
                 }
             ],
-            Status = CommentThreadStatus.Active
+            Status = Microsoft.TeamFoundation.SourceControl.WebApi.CommentThreadStatus.Active
         };
 
-        return await gitClient.CreateThreadAsync(
+        var azureDevOpsThread = await gitClient.CreateThreadAsync(
             thread,
             projectName,
             repositoryName,
-            pullRequestId
-            )
-            ;
+            pullRequestId);
+
+        return MapToGenericCommentThread(azureDevOpsThread);
     }
 
-    public async Task<GitPullRequestCommentThread> CreateCodeChangeCommentAsync(
+    public async Task<PullRequestCommentThread> CreateCodeChangeCommentAsync(
         string projectName,
         string repositoryName,
         int pullRequestId,
@@ -490,10 +491,10 @@ public class AzureDevopsClientService : IGitClient
                 new Comment
                 {
                     Content = commentContent.ToString(),
-                    CommentType = CommentType.CodeChange
+                    CommentType = Microsoft.TeamFoundation.SourceControl.WebApi.CommentType.CodeChange
                 }
             ],
-            Status = CommentThreadStatus.Active
+            Status = Microsoft.TeamFoundation.SourceControl.WebApi.CommentThreadStatus.Active
         };
 
         // If filePath and line are provided, create an inline comment
@@ -510,15 +511,15 @@ public class AzureDevopsClientService : IGitClient
 
             var endLine = lineTo ?? lineFrom.Value;
 
-            thread.ThreadContext = new CommentThreadContext
+            thread.ThreadContext = new Microsoft.TeamFoundation.SourceControl.WebApi.CommentThreadContext
             {
                 FilePath = filePath,
-                RightFileStart = new CommentPosition
+                RightFileStart = new Microsoft.TeamFoundation.SourceControl.WebApi.CommentPosition
                 {
                     Line = lineFrom.Value,
                     Offset = 1  // Start at the beginning of the line
                 },
-                RightFileEnd = new CommentPosition
+                RightFileEnd = new Microsoft.TeamFoundation.SourceControl.WebApi.CommentPosition
                 {
                     Line = endLine,
                     Offset = int.MaxValue  // Extend to end of line (Azure DevOps will cap this automatically)
@@ -526,33 +527,33 @@ public class AzureDevopsClientService : IGitClient
             };
         }
 
-        return await gitClient.CreateThreadAsync(
+        var azureDevOpsThread = await gitClient.CreateThreadAsync(
             thread,
             projectName,
             repositoryName,
             pullRequestId)
             ;
+
+        return MapToGenericCommentThread(azureDevOpsThread);
     }
 
     /// <inheritdoc />
-    public async Task<GitPullRequest> AppendToDescriptionAsync(
+    public async Task<PullRequest> AppendToDescriptionAsync(
         string projectName,
         string repositoryName,
         int pullRequestId,
         string textToAppend,
         string separator = "\n\n---\n\n")
     {
-        var gitClient = await GetHttpGitClient();
-        var pullRequest = await GetPullRequestAsync(projectName, repositoryName, pullRequestId)
-            ;
+        var pullRequest = await GetPullRequestAsync(projectName, repositoryName, pullRequestId);
 
         var existingDescription = pullRequest.Description ?? string.Empty;
         var newDescription = string.IsNullOrWhiteSpace(existingDescription)
             ? textToAppend
             : $"{existingDescription}{separator}{textToAppend}";
 
-        return await UpdateDescriptionAsync(projectName, repositoryName, pullRequestId, newDescription)
-            ;
+        var updatedPr = await UpdateDescriptionAsync(projectName, repositoryName, pullRequestId, newDescription);
+        return MapToGenericPullRequest(updatedPr);
     }
 
     /// <summary>
@@ -706,7 +707,8 @@ public class AzureDevopsClientService : IGitClient
         CodeOwnersResult codeOwners,
         string? repositoryName = null)
     {
-        var pullRequest = await GetPullRequestAsync(projectName, repositoryName!, pullRequestId);
+        var gitClient = await GetHttpGitClient();
+        var azureDevOpsPr = await gitClient.GetPullRequestAsync(projectName, repositoryName!, pullRequestId);
 
         var resolvedCodeOwners = await ResolveCodeOwnersAsync(codeOwners.CodeOwners);
 
@@ -717,7 +719,7 @@ public class AzureDevopsClientService : IGitClient
         }
 
         // Get existing reviewers to avoid duplicates
-        var existingReviewerIds = pullRequest.Reviewers?.Select(r => r.Id).ToHashSet() ?? [];
+        var existingReviewerIds = azureDevOpsPr.Reviewers?.Select(r => r.Id).ToHashSet() ?? [];
 
         var reviewersToAdd = resolvedCodeOwners
             .Where(x => !string.IsNullOrEmpty(x.AzureDevOpsId) && !existingReviewerIds.Contains(x.AzureDevOpsId))
@@ -730,9 +732,6 @@ public class AzureDevopsClientService : IGitClient
 
         if (reviewersToAdd.Count > 0)
         {
-
-            var gitClient = await GetHttpGitClient();
-
             var result = await gitClient.CreatePullRequestReviewersAsync(
                 [.. reviewersToAdd],
                 projectName,
@@ -800,6 +799,173 @@ public class AzureDevopsClientService : IGitClient
         }
 
         return resolvedOwners;
+    }
+
+
+    public async Task<PullRequestCommentThread> GetPullRequestThreadContextAsync(string projectName, int pullRequestId, int prCommentId)
+    {
+        var gitClient = await GetHttpGitClient();
+
+        var thread = await gitClient.GetPullRequestThreadAsync(projectName, pullRequestId, prCommentId);
+
+        return MapToGenericCommentThread(thread);
+    }
+
+    /// <summary>
+    /// Maps an Azure DevOps GitPullRequest to the generic PullRequest model.
+    /// </summary>
+    private static PullRequest MapToGenericPullRequest(Microsoft.TeamFoundation.SourceControl.WebApi.GitPullRequest azureDevOpsPr)
+    {
+        return new PullRequest
+        {
+            PullRequestId = azureDevOpsPr.PullRequestId,
+            Title = azureDevOpsPr.Title,
+            Description = azureDevOpsPr.Description,
+            SourceRefName = azureDevOpsPr.SourceRefName,
+            TargetRefName = azureDevOpsPr.TargetRefName,
+            Status = MapPullRequestStatus(azureDevOpsPr.Status),
+            CreatedBy = azureDevOpsPr.CreatedBy != null ? MapToGenericIdentityRef(azureDevOpsPr.CreatedBy) : null,
+            CreationDate = azureDevOpsPr.CreationDate,
+            LastMergeCommit = azureDevOpsPr.LastMergeCommit != null ? MapToGenericCommitRef(azureDevOpsPr.LastMergeCommit) : null
+        };
+    }
+
+    /// <summary>
+    /// Maps an Azure DevOps GitPullRequestCommentThread to the generic PullRequestCommentThread model.
+    /// </summary>
+    private static PullRequestCommentThread MapToGenericCommentThread(GitPullRequestCommentThread azureDevOpsThread)
+    {
+        return new PullRequestCommentThread
+        {
+            Id = azureDevOpsThread.Id,
+            Comments = azureDevOpsThread.Comments?.Select(MapToGenericComment).ToList() ?? [],
+            Status = MapCommentThreadStatus(azureDevOpsThread.Status),
+            ThreadContext = azureDevOpsThread.ThreadContext != null ? MapToGenericThreadContext(azureDevOpsThread.ThreadContext) : null
+        };
+    }
+
+    /// <summary>
+    /// Maps an Azure DevOps Comment to the generic PullRequestComment model.
+    /// </summary>
+    private static PullRequestComment MapToGenericComment(Comment azureDevOpsComment)
+    {
+        return new PullRequestComment
+        {
+            Id = azureDevOpsComment.Id,
+            ParentCommentId = azureDevOpsComment.ParentCommentId,
+            Content = azureDevOpsComment.Content ?? string.Empty,
+            Author = azureDevOpsComment.Author != null ? MapToGenericIdentityRef(azureDevOpsComment.Author) : null,
+            PublishedDate = azureDevOpsComment.PublishedDate,
+            LastUpdatedDate = azureDevOpsComment.LastUpdatedDate,
+            CommentType = MapCommentType(azureDevOpsComment.CommentType)
+        };
+    }
+
+    /// <summary>
+    /// Maps an Azure DevOps IdentityRef to the generic IdentityRef model.
+    /// </summary>
+    private static Lintellect.Api.Application.Models.Git.IdentityRef MapToGenericIdentityRef(Microsoft.VisualStudio.Services.WebApi.IdentityRef azureDevOpsIdentity)
+    {
+        return new Lintellect.Api.Application.Models.Git.IdentityRef
+        {
+            DisplayName = azureDevOpsIdentity.DisplayName,
+            UniqueName = azureDevOpsIdentity.UniqueName,
+            Id = azureDevOpsIdentity.Id?.ToString(),
+            Url = azureDevOpsIdentity.Url,
+            ImageUrl = azureDevOpsIdentity.ImageUrl
+        };
+    }
+
+    /// <summary>
+    /// Maps an Azure DevOps GitCommitRef to the generic CommitRef model.
+    /// </summary>
+    private static CommitRef MapToGenericCommitRef(Microsoft.TeamFoundation.SourceControl.WebApi.GitCommitRef azureDevOpsCommit)
+    {
+        return new CommitRef
+        {
+            CommitId = azureDevOpsCommit.CommitId,
+            Comment = azureDevOpsCommit.Comment,
+            Author = azureDevOpsCommit.Author != null ? new Application.Models.Git.IdentityRef
+            {
+                DisplayName = azureDevOpsCommit.Author.Name,
+                UniqueName = azureDevOpsCommit.Author.Name
+            } : null,
+            Committer = azureDevOpsCommit.Committer != null ? new Application.Models.Git.IdentityRef
+            {
+                DisplayName = azureDevOpsCommit.Committer.Name,
+                UniqueName = azureDevOpsCommit.Committer.Name
+            } : null,
+            CommitDate = azureDevOpsCommit.Author?.Date ?? azureDevOpsCommit.Committer?.Date
+        };
+    }
+
+    /// <summary>
+    /// Maps an Azure DevOps CommentThreadContext to the generic CommentThreadContext model.
+    /// </summary>
+    private static Application.Models.Git.CommentThreadContext MapToGenericThreadContext(Microsoft.TeamFoundation.SourceControl.WebApi.CommentThreadContext azureDevOpsContext)
+    {
+        return new Application.Models.Git.CommentThreadContext
+        {
+            FilePath = azureDevOpsContext.FilePath ?? string.Empty,
+            RightFileStart = azureDevOpsContext.RightFileStart != null ? MapToGenericCommentPosition(azureDevOpsContext.RightFileStart) : null,
+            RightFileEnd = azureDevOpsContext.RightFileEnd != null ? MapToGenericCommentPosition(azureDevOpsContext.RightFileEnd) : null
+        };
+    }
+
+    /// <summary>
+    /// Maps an Azure DevOps CommentPosition to the generic CommentPosition model.
+    /// </summary>
+    private static Application.Models.Git.CommentPosition MapToGenericCommentPosition(Microsoft.TeamFoundation.SourceControl.WebApi.CommentPosition azureDevOpsPosition)
+    {
+        return new Application.Models.Git.CommentPosition
+        {
+            Line = azureDevOpsPosition.Line,
+            Offset = azureDevOpsPosition.Offset
+        };
+    }
+
+    /// <summary>
+    /// Maps an Azure DevOps PullRequestStatus to the generic PullRequestStatus enum.
+    /// </summary>
+    private static Application.Models.Git.PullRequestStatus MapPullRequestStatus(Microsoft.TeamFoundation.SourceControl.WebApi.PullRequestStatus? status)
+    {
+        return status switch
+        {
+            Microsoft.TeamFoundation.SourceControl.WebApi.PullRequestStatus.Active => Application.Models.Git.PullRequestStatus.Active,
+            Microsoft.TeamFoundation.SourceControl.WebApi.PullRequestStatus.Completed => Application.Models.Git.PullRequestStatus.Completed,
+            Microsoft.TeamFoundation.SourceControl.WebApi.PullRequestStatus.Abandoned => Application.Models.Git.PullRequestStatus.Abandoned,
+            _ => Application.Models.Git.PullRequestStatus.Active
+        };
+    }
+
+    /// <summary>
+    /// Maps an Azure DevOps CommentThreadStatus to the generic CommentThreadStatus enum.
+    /// </summary>
+    private static Application.Models.Git.CommentThreadStatus MapCommentThreadStatus(Microsoft.TeamFoundation.SourceControl.WebApi.CommentThreadStatus? status)
+    {
+        return status switch
+        {
+            Microsoft.TeamFoundation.SourceControl.WebApi.CommentThreadStatus.Active => Application.Models.Git.CommentThreadStatus.Active,
+            Microsoft.TeamFoundation.SourceControl.WebApi.CommentThreadStatus.Fixed => Application.Models.Git.CommentThreadStatus.Resolved,
+            Microsoft.TeamFoundation.SourceControl.WebApi.CommentThreadStatus.WontFix => Application.Models.Git.CommentThreadStatus.Resolved,
+            Microsoft.TeamFoundation.SourceControl.WebApi.CommentThreadStatus.ByDesign => Application.Models.Git.CommentThreadStatus.Resolved,
+            Microsoft.TeamFoundation.SourceControl.WebApi.CommentThreadStatus.Closed => Application.Models.Git.CommentThreadStatus.Closed,
+            _ => Application.Models.Git.CommentThreadStatus.Active
+        };
+    }
+
+    /// <summary>
+    /// Maps an Azure DevOps CommentType to the generic CommentType enum.
+    /// </summary>
+    private static Application.Models.Git.CommentType MapCommentType(Microsoft.TeamFoundation.SourceControl.WebApi.CommentType? commentType)
+    {
+        return commentType switch
+        {
+            Microsoft.TeamFoundation.SourceControl.WebApi.CommentType.Text => Application.Models.Git.CommentType.Text,
+            Microsoft.TeamFoundation.SourceControl.WebApi.CommentType.CodeChange => Application.Models.Git.CommentType.CodeChange,
+            Microsoft.TeamFoundation.SourceControl.WebApi.CommentType.System => Application.Models.Git.CommentType.System,
+            _ => Application.Models.Git.CommentType.Text
+        };
     }
 }
 

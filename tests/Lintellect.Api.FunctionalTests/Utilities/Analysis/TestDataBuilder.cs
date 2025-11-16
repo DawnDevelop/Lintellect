@@ -1,9 +1,9 @@
 using Bogus;
 
-namespace Lintellect.Api.functionaltests.Utilities;
+namespace Lintellect.Api.FunctionalTests.Utilities.Analysis;
 
 /// <summary>
-/// Fluent builder for creating test data.
+/// Fluent builder for creating analysis test data.
 /// </summary>
 public sealed class TestDataBuilder
 {
@@ -12,9 +12,10 @@ public sealed class TestDataBuilder
 
     public TestDataBuilder WithValidGitInfo()
     {
-        _request.GitInfo = new GitInfo(_faker.UniqueIndex,
-            _faker.Random.AlphaNumeric(40),
-            _faker.Lorem.Word(),
+        _request.GitInfo = new GitInfo(
+            _faker.Random.Int(1, 10000), // Valid PR ID
+            _faker.Random.AlphaNumeric(40), // Commit SHA
+            "TestRepo", // Repository name
             EGitInfoType.PullRequest,
             "TestProject");
 
@@ -83,10 +84,40 @@ public sealed class TestDataBuilder
         return _request;
     }
 
+    public TestDataBuilder WithPullRequestId(int pullRequestId)
+    {
+        if (_request.GitInfo != null)
+        {
+            _request.GitInfo = _request.GitInfo with { PullRequestId = pullRequestId };
+        }
+        return this;
+    }
+
+    public TestDataBuilder WithRepositoryName(string repositoryName)
+    {
+        if (_request.GitInfo != null)
+        {
+            _request.GitInfo = _request.GitInfo with { RepositoryName = repositoryName };
+        }
+        return this;
+    }
+
+    public TestDataBuilder WithProjectName(string projectName)
+    {
+        if (_request.GitInfo != null)
+        {
+            _request.GitInfo = _request.GitInfo with { ProjectName = projectName };
+        }
+        return this;
+    }
+
     public static AnalysisRequest ValidRequest()
     {
         return new TestDataBuilder()
             .WithValidGitInfo()
+            .WithPullRequestId(123) // Use a consistent PR ID for tests
+            .WithRepositoryName("TestRepo")
+            .WithProjectName("TestProject")
             .WithGitProvider(EGitProvider.GitHub)
             .WithLanguage(EProgrammingLanguage.CSharp)
             .WithEnabledFeatures()
@@ -104,3 +135,4 @@ public sealed class TestDataBuilder
             .Build();
     }
 }
+

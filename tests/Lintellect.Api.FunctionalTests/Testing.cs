@@ -1,66 +1,70 @@
-using Lintellect.Api.functionaltests.Setup;
+using Lintellect.Api.FunctionalTests.Setup;
 using Lintellect.Api.Infrastructure.Persistence;
+using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Respawn;
 
-namespace Lintellect.Api.functionaltests;
+namespace Lintellect.Api.FunctionalTests;
 
-/// <summary>
-/// Base class for all functional tests.
-/// </summary>
+
 [SetUpFixture]
-public abstract class Testing
+public partial class Testing
 {
-    public HttpClient Client { get; set; }
-    public CustomWebApplicationFactory Factory { get; set; }
+    public static HttpClient Client { get; set; }
+    public static LintellectApiFixture WebApplicationFactory { get; set; }
 
-    private static Respawner _respawner;
+    public static string PostgresConnectionString { get; set; }
 
-    private static string ConnectionString { get; set; }
+    private static IServiceScopeFactory _scopeFactory = null!;
 
     [OneTimeSetUp]
-    public async Task InitializeAsync()
+    public async Task RunBeforeAnyTests()
     {
-        var db = new TestDatabase();
-        await db.InitializeAsync();
+        WebApplicationFactory = new LintellectApiFixture();
+        await WebApplicationFactory.InitializeAsync();
 
-        // Reset database state before each test
-        _respawner = await Respawner.CreateAsync(
-            db.ConnectionString,
-            new RespawnerOptions
-            {
-                TablesToIgnore = ["__EFMigrationsHistory"]
-            });
-        ConnectionString = db.ConnectionString;
-        Factory = new CustomWebApplicationFactory(db.ConnectionString);
-        Client = Factory.CreateClient();
+        Client = WebApplicationFactory.CreateClient();
+        Client.DefaultRequestHeaders.Add("Api-Key", LintellectApiFixture.API_KEY);
 
-        await _respawner.ResetAsync(db.ConnectionString);
+        await WebApplicationFactory.InitializeDbConnectionAsync();
+
+
+        PostgresConnectionString = WebApplicationFactory.PostgresConnectionString!;
+        _scopeFactory = WebApplicationFactory.Services.GetRequiredService<IServiceScopeFactory>();
     }
 
     [OneTimeTearDown]
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
         Client?.Dispose();
-        Factory?.Dispose();
-        return Task.CompletedTask;
+
+        await WebApplicationFactory.DisposeAsync();
     }
 
-    protected async Task<T> GetService<T>() where T : notnull
+    public static async Task<T> GetService<T>() where T : notnull
     {
-        using var scope = Factory.Services.CreateScope();
+        using var scope = WebApplicationFactory.Services.CreateScope();
         return scope.ServiceProvider.GetRequiredService<T>();
     }
 
-    protected async Task<ApplicationDbContext> GetDbContext()
+    public static (IServiceScope Scope, ApplicationDbContext Context) GetDbContext()
     {
-        using var scope = Factory.Services.CreateScope();
-        return scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var scope = WebApplicationFactory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return (scope, context);
     }
 
     public static async Task ResetStateAsync()
     {
-        await _respawner.ResetAsync(ConnectionString);
+        await WebApplicationFactory.ResetAsync();
+    }
+
+    public static async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request)
+    {
+        using var scope = _scopeFactory.CreateScope();
+
+        var mediator = scope.ServiceProvider.GetRequiredService<ISender>();
+
+        return await mediator.Send(request);
     }
 }

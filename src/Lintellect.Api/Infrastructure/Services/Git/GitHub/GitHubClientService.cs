@@ -1,8 +1,7 @@
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
+using Lintellect.Api.Application.Models.Git;
 using Lintellect.Shared.Models;
-using Microsoft.TeamFoundation.SourceControl.WebApi;
-using Microsoft.VisualStudio.Services.WebApi;
 using Octokit;
 
 namespace Lintellect.Api.Infrastructure.Services.Git.GitHub;
@@ -101,7 +100,7 @@ public sealed class GitHubClientService : IGitClient
         }
     }
 
-    public async Task<GitPullRequest> GetPullRequestAsync(
+    public async Task<Lintellect.Api.Application.Models.Git.PullRequest> GetPullRequestAsync(
         string projectName,
         string repositoryName,
         int pullRequestId)
@@ -110,22 +109,24 @@ public sealed class GitHubClientService : IGitClient
         {
             var pr = await _client.PullRequest.Get(projectName, repositoryName, pullRequestId);
 
-            // Convert GitHub PR to Azure DevOps format for compatibility
-            return new GitPullRequest
+            return new Lintellect.Api.Application.Models.Git.PullRequest
             {
                 PullRequestId = pullRequestId,
                 Title = pr.Title,
                 Description = pr.Body,
                 SourceRefName = $"refs/heads/{pr.Head.Ref}",
                 TargetRefName = $"refs/heads/{pr.Base.Ref}",
-                Status = PullRequestStatus.Active,
+                Status = MapPullRequestStatus(pr.State),
                 CreatedBy = new IdentityRef
                 {
                     DisplayName = pr.User.Login,
-                    UniqueName = pr.User.Login
+                    UniqueName = pr.User.Login,
+                    Id = pr.User.Id.ToString(),
+                    Url = pr.User.HtmlUrl,
+                    ImageUrl = pr.User.AvatarUrl
                 },
-                CreationDate = pr.CreatedAt.DateTime,
-                LastMergeCommit = new GitCommitRef
+                CreationDate = pr.CreatedAt.UtcDateTime,
+                LastMergeCommit = new CommitRef
                 {
                     CommitId = pr.Head.Sha
                 }
@@ -175,7 +176,7 @@ public sealed class GitHubClientService : IGitClient
         }
     }
 
-    public async Task<GitPullRequestCommentThread> CreateCommentAsync(
+    public async Task<PullRequestCommentThread> CreateCommentAsync(
         string projectName,
         string repositoryName,
         int pullRequestId,
@@ -189,21 +190,26 @@ public sealed class GitHubClientService : IGitClient
                 pullRequestId,
                 comment);
 
-            // Convert to Azure DevOps format for compatibility
-            return new GitPullRequestCommentThread
+            return new PullRequestCommentThread
             {
                 Id = (int)issueComment.Id,
                 Comments =
                 [
-                    new() {
-                        Id = (short)issueComment.Id,
-                        Content = issueComment.Body,
+                    new PullRequestComment
+                    {
+                        Id = (int)issueComment.Id,
+                        Content = issueComment.Body ?? string.Empty,
                         Author = new IdentityRef
                         {
                             DisplayName = issueComment.User.Login,
-                            UniqueName = issueComment.User.Login
+                            UniqueName = issueComment.User.Login,
+                            Id = issueComment.User.Id.ToString(),
+                            Url = issueComment.User.HtmlUrl,
+                            ImageUrl = issueComment.User.AvatarUrl
                         },
-                        PublishedDate = issueComment.CreatedAt.DateTime
+                        PublishedDate = issueComment.CreatedAt.UtcDateTime,
+                        LastUpdatedDate = issueComment.UpdatedAt?.UtcDateTime,
+                        CommentType = CommentType.Text
                     }
                 ]
             };
@@ -215,7 +221,39 @@ public sealed class GitHubClientService : IGitClient
         }
     }
 
-    public async Task<GitPullRequestCommentThread> CreateCodeChangeCommentAsync(
+
+    public async Task<PullRequestCommentThread> GetPullRequestThreadContextAsync(string projectName, int pullRequestId, int prCommentId)
+    {
+        // GitHub API does not have "thread" resources in the same way as Azure DevOps.
+        // prCommentId corresponds to the GitHub comment ID.
+        var comment = await _client.Issue.Comment.Get(projectName, pullRequestId.ToString(), prCommentId);
+
+        return new PullRequestCommentThread
+        {
+            Id = (int)comment.Id,
+            Comments =
+            [
+                new PullRequestComment
+                {
+                    Id = (int)comment.Id,
+                    Content = comment.Body ?? string.Empty,
+                    Author = new IdentityRef
+                    {
+                        DisplayName = comment.User.Login,
+                        UniqueName = comment.User.Login,
+                        Id = comment.User.Id.ToString(),
+                        Url = comment.User.HtmlUrl,
+                        ImageUrl = comment.User.AvatarUrl
+                    },
+                    PublishedDate = comment.CreatedAt.UtcDateTime,
+                    LastUpdatedDate = comment.UpdatedAt?.UtcDateTime,
+                    CommentType = CommentType.Text
+                }
+            ]
+        };
+    }
+
+    public async Task<PullRequestCommentThread> CreateCodeChangeCommentAsync(
         string projectName,
         string repositoryName,
         int pullRequestId,
@@ -230,29 +268,54 @@ public sealed class GitHubClientService : IGitClient
             if (filePath != null && lineFrom.HasValue)
             {
                 // Create a review comment (inline suggestion)
+                // Note: GitHub's API requires the diff_hunk and position, which we need to calculate
+                // For now, we'll create a general comment with the suggestion format
+                var commentText = string.IsNullOrWhiteSpace(context)
+                    ? $"```suggestion\n{codeChange}\n```"
+                    : $"{context}\n\n```suggestion\n{codeChange}\n```";
+
                 var reviewComment = await _client.PullRequest.ReviewComment.Create(
                     projectName,
                     repositoryName,
                     pullRequestId,
-                    new PullRequestReviewCommentCreate(codeChange, "unknown", "unknown", 1));
+                    new PullRequestReviewCommentCreate(commentText, filePath, filePath, lineFrom.Value));
 
-                return new GitPullRequestCommentThread
+                return new PullRequestCommentThread
                 {
                     Id = (int)reviewComment.Id,
                     Comments =
                     [
-                        new Comment
+                        new PullRequestComment
                         {
-                            Id = (short)reviewComment.Id,
-                            Content = $"{context}\n\n```suggestion\n{codeChange}\n```",
+                            Id = (int)reviewComment.Id,
+                            Content = reviewComment.Body ?? string.Empty,
                             Author = new IdentityRef
                             {
                                 DisplayName = reviewComment.User.Login,
-                                UniqueName = reviewComment.User.Login
+                                UniqueName = reviewComment.User.Login,
+                                Id = reviewComment.User.Id.ToString(),
+                                Url = reviewComment.User.HtmlUrl,
+                                ImageUrl = reviewComment.User.AvatarUrl
                             },
-                            PublishedDate = reviewComment.CreatedAt.DateTime
+                            PublishedDate = reviewComment.CreatedAt.UtcDateTime,
+                            LastUpdatedDate = reviewComment.UpdatedAt.UtcDateTime,
+                            CommentType = CommentType.CodeChange
                         }
-                    ]
+                    ],
+                    ThreadContext = new CommentThreadContext
+                    {
+                        FilePath = filePath,
+                        RightFileStart = new CommentPosition
+                        {
+                            Line = lineFrom.Value,
+                            Offset = 1
+                        },
+                        RightFileEnd = new CommentPosition
+                        {
+                            Line = lineTo ?? lineFrom.Value,
+                            Offset = 1
+                        }
+                    }
                 };
             }
             else
@@ -269,7 +332,7 @@ public sealed class GitHubClientService : IGitClient
         }
     }
 
-    public async Task<GitPullRequest> AppendToDescriptionAsync(
+    public async Task<Lintellect.Api.Application.Models.Git.PullRequest> AppendToDescriptionAsync(
         string projectName,
         string repositoryName,
         int pullRequestId,
@@ -288,21 +351,24 @@ public sealed class GitHubClientService : IGitClient
 
             var updatedPr = await _client.PullRequest.Update(projectName, repositoryName, pullRequestId, update);
 
-            return new GitPullRequest
+            return new Lintellect.Api.Application.Models.Git.PullRequest
             {
                 PullRequestId = pullRequestId,
                 Title = updatedPr.Title,
                 Description = updatedPr.Body,
                 SourceRefName = $"refs/heads/{updatedPr.Head.Ref}",
                 TargetRefName = $"refs/heads/{updatedPr.Base.Ref}",
-                Status = PullRequestStatus.Active,
+                Status = MapPullRequestStatus(updatedPr.State),
                 CreatedBy = new IdentityRef
                 {
                     DisplayName = updatedPr.User.Login,
-                    UniqueName = updatedPr.User.Login
+                    UniqueName = updatedPr.User.Login,
+                    Id = updatedPr.User.Id.ToString(),
+                    Url = updatedPr.User.HtmlUrl,
+                    ImageUrl = updatedPr.User.AvatarUrl
                 },
-                CreationDate = updatedPr.CreatedAt.DateTime,
-                LastMergeCommit = new GitCommitRef
+                CreationDate = updatedPr.CreatedAt.UtcDateTime,
+                LastMergeCommit = new CommitRef
                 {
                     CommitId = updatedPr.Head.Sha
                 }
@@ -496,6 +562,19 @@ public sealed class GitHubClientService : IGitClient
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Maps a GitHub PullRequestState to the generic PullRequestStatus enum.
+    /// </summary>
+    private static Lintellect.Api.Application.Models.Git.PullRequestStatus MapPullRequestStatus(StringEnum<ItemState> state)
+    {
+        return state.Value switch
+        {
+            ItemState.Open => Lintellect.Api.Application.Models.Git.PullRequestStatus.Active,
+            ItemState.Closed => Lintellect.Api.Application.Models.Git.PullRequestStatus.Completed,
+            _ => Lintellect.Api.Application.Models.Git.PullRequestStatus.Active
+        };
     }
 
 }

@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Lintellect.Api\Lintellect.Api.csproj" />
+    <ProjectReference Include="..\Lintellect.Cli\Lintellect.Cli.csproj" />
   </ItemGroup>
 
 </Project>

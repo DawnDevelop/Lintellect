@@ -1,10 +1,11 @@
 using Lintellect.Api.Application.Messages.Commands.Analysis;
-using Mediator;
+using Lintellect.Api.Application.Messages.Queries;
+using Lintellect.Api.FunctionalTests.Utilities.Analysis;
+using static Lintellect.Api.FunctionalTests.Testing;
 
-namespace Lintellect.Api.functionaltests.Queries;
+namespace Lintellect.Api.FunctionalTests.QueryTests;
 
-[TestFixture]
-public class GetAnalysisStatusQueryTests : Testing
+public class GetAnalysisStatusQueryTests : BaseTestFixture
 {
     [Test]
     public async Task Handle_WithExistingJob_ReturnsJob()
@@ -12,15 +13,14 @@ public class GetAnalysisStatusQueryTests : Testing
         // Arrange
         var request = TestDataBuilder.ValidRequest();
         var submitCommand = new SubmitAnalysisCommand(request);
-        var mediator = await GetService<IMediator>();
 
         // Create a job first
-        var jobId = await mediator.Send(submitCommand);
+        var jobId = await SendAsync(submitCommand);
 
         var query = new GetAnalysisStatusQuery(jobId);
 
         // Act
-        var result = await mediator.Send(query);
+        var result = await SendAsync(query);
 
         // Assert
         result.ShouldNotBeNull();
@@ -35,10 +35,9 @@ public class GetAnalysisStatusQueryTests : Testing
         // Arrange
         var nonExistentJobId = Guid.NewGuid();
         var query = new GetAnalysisStatusQuery(nonExistentJobId);
-        var mediator = await GetService<IMediator>();
 
         // Act
-        var result = await mediator.Send(query);
+        var result = await SendAsync(query);
 
         // Assert
         result.ShouldBeNull();

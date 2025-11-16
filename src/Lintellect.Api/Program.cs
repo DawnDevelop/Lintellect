@@ -4,6 +4,7 @@ using Lintellect.Api.Apis;
 using Lintellect.Api.Apis.Authorization;
 using Lintellect.Api.Apis.Infrastructure;
 using Lintellect.Api.Apis.Options;
+using Lintellect.Api.Infrastructure.Extensions;
 using Lintellect.Api.Infrastructure.Persistence;
 using Lintellect.ServiceDefaults;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -20,7 +21,7 @@ builder.Logging.ClearProviders();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
-    options.SerializerOptions.PropertyNameCaseInsensitive = true;
+    options.SerializerOptions.PropertyNameCaseInsensitive = JsonExtensions.JsonSerializerOptions.PropertyNameCaseInsensitive;
 });
 
 builder.Services.AddLogging(x => x.AddConsole());
@@ -58,7 +59,6 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
-
 await app.MigrateAsync();
 
 app.UseExceptionHandler();
@@ -76,5 +76,4 @@ app.MapAzureDevopsWebhooksApi();
 
 await app.RunAsync();
 
-// Make Program class accessible to tests
 public partial class Program { }
