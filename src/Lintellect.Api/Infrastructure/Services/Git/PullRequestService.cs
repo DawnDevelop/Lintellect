@@ -135,7 +135,7 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
     /// <returns>The created comment thread.</returns>
     public async Task<PullRequestCommentThread> AddCommentAsync(
         AnalysisRequest analysisResult,
-        string comment)
+        string comment, int? threadId = null)
     {
         var gitClient = _clientFactory.CreateClient(analysisResult);
 
@@ -143,7 +143,8 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
             analysisResult.GitInfo!.ProjectName!,
             analysisResult.GitInfo!.RepositoryName,
             analysisResult.GitInfo!.PullRequestId,
-            comment);
+            comment,
+            threadId);
     }
 
     /// <summary>

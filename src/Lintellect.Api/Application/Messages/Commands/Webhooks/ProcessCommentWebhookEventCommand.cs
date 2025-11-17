@@ -21,7 +21,7 @@ public sealed record ProcessCommentWebhookEventCommand(WebhookEvent WebhookEvent
 public sealed class ProcessWebhookEventCommandHandler(
     ILogger<ProcessWebhookEventCommandHandler> logger,
     PullRequestService pullRequestService,
-    IAnalyzerServiceResolver analyzerResolver
+    IAnalyzerService analyzerService
     ) : IRequestHandler<ProcessCommentWebhookEventCommand>
 {
 
@@ -92,7 +92,7 @@ public sealed class ProcessWebhookEventCommandHandler(
         var context = BuildQuestionContext(question, [.. threadContext.Comments], customInstructions);
 
         // Answer the question
-        await AnswerQuestionAsync(analysisRequest, context, question, cancellationToken);
+        await AnswerQuestionAsync(analysisRequest, context, question, threadContext.Id, cancellationToken);
     }
 
     private Task HandleGitHubCommentAsync(WebhookEvent webhookEvent, CancellationToken cancellationToken)
@@ -138,16 +138,13 @@ public sealed class ProcessWebhookEventCommandHandler(
         var trimmed = comment.Trim();
 
         // Check if bot is mentioned
-        if (trimmed.Contains("Lintellect", StringComparison.OrdinalIgnoreCase) ||
+        if (trimmed.Contains("@lintellect", StringComparison.OrdinalIgnoreCase) ||
             trimmed.Contains("lintellect", StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
 
-        // Check if it starts with question words
-        var questionWords = new[] { "explain", "what", "how", "why", "can you", "help", "tell me", "?" };
-        return questionWords.Any(word => trimmed.StartsWith(word, StringComparison.OrdinalIgnoreCase)) ||
-               trimmed.EndsWith("?", StringComparison.OrdinalIgnoreCase);
+        return false;
     }
 
     /// <summary>
@@ -175,6 +172,7 @@ public sealed class ProcessWebhookEventCommandHandler(
       AnalysisRequest request,
       string threadContext,
       string question,
+      int threadId,
       CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -184,14 +182,14 @@ public sealed class ProcessWebhookEventCommandHandler(
 
         try
         {
-            var analyzer = analyzerResolver.GetAnalyzerService(request.AIAnalyzer);
             var instructions = await pullRequestService.GetCustomInstructionsAsync(request);
             var model = new AnalyzerServiceModel(request, instructions ?? string.Empty);
 
-            var answer = await analyzer.AnswerQuestionAsync(model, threadContext, question, cancellationToken);
+
+            var answer = await analyzerService.AnswerQuestionAsync(model, threadContext, question, cancellationToken);
 
             // Post answer back to PR
-            await pullRequestService.AddCommentAsync(request, answer);
+            await pullRequestService.AddCommentAsync(request, answer, threadId);
         }
         catch (Exception ex)
         {

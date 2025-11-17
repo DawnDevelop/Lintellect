@@ -22,7 +22,7 @@ public sealed record ProcessAnalysisJobCommand(
 public sealed class ProcessAnalysisJobCommandHandler(
     IApplicationDbContext context,
     PullRequestService prService,
-    IAnalyzerServiceResolver analyzerResolver) : IRequestHandler<ProcessAnalysisJobCommand, PullRequestAnalysisReportModel>
+    IAnalyzerService analyzerService) : IRequestHandler<ProcessAnalysisJobCommand, PullRequestAnalysisReportModel>
 {
     public async ValueTask<PullRequestAnalysisReportModel> Handle(ProcessAnalysisJobCommand request, CancellationToken cancellationToken)
     {
@@ -42,7 +42,6 @@ public sealed class ProcessAnalysisJobCommandHandler(
                     LinesAdded = 0,
                     LinesRemoved = 0
                 },
-                AnalyzerUsed = analysisRequest.AIAnalyzer.ToString(),
                 AnalyzedAt = DateTimeOffset.UtcNow,
                 InlineSuggestions = null
             };
@@ -65,12 +64,11 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
 
         // Step 2: Prepare analyzer and custom instructions
-        var analyzer = analyzerResolver.GetAnalyzerService(analysisRequest.AIAnalyzer);
         var customInstructions = await prService.GetCustomInstructionsAsync(analysisRequest);
         var aiAnalyzerModel = new AnalyzerServiceModel(analysisRequest, customInstructions ?? string.Empty);
 
         // Step 3: Execute analysis tasks in parallel
-        var analysisResults = await ExecuteAnalysisTasksAsync(analyzer, aiAnalyzerModel, diffs, analysisRequest, cancellationToken);
+        var analysisResults = await ExecuteAnalysisTasksAsync(analyzerService, aiAnalyzerModel, diffs, analysisRequest, cancellationToken);
 
         // Step 4: Post results to PR
         await PostResultsToPullRequestAsync(prService, analysisRequest, analysisResults, cancellationToken);
@@ -275,7 +273,6 @@ public sealed class ProcessAnalysisJobCommandHandler(
             Summary = results.Summary,
             DetailedAnalysis = results.DetailedAnalysis,
             DiffStatistics = BuildDiffStatistics(diffs),
-            AnalyzerUsed = analysisRequest.AIAnalyzer.ToString(),
             AnalyzedAt = DateTimeOffset.UtcNow,
             InlineSuggestions = results.InlineSuggestions.Count != 0 ? "Inline suggestions posted" : null
         };
@@ -342,6 +339,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
         var existingJob = await context.AnalysisJobs
             .Where(job =>
                 job.AnalysisRequest != null &&
+                job.Status == Domain.Enums.AnalysisStatus.Completed &&
                 job.AnalysisRequest.GitInfo != null &&
                 job.AnalysisRequest.GitInfo.PullRequestId == pullRequestId &&
                 job.AnalysisRequest.GitProvider == analysisRequest.GitProvider)

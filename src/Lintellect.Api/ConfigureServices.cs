@@ -60,9 +60,8 @@ public static class ConfigureServices
                 options.ApiKey ??= claudeApiKey;
             });
 
-            services.AddKeyedScoped<IAnalyzerService, ClaudeAnalyzerService>(
-                EAnalyzers.Claude,
-                (sp, key) =>
+            services.AddScoped<IAnalyzerService, ClaudeAnalyzerService>(
+                (sp) =>
                 {
                     var options = sp.GetRequiredService<IOptions<ClaudeAnalyzerOptions>>().Value;
                     var mcpServiceResolver = sp.GetRequiredService<IMcpServiceResolver>();
@@ -70,26 +69,31 @@ public static class ConfigureServices
                     return new ClaudeAnalyzerService(options, mcpServiceResolver);
                 });
         }
-
-        // Only register Semantic (AIFoundry) if configured
-        var semanticApiKey = configuration.GetValue<string>("SEMANTIC_API_KEY") ??
-                            configuration.GetSection("SemanticAnalyzer:ApiKey").Value;
-        var semanticEndpoint = configuration.GetValue<string>("SEMANTIC_ENDPOINT") ??
-                              configuration.GetSection("SemanticAnalyzer:Endpoint").Value;
-
-        if (!string.IsNullOrWhiteSpace(semanticApiKey) || !string.IsNullOrWhiteSpace(semanticEndpoint))
+        else
         {
+            var semanticApiKey = configuration.GetValue<string>("SEMANTIC_API_KEY") ??
+                        configuration.GetSection("SemanticAnalyzer:ApiKey").Value;
+
+            var semanticEndpoint = configuration.GetValue<string>("SEMANTIC_ENDPOINT") ??
+                                  configuration.GetSection("SemanticAnalyzer:Endpoint").Value;
+
+            var semanticDeploymentName = configuration.GetValue<string>("SEMANTIC_DEPLOYMENT_NAME") ??
+                                         configuration.GetSection("SemanticAnalyzer:DeploymentName").Value;
+
             services.Configure<SemanticAnalyzerOptions>(options =>
             {
                 configuration.GetSection("SemanticAnalyzer").Bind(options);
                 configureSemanticOptions?.Invoke(options);
+                
                 options.ApiKey ??= semanticApiKey;
                 options.Endpoint ??= semanticEndpoint;
+
+                options.DeploymentName ??= semanticDeploymentName;
+                options.DeploymentName ??= "gpt-4o"; //fallback
             });
 
-            services.AddKeyedScoped<IAnalyzerService, SemanticAnalyzerService>(
-                EAnalyzers.AIFoundry,
-                (sp, key) =>
+            services.AddScoped<IAnalyzerService, SemanticAnalyzerService>(
+                (sp) =>
                 {
                     var options = sp.GetRequiredService<IOptions<SemanticAnalyzerOptions>>().Value;
                     var mcpResolver = sp.GetRequiredService<IMcpServiceResolver>();
@@ -97,9 +101,6 @@ public static class ConfigureServices
                     return new SemanticAnalyzerService(options, mcpResolver, logger);
                 });
         }
-
-        // Register the resolver that picks the right analyzer based on configuration
-        services.AddScoped<IAnalyzerServiceResolver, AnalyzerServiceResolver>();
 
         services.AddKeyedSingleton<IMcpService, Context7McpService>(EMcpServer.Context7);
         services.AddKeyedSingleton<IMcpService, MicrosoftDocsMcpService>(EMcpServer.MicrosoftDocs);

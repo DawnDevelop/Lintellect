@@ -291,7 +291,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
 
             _logger.LogDebug("Using ApiKey authentication for Azure OpenAI chat completion");
             builder.AddAzureOpenAIChatCompletion(
-                     deploymentName: options.DeploymentName,
+                     deploymentName: options.DeploymentName!,
                      endpoint: options.Endpoint,
                      apiKey: options.ApiKey);
         }
@@ -304,7 +304,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
 
             _logger.LogDebug("Using TokenCredential authentication for Azure OpenAI chat completion");
             builder.AddAzureOpenAIChatCompletion(
-                     deploymentName: options.DeploymentName,
+                     deploymentName: options.DeploymentName!,
                      endpoint: options.Endpoint!,
                      options.TokenCredential);
         }

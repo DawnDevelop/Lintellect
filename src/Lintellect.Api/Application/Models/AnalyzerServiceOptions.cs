@@ -50,7 +50,7 @@ public sealed class SemanticAnalyzerOptions
     /// <summary>
     /// The deployment name or model to use.
     /// </summary>
-    public string DeploymentName { get; set; } = "gpt-4o";
+    public string? DeploymentName { get; set; }
 
     /// <summary>
     /// Maximum tokens for the response.

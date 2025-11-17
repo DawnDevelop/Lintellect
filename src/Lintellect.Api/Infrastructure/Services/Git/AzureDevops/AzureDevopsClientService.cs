@@ -434,7 +434,8 @@ public class AzureDevopsClientService : IGitClient
         string projectName,
         string repositoryName,
         int pullRequestId,
-        string comment)
+        string comment,
+        int? threadId = null)
     {
         var gitClient = await GetHttpGitClient();
 
@@ -451,13 +452,15 @@ public class AzureDevopsClientService : IGitClient
             Status = Microsoft.TeamFoundation.SourceControl.WebApi.CommentThreadStatus.Active
         };
 
-        var azureDevOpsThread = await gitClient.CreateThreadAsync(
-            thread,
-            projectName,
-            repositoryName,
-            pullRequestId);
-
-        return MapToGenericCommentThread(azureDevOpsThread);
+        GitPullRequestCommentThread threadResult = threadId.HasValue
+            ? await gitClient.UpdateThreadAsync(
+                thread, projectName, repositoryName, pullRequestId, threadId.Value)
+            : await gitClient.CreateThreadAsync(
+                thread,
+                projectName,
+                repositoryName,
+                pullRequestId);
+        return MapToGenericCommentThread(threadResult);
     }
 
     public async Task<PullRequestCommentThread> CreateCodeChangeCommentAsync(
@@ -806,7 +809,7 @@ public class AzureDevopsClientService : IGitClient
     {
         var gitClient = await GetHttpGitClient();
 
-        var thread = await gitClient.GetPullRequestThreadAsync(projectName, pullRequestId, prCommentId);
+        var thread = await gitClient.GetPullRequestThreadAsync(projectName, repositoryName, pullRequestId, prCommentId);
 
         return MapToGenericCommentThread(thread);
     }
