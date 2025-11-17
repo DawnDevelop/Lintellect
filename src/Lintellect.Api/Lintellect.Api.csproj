@@ -12,10 +12,10 @@
 		<DockerfileContext>..\..</DockerfileContext>
 		
 		<!-- Version and Release Information -->
-		<Version>0.0.13</Version>
-		<AssemblyVersion>0.0.13.0</AssemblyVersion>
-		<FileVersion>0.0.13.0</FileVersion>
-		<InformationalVersion>0.0.13</InformationalVersion>
+		<Version>0.0.14</Version>
+		<AssemblyVersion>0.0.14.0</AssemblyVersion>
+		<FileVersion>0.0.14.0</FileVersion>
+		<InformationalVersion>0.0.14</InformationalVersion>
 		
 		<!-- Publishing Configuration -->
 		<AssemblyTitle>Lintellect API</AssemblyTitle>
