@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [API v0.1.0] - 2025-11-17
+
 ### Added
 - DELETE endpoint for analysis history (`/api/analysis/history`) to allow deletion of analysis jobs by job ID
 - Deep copy snapshot method for AnalysisRequest to prevent mutation during background processing
