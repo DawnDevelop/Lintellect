@@ -180,7 +180,7 @@ public sealed class GitHubClientService : IGitClient
         string projectName,
         string repositoryName,
         int pullRequestId,
-        string comment)
+        string comment, int? threadId = null)
     {
         try
         {

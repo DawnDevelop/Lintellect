@@ -28,11 +28,6 @@ public sealed class PullRequestAnalysisReportModel
     public required DiffStatistics DiffStatistics { get; init; }
 
     /// <summary>
-    /// The AI analyzer that was used.
-    /// </summary>
-    public required string AnalyzerUsed { get; init; }
-
-    /// <summary>
     /// When the analysis was performed.
     /// </summary>
     public required DateTimeOffset AnalyzedAt { get; init; }

@@ -66,7 +66,6 @@ public sealed class LintellectApiFixture : WebApplicationFactory<Program>
 
             // Replace external services with mocks
             services.AddScoped<IGitClientFactory, MockGitClientFactory>();
-            services.AddScoped<IAnalyzerServiceResolver, MockAnalyzerServiceResolver>();
 
             // Remove background services for testing to avoid race conditions
             var analysisBackgroundService = services.FirstOrDefault(s => s.ImplementationType == typeof(AnalysisBackgroundService));

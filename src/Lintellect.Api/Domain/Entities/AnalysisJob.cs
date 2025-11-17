@@ -29,7 +29,7 @@ public sealed class AnalysisJob : BaseAuditableEntity
         ArgumentNullException.ThrowIfNull(cliAnalysisResult);
 
         Status = AnalysisStatus.Pending;
-        AnalysisRequest = CloneAnalysisRequest(cliAnalysisResult);
+        AnalysisRequest = cliAnalysisResult;
 
         AddDomainEvent(new AnalysisJobCreatedEvent(Id,
             cliAnalysisResult.GitInfo?.ProjectName ?? "Unknown",
@@ -123,7 +123,6 @@ public sealed class AnalysisJob : BaseAuditableEntity
             EnableDescriptionSummary = request.EnableDescriptionSummary,
             EnableAzureDevopsCodeOwners = request.EnableAzureDevopsCodeOwners,
             McpServer = request.McpServer is null ? [] : [.. request.McpServer],
-            AIAnalyzer = request.AIAnalyzer
         };
     }
 }

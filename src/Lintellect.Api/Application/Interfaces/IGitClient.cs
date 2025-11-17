@@ -72,7 +72,8 @@ public interface IGitClient
         string projectName,
         string repositoryName,
         int pullRequestId,
-        string comment);
+        string comment,
+        int? threadId = null);
 
     /// <summary>
     /// Creates a new code change suggestion comment on a pull request.
@@ -148,4 +149,5 @@ public interface IGitClient
     /// the <see cref="PullRequestCommentThread"/> with details of the specified comment thread.
     /// </returns>
     Task<PullRequestCommentThread> GetPullRequestThreadContextAsync(string projectName, string repositoryName, int pullRequestId, int prCommentId);
+    
 }

@@ -50,7 +50,7 @@ public sealed class MockGitClient : IGitClient
         return Task.FromResult<string?>("Mock file content");
     }
 
-    public Task<PullRequestCommentThread> CreateCommentAsync(string projectName, string repositoryName, int pullRequestId, string comment)
+    public Task<PullRequestCommentThread> CreateCommentAsync(string projectName, string repositoryName, int pullRequestId, string comment, int? threadId = null)
     {
         return Task.FromResult(new PullRequestCommentThread
         {

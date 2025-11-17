@@ -2,17 +2,6 @@
 
 
 /// <summary>
-/// Mock implementation of IAnalyzerServiceResolver for testing.
-/// </summary>
-public sealed class MockAnalyzerServiceResolver : IAnalyzerServiceResolver
-{
-    public IAnalyzerService GetAnalyzerService(EAnalyzers provider)
-    {
-        return new MockAnalyzerService();
-    }
-}
-
-/// <summary>
 /// Mock implementation of IAnalyzerService for testing.
 /// </summary>
 public sealed class MockAnalyzerService : IAnalyzerService

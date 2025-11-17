@@ -19,6 +19,4 @@ public class AnalysisRequest
     public bool EnableAzureDevopsCodeOwners { get; set; } = false;
 
     public List<EMcpServer> McpServer { get; set; } = [];
-
-    public EAnalyzers AIAnalyzer { get; set; } = EAnalyzers.AIFoundry;
 }

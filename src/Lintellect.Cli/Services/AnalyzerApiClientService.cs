@@ -37,6 +37,12 @@ internal class AnalyzerApiClientService : IDisposable
 
         var jsonContent = JsonSerializer.Serialize(request);
 
+        Console.WriteLine($"""
+            Sending Post request to {_httpClient.BaseAddress}{StartAnalysisEndpoint}:
+
+            {jsonContent}
+            """);
+
         using StringContent content = new(
             jsonContent,
             Encoding.UTF8,

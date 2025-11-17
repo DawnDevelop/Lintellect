@@ -7,14 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [CLI v0.0.12] - 2025-11-17
-
-### Changed
-
-- Version bump for compatibility with API v0.0.12
-
-## [API v0.0.12] - 2025-11-17
-
 ### Added
 
 - Enhanced webhook comment processing for Azure DevOps PRs with question answering
