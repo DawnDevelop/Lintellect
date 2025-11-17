@@ -138,13 +138,8 @@ public sealed class ProcessWebhookEventCommandHandler(
         var trimmed = comment.Trim();
 
         // Check if bot is mentioned
-        if (trimmed.Contains("@lintellect", StringComparison.OrdinalIgnoreCase) ||
-            trimmed.Contains("lintellect", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        return false;
+        return trimmed.StartsWith("@lintellect", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.StartsWith("lintellect", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
