@@ -8,18 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ## [CLI v0.0.12] - 2025-11-17
 
-### Added
-- TBD
-
 ### Changed
-- TBD
 
-### Fixed
-- TBD
-
-### Security
-- TBD
-
+- Version bump for compatibility with API v0.0.12
 
 ### Fixed
 
