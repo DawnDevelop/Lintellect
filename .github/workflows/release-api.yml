@@ -261,6 +261,8 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           path: ./binaries
+          pattern: lintellect-api-*
+          merge-multiple: false
 
       - name: Write release notes to file
         run: |
