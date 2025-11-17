@@ -32,6 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `AnalysisPromptBuilder` class (renamed to `PromptBuilder`)
 - Per-request credential override support (credentials must be configured at application level)
 
+## [CLI v0.0.11] - 2025-11-17
+
+### Changed
+- Version bump for compatibility with API v0.0.10
+
 ## [CLI v0.0.10] - 2025-10-28
 
 ### Added
