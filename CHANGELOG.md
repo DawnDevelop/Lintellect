@@ -6,20 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
 ## [API v0.0.12] - 2025-11-17
 
 ### Added
-- TBD
+
+- Enhanced webhook comment processing for Azure DevOps PRs with question answering
+- Thread context support for webhook comment responses
 
 ### Changed
-- TBD
 
-### Fixed
-- TBD
-
-### Security
-- TBD
-
+- Simplified analyzer service architecture by removing IAnalyzerServiceResolver
+- Updated prompt templates for better AI responses
 
 ### Fixed
 
