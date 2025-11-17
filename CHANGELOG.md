@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [API v0.0.12] - 2025-11-17
+
+### Added
+
+- Enhanced webhook comment processing for Azure DevOps PRs with question answering
+- Thread context support for webhook comment responses
+
+### Changed
+
+- Simplified analyzer service architecture by removing IAnalyzerServiceResolver
+- Updated prompt templates for better AI responses
+
 ### Fixed
 
 - Docker build pipeline
