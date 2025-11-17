@@ -12,10 +12,10 @@
 		<DockerfileContext>..\..</DockerfileContext>
 		
 		<!-- Version and Release Information -->
-		<Version>0.0.10</Version>
-		<AssemblyVersion>0.0.10.0</AssemblyVersion>
-		<FileVersion>0.0.10.0</FileVersion>
-		<InformationalVersion>0.0.10</InformationalVersion>
+		<Version>0.0.11</Version>
+		<AssemblyVersion>0.0.11.0</AssemblyVersion>
+		<FileVersion>0.0.11.0</FileVersion>
+		<InformationalVersion>0.0.11</InformationalVersion>
 		
 		<!-- Publishing Configuration -->
 		<AssemblyTitle>Lintellect API</AssemblyTitle>
@@ -46,7 +46,7 @@
 		<SelfContained>false</SelfContained>
 		<PublishSingleFile>false</PublishSingleFile>
 		<ContainerRepository Condition="'$(ContainerRepository)' == ''">dawndevelop/lintellect-api</ContainerRepository>
-		<ContainerImageTag Condition="'$(ContainerImageTag)' == ''">0.0.10</ContainerImageTag>
+		<ContainerImageTag Condition="'$(ContainerImageTag)' == ''">0.0.11</ContainerImageTag>
 		<ContainerRegistry Condition="'$(ContainerRegistry)' == '' AND '$(ContainerRepository)' != 'API'">ghcr.io</ContainerRegistry>
 		<ContainerRegistry Condition="'$(ContainerRepository)' == 'API'"></ContainerRegistry>
 	</PropertyGroup>
