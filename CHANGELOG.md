@@ -8,20 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- TBD
+
+- Docker build pipeline
 
 ## [API v0.0.11] - 2025-11-17
 
 ### Fixed
+
 - Fixed GitHub Actions workflow permissions for pushing Docker images to GHCR and creating releases
 
 ## [API v0.0.10] - 2025-11-17
 
 ### Added
+
 - DELETE endpoint for analysis history (`/api/analysis/history`) to allow deletion of analysis jobs by job ID
 - Deep copy snapshot method for AnalysisRequest to prevent mutation during background processing
 
 ### Changed
+
 - **BREAKING**: Removed credential fields (`AccessToken`, `AzureDevOpsOrgUrl`) from `AnalysisRequest` model. Credentials are now only configured at the application level via configuration or environment variables
 - **BREAKING**: Changed `AnalysisRequest` storage from `JsonDocument` to EF Core owned entity for better type safety and queryability
 - Improved exception handling with comprehensive error responses for unhandled exceptions
@@ -32,11 +36,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved query performance by using direct property access instead of JSON path queries
 
 ### Fixed
+
 - Fixed exception handler to properly handle all exceptions, not just registered types
 - Fixed analysis request snapshot creation to prevent shared reference mutations
 - Fixed query filtering to use strongly-typed properties instead of JSON navigation
 
 ### Removed
+
 - `ICredentialResolver` interface and `CredentialResolver` implementation (credentials now resolved from configuration only)
 - `SanitizedAnalysisRequest` class (no longer needed with owned entity approach)
 - `AnalysisPromptBuilder` class (renamed to `PromptBuilder`)
@@ -45,93 +51,118 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [CLI v0.0.11] - 2025-11-17
 
 ### Changed
+
 - Version bump for compatibility with API v0.0.10
 
 ## [CLI v0.0.10] - 2025-10-28
 
 ### Added
+
 - TBD
 
 ### Changed
+
 - TBD
 
 ### Fixed
+
 - TBD
 
 ### Security
+
 - TBD
 
 ## [CLI v0.0.9] - 2025-10-28
+
 ## [API v0.0.9] - 2025-10-28
 
 ### Added
+
 - TBD
 
 ### Changed
+
 - TBD
 
 ### Fixed
+
 - TBD
 
 ### Security
+
 - TBD
 
 ## [CLI v0.0.8] - 2025-10-27
 
 ### Added
+
 - TBD
 
 ### Changed
+
 - TBD
 
 ### Fixed
+
 - TBD
 
 ### Security
+
 - TBD
 
 ## [API v0.0.7] - 2025-10-27
 
 ### Added
+
 - TBD
 
 ### Changed
+
 - TBD
 
 ### Fixed
+
 - TBD
 
 ### Security
+
 - TBD
 
 ## [CLI v0.0.7] - 2025-10-27
 
 ### Added
+
 - TBD
 
 ### Changed
+
 - TBD
 
 ### Fixed
+
 - TBD
 
 ### Security
+
 - TBD
 
 ## [API v0.0.6] - 2025-10-27
 
 ### Added
+
 - TBD
 
 ### Changed
+
 - TBD
 
 ### Fixed
+
 - TBD
 
 ### Security
-- TBD
 
+- TBD
 
 ## [CLI v0.0.6] - 2025-10-27
 
