@@ -7,6 +7,7 @@ using Lintellect.Shared.Models;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using ModelContextProtocol.Client;
 
 namespace Lintellect.Api.Infrastructure.Services.AI;
@@ -239,14 +240,16 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
         var chatHistory = new ChatHistory(systemPrompt);
         chatHistory.AddUserMessage(_promptBuilder.BuildInlineSuggestionsPrompt(analysisResult.AnalysisResult, diffs));
 
+#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         var executionSettings = new AzureOpenAIPromptExecutionSettings
         {
             MaxTokens = _options.MaxTokens,
-
+            SetNewMaxCompletionTokensEnabled = true,
             Temperature = 0.2, // Lower temperature for more precise suggestions
             FunctionChoiceBehavior = FunctionChoiceBehavior,
             ResponseFormat = typeof(InlineSuggestionsResponse) // Request JSON output for structured parsing
         };
+#pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
         var response = await chatCompletionService.GetChatMessageContentAsync(
             chatHistory,
