@@ -1,5 +1,4 @@
 using System.Data.Common;
-using Lintellect.Api.FunctionalTests.Mocks.AI;
 using Lintellect.Api.FunctionalTests.Mocks.Git;
 using Lintellect.Api.Infrastructure.Persistence;
 using Lintellect.Api.Infrastructure.Services.Analysis;

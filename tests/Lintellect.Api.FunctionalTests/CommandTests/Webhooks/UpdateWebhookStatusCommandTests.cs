@@ -1,7 +1,4 @@
 using Lintellect.Api.Application.Messages.Commands.Webhooks;
-using Lintellect.Api.Domain.Entities;
-using Lintellect.Api.Domain.Enums;
-using Lintellect.Api.FunctionalTests.Utilities.Webhooks;
 using static Lintellect.Api.FunctionalTests.Testing;
 
 namespace Lintellect.Api.FunctionalTests.CommandTests.Webhooks;

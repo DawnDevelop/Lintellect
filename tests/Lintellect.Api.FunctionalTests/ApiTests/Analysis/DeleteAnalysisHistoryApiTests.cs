@@ -1,6 +1,4 @@
 using Lintellect.Api.Application.Messages.Commands.Analysis;
-using Lintellect.Api.FunctionalTests.Utilities.Analysis;
-using Lintellect.Api.FunctionalTests.Utilities.Http;
 using static Lintellect.Api.FunctionalTests.Testing;
 
 namespace Lintellect.Api.FunctionalTests.ApiTests.Analysis;

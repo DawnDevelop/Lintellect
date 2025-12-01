@@ -1,6 +1,5 @@
 using Lintellect.Api.Application.Messages.Commands.Webhooks;
 using Lintellect.Api.Domain.Entities;
-using Lintellect.Api.FunctionalTests.Utilities.Webhooks;
 using Mediator;
 using static Lintellect.Api.FunctionalTests.Testing;
 

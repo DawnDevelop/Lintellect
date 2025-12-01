@@ -149,5 +149,5 @@ public interface IGitClient
     /// the <see cref="PullRequestCommentThread"/> with details of the specified comment thread.
     /// </returns>
     Task<PullRequestCommentThread> GetPullRequestThreadContextAsync(string projectName, string repositoryName, int pullRequestId, int prCommentId);
-    
+
 }

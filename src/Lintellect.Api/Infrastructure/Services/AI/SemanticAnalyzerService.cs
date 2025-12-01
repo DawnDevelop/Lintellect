@@ -7,7 +7,6 @@ using Lintellect.Shared.Models;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
 using ModelContextProtocol.Client;
 
 namespace Lintellect.Api.Infrastructure.Services.AI;

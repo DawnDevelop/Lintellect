@@ -1,6 +1,3 @@
-using Lintellect.Api.Application.Models.Webhooks;
-using Lintellect.Api.FunctionalTests.Utilities.Http;
-using Lintellect.Api.FunctionalTests.Utilities.Webhooks;
 using static Lintellect.Api.FunctionalTests.Testing;
 
 namespace Lintellect.Api.FunctionalTests.ApiTests.Webhooks;
