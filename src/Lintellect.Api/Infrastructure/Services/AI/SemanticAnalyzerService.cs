@@ -101,7 +101,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
         var executionSettings = new AzureOpenAIPromptExecutionSettings
         {
             MaxTokens = _options.MaxTokens,
-            Temperature = 0.2, // Lower temperature for more precise suggestions
+            Temperature = _options.Temperature, // Lower temperature for more precise suggestions
             FunctionChoiceBehavior = FunctionChoiceBehavior,
             SetNewMaxCompletionTokensEnabled = true,
             ResponseFormat = "json_object" // Request JSON output for structured parsing
@@ -156,7 +156,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
         var executionSettings = new AzureOpenAIPromptExecutionSettings
         {
             MaxTokens = 500, // Keep summaries concise
-            Temperature = 0.3, // Lower temperature for more focused summaries
+            Temperature = _options.Temperature, // Lower temperature for more focused summaries
             SetNewMaxCompletionTokensEnabled = true,
             FunctionChoiceBehavior = FunctionChoiceBehavior
         };
@@ -256,7 +256,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
         {
             MaxTokens = _options.MaxTokens,
             SetNewMaxCompletionTokensEnabled = true,
-            Temperature = 0.2, // Lower temperature for more precise suggestions
+            Temperature = _options.Temperature,
             FunctionChoiceBehavior = FunctionChoiceBehavior,
             ResponseFormat = typeof(InlineSuggestionsResponse) // Request JSON output for structured parsing
         };
