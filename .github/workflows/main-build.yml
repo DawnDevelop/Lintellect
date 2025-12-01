@@ -12,6 +12,10 @@ on:
       - "*.md"
       - ".github/workflows/dependency-update.yml"
 
+permissions:
+  contents: write
+  packages: write
+
 env:
   DOTNET_VERSION: "10.0.x"
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
