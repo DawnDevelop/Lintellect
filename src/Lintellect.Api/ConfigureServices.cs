@@ -84,7 +84,7 @@ public static class ConfigureServices
             {
                 configuration.GetSection("SemanticAnalyzer").Bind(options);
                 configureSemanticOptions?.Invoke(options);
-                
+
                 options.ApiKey ??= semanticApiKey;
                 options.Endpoint ??= semanticEndpoint;
 
