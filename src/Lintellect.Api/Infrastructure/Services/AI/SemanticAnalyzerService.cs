@@ -48,13 +48,16 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
         var chatHistory = new ChatHistory(systemPrompt);
         chatHistory.AddUserMessage(_promptBuilder.BuildAnalysisPrompt(analysisResult.AnalysisResult, diffs));
 
+#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         var executionSettings = new AzureOpenAIPromptExecutionSettings
         {
             MaxTokens = _options.MaxTokens,
             Temperature = _options.Temperature,
             FunctionChoiceBehavior = FunctionChoiceBehavior,
+            SetNewMaxCompletionTokensEnabled = true,
             ResponseFormat = "text" // Use text for detailed markdown analysis
         };
+#pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
         var response = await chatCompletionService.GetChatMessageContentAsync(
             chatHistory,
@@ -94,13 +97,16 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
 
         chatHistory.AddUserMessage(userMessage);
 
+#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         var executionSettings = new AzureOpenAIPromptExecutionSettings
         {
             MaxTokens = _options.MaxTokens,
             Temperature = 0.2, // Lower temperature for more precise suggestions
             FunctionChoiceBehavior = FunctionChoiceBehavior,
+            SetNewMaxCompletionTokensEnabled = true,
             ResponseFormat = "json_object" // Request JSON output for structured parsing
         };
+#pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
         var response = await chatCompletionService.GetChatMessageContentAsync(
             chatHistory,
@@ -146,12 +152,15 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
         var chatHistory = new ChatHistory(systemPrompt);
         chatHistory.AddUserMessage(PromptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs));
 
+#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         var executionSettings = new AzureOpenAIPromptExecutionSettings
         {
             MaxTokens = 500, // Keep summaries concise
             Temperature = 0.3, // Lower temperature for more focused summaries
+            SetNewMaxCompletionTokensEnabled = true,
             FunctionChoiceBehavior = FunctionChoiceBehavior
         };
+#pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
         var response = await chatCompletionService.GetChatMessageContentAsync(
             chatHistory,
@@ -192,13 +201,16 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
             {question}
             """);
 
+#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         var executionSettings = new AzureOpenAIPromptExecutionSettings
         {
             MaxTokens = _options.MaxTokens,
             Temperature = _options.Temperature,
             FunctionChoiceBehavior = FunctionChoiceBehavior,
+            SetNewMaxCompletionTokensEnabled = true,
             ResponseFormat = "text" // Use text for markdown answers
         };
+#pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
         var response = await chatCompletionService.GetChatMessageContentAsync(
             chatHistory,
