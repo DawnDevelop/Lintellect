@@ -271,7 +271,7 @@ public class AzureDevopsClientService : IGitClient
         var baseContent = await GetFileTextAsync(projectName, repositoryName, filePath, baseCommitId);
         var targetContent = await GetFileTextAsync(projectName, repositoryName, filePath, targetCommitId);
 
-        return DiffGenerationHelper.GenerateUnifiedDiff(filePath, baseContent, targetContent);
+        return DiffGenerationHelper.GenerateUnifiedDiff(baseContent, targetContent);
     }
 
     /// <inheritdoc />
@@ -340,9 +340,7 @@ public class AzureDevopsClientService : IGitClient
         string projectName,
         string repositoryName,
         int pullRequestId,
-        int contextLines = 3,
-        int maxNewFileLines = 50,
-        int maxLinesPerFile = 1000)
+        int contextLines)
     {
         var gitClient = await GetHttpGitClient();
         var pullRequest = await GetPullRequestAsync(projectName, repositoryName, pullRequestId);
@@ -362,8 +360,7 @@ public class AzureDevopsClientService : IGitClient
             {
                 Version = pullRequest.SourceRefName?.Replace("refs/heads/", string.Empty) ?? string.Empty,
                 VersionType = GitVersionType.Branch
-            })
-            ;
+            });
 
         var compactDiffs = new Dictionary<string, string>();
         commitDiffs.Changes = commitDiffs.Changes.Where(x => !x.Item.IsFolder);
@@ -390,43 +387,18 @@ public class AzureDevopsClientService : IGitClient
             }
 
             var filePath = change.Item.Path;
-            var compactDiff = await GetFileCompactDiffAsync(
-                projectName,
-                repositoryName,
-                filePath,
-                baseCommitId,
-                targetCommitId,
-                contextLines,
-                maxNewFileLines,
-                maxLinesPerFile)
-                ;
+            var baseContent = await GetFileTextAsync(projectName, repositoryName, filePath, baseCommitId);
+            var targetContent = await GetFileTextAsync(projectName, repositoryName, filePath, targetCommitId);
 
-            if (compactDiff is not null)
+            var diff = DiffGenerationHelper.GenerateUnifiedDiff(baseContent, targetContent, contextLines);
+
+            if (diff is not null)
             {
-                compactDiffs[filePath] = compactDiff;
+                compactDiffs[filePath] = diff;
             }
         }
 
         return compactDiffs;
-    }
-
-    /// <summary>
-    /// Gets a compact diff for a single file showing only changed hunks with context.
-    /// </summary>
-    private async Task<string?> GetFileCompactDiffAsync(
-        string projectName,
-        string repositoryName,
-        string filePath,
-        string baseCommitId,
-        string targetCommitId,
-        int contextLines,
-        int maxNewFileLines,
-        int maxLinesPerFile)
-    {
-        var baseContent = await GetFileTextAsync(projectName, repositoryName, filePath, baseCommitId);
-        var targetContent = await GetFileTextAsync(projectName, repositoryName, filePath, targetCommitId);
-
-        return DiffGenerationHelper.GenerateCompactDiff(filePath, baseContent, targetContent, contextLines, maxNewFileLines, maxLinesPerFile);
     }
 
     /// <inheritdoc />

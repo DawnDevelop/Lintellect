@@ -25,9 +25,7 @@ public interface IGitClient
         string projectName,
         string repositoryName,
         int pullRequestId,
-        int contextLines = 3,
-        int maxNewFileLines = 50,
-        int maxLinesPerFile = 1000);
+        int contextLines);
 
     /// <summary>
     /// Retrieves full pull request diffs (entire file contents).

@@ -15,9 +15,7 @@ public sealed class MockGitClient : IGitClient
         });
     }
 
-    public Task<Dictionary<string, string>> GetPullRequestCompactDiffsAsync(
-        string projectName, string repositoryName, int pullRequestId,
-        int contextLines = 3, int maxNewFileLines = 50, int maxLinesPerFile = 1000)
+    public Task<Dictionary<string, string>> GetPullRequestCompactDiffsAsync(string projectName, string repositoryName, int pullRequestId, int contextLines = 3)
     {
         return Task.FromResult(new Dictionary<string, string>
         {

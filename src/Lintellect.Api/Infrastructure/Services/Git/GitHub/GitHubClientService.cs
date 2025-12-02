@@ -29,9 +29,7 @@ public sealed class GitHubClientService : IGitClient
         string projectName,
         string repositoryName,
         int pullRequestId,
-        int contextLines = 3,
-        int maxNewFileLines = 50,
-        int maxLinesPerFile = 1000)
+        int contextLines)
     {
         try
         {
@@ -45,12 +43,12 @@ public sealed class GitHubClientService : IGitClient
 
             foreach (var file in files)
             {
-                if (ShouldSkipFile(file, maxLinesPerFile))
+                if (ShouldSkipFile(file))
                 {
                     continue;
                 }
 
-                var diff = await GetFileDiffAsync(file, contextLines, maxNewFileLines);
+                var diff = await GetFileDiffAsync(file, contextLines);
                 if (!string.IsNullOrWhiteSpace(diff))
                 {
                     diffs[file.FileName] = diff;
@@ -390,16 +388,10 @@ public sealed class GitHubClientService : IGitClient
         }
     }
 
-    private static bool ShouldSkipFile(PullRequestFile file, int maxLinesPerFile)
+    private static bool ShouldSkipFile(PullRequestFile file)
     {
         // Skip binary files
         if (file.Status == "added" && file.Changes == 0)
-        {
-            return true;
-        }
-
-        // Skip files that are too large
-        if (file.Changes > maxLinesPerFile)
         {
             return true;
         }
@@ -413,11 +405,11 @@ public sealed class GitHubClientService : IGitClient
                fileName.Contains("obj/");
     }
 
-    private async Task<string> GetFileDiffAsync(PullRequestFile file, int contextLines, int maxNewFileLines)
+    private async Task<string> GetFileDiffAsync(PullRequestFile file, int contextLines)
     {
         try
         {
-            if (file.Status == "added" && file.Changes > maxNewFileLines)
+            if (file.Status == "added")
             {
                 // For new files, limit the content
                 var content = await _client.Repository.Content.GetAllContentsByRef(
@@ -427,8 +419,7 @@ public sealed class GitHubClientService : IGitClient
                     file.Sha);
 
                 var lines = content[0].Content.Split('\n');
-                var limitedLines = lines.Take(maxNewFileLines);
-                return string.Join('\n', limitedLines);
+                return string.Join('\n', lines);
             }
 
             return file.Patch ?? string.Empty;

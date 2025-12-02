@@ -25,9 +25,7 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
     /// <exception cref="InvalidOperationException">When PR information is invalid or missing.</exception>
     public async Task<Dictionary<string, string>> GetCompactDiffsAsync(
         AnalysisRequest analysisResult,
-        int contextLines = 3,
-        int maxNewFileLines = 50,
-        int maxLinesPerFile = 1000)
+        int contextLines)
     {
         // Get the appropriate client based on the provider
         var gitClient = _clientFactory.CreateClient(analysisResult);
@@ -36,9 +34,7 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
             analysisResult.GitInfo!.ProjectName!,
             analysisResult.GitInfo!.RepositoryName,
             analysisResult.GitInfo!.PullRequestId,
-            contextLines,
-            maxNewFileLines,
-            maxLinesPerFile);
+            contextLines);
 
         return diffs;
     }

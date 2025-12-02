@@ -59,6 +59,7 @@
 	<ItemGroup>
 		<PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
 		<PackageReference Include="Azure.Messaging.ServiceBus" />
+		<PackageReference Include="DiffPlex" />
 		<PackageReference Include="FluentValidation" />
 		<PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
 		<PackageReference Include="Mediator.Abstractions" />

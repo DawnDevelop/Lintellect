@@ -49,7 +49,9 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
         // Step 1: Get and filter diffs and findings
 
-        var diffs = await GetFilteredDiffsAsync(analysisRequest, cancellationToken);
+        var diffs = await prService.GetCompactDiffsAsync(
+            analysisRequest,
+            contextLines: 10);
 
         // Apply file exclusions if specified
         if (analysisRequest.FileExclusions != null && analysisRequest.FileExclusions.Count > 0)
@@ -59,8 +61,8 @@ public sealed class ProcessAnalysisJobCommandHandler(
         }
 
         // Filter findings to only include those for files that exist in diffs
-        analysisRequest.Findings = analysisRequest.Findings.Where(finding =>
-            diffs.ContainsKey(finding.FilePath)).ToList();
+        analysisRequest.Findings = [.. analysisRequest.Findings.Where(finding =>
+            diffs.ContainsKey(finding.FilePath))];
 
 
         // Step 2: Prepare analyzer and custom instructions
@@ -75,18 +77,6 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
         // Step 5: Return report
         return BuildAnalysisReport(analysisRequest, analysisResults, diffs);
-    }
-
-    private async Task<Dictionary<string, string>> GetFilteredDiffsAsync(AnalysisRequest analysisRequest, CancellationToken cancellationToken)
-    {
-        // Get diffs from Git provider
-        var diffs = await prService.GetCompactDiffsAsync(
-            analysisRequest,
-            contextLines: 3,
-            maxNewFileLines: 50,
-            maxLinesPerFile: 1000);
-
-        return diffs;
     }
 
     private async Task<AnalysisResults> ExecuteAnalysisTasksAsync(
