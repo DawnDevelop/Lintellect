@@ -105,6 +105,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<InternalsVisibleTo Include="Lintellect.Api.UnitTests" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<Folder Include="Infrastructure\Persistence\Migrations\" />
 	</ItemGroup>
 

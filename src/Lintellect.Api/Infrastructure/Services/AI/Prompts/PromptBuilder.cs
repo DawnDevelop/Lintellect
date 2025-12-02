@@ -136,15 +136,7 @@ internal sealed class PromptBuilder
             builder.AppendLine($"- **{finding.RuleId}** at `{finding.FilePath}:{finding.Line}`");
 
             // Always show messages inline (no code blocks) - saves tokens and improves readability
-            // Truncate very long messages to first sentence or 150 chars
-            var message = finding.Message;
-            if (message.Length > 150)
-            {
-                var firstSentence = message.Split(new[] { '.', '!', '?' }, 2, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim();
-                message = firstSentence != null && firstSentence.Length < message.Length - 50
-                    ? firstSentence + "."
-                    : message[..150].Trim() + "...";
-            }
+            var message = SummarizeMessage(finding.Message);
             builder.AppendLine($"  {message}");
         }
 
@@ -269,19 +261,44 @@ internal sealed class PromptBuilder
         builder.AppendLine("## Static Analyzer Findings (Reference Only - Also Review Beyond These):");
         builder.AppendLine();
 
-        foreach (var (filePath, fileFindings) in findingsByFile)
+        foreach (var (filePath, fileFindings) in findingsByFile.OrderBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase))
         {
             builder.AppendLine($"### File: `{filePath}`");
 
             foreach (var finding in fileFindings.OrderBy(f => f.Line))
             {
                 builder.AppendLine($"- **Line {finding.Line}** - [{finding.Severity}] {finding.RuleId}");
-                builder.AppendLine($"  Message: {finding.Message[..150]}");
+                builder.AppendLine($"  Message: {SummarizeMessage(finding.Message)}");
                 builder.AppendLine();
             }
         }
 
         return builder.ToString();
+    }
+
+    private static string SummarizeMessage(string? message, int maxLength = 150)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = message.Trim();
+        if (trimmed.Length <= maxLength)
+        {
+            return trimmed;
+        }
+
+        var firstSentence = trimmed
+            .Split(['.', '!', '?'], 2, StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault()?.Trim();
+
+        if (!string.IsNullOrEmpty(firstSentence) && firstSentence.Length <= maxLength / 2)
+        {
+            return firstSentence.EndsWith('.') ? firstSentence : firstSentence + ".";
+        }
+
+        return trimmed[..maxLength].TrimEnd() + "...";
     }
 
 }
