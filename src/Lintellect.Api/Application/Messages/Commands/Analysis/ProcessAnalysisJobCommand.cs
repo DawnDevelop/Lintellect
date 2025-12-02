@@ -49,20 +49,21 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
         // Step 1: Get and filter diffs and findings
 
-        var diffs = await prService.GetCompactDiffsAsync(
+        var diffFull = await prService.GetCompactDiffsAsync(
             analysisRequest,
             contextLines: 10);
+
 
         // Apply file exclusions if specified
         if (analysisRequest.FileExclusions != null && analysisRequest.FileExclusions.Count > 0)
         {
-            var filteredFiles = FilePatternMatcher.FilterFiles(diffs.Keys, analysisRequest.FileExclusions);
-            diffs = filteredFiles.ToDictionary(file => file, file => diffs[file]);
+            var filteredFiles = FilePatternMatcher.FilterFiles(diffFull.Keys, analysisRequest.FileExclusions);
+            diffFull = filteredFiles.ToDictionary(file => file, file => diffFull[file]);
         }
 
         // Filter findings to only include those for files that exist in diffs
         analysisRequest.Findings = [.. analysisRequest.Findings.Where(finding =>
-            diffs.ContainsKey(finding.FilePath))];
+            diffFull.ContainsKey(finding.FilePath))];
 
 
         // Step 2: Prepare analyzer and custom instructions
@@ -70,13 +71,13 @@ public sealed class ProcessAnalysisJobCommandHandler(
         var aiAnalyzerModel = new AnalyzerServiceModel(analysisRequest, customInstructions ?? string.Empty);
 
         // Step 3: Execute analysis tasks in parallel
-        var analysisResults = await ExecuteAnalysisTasksAsync(analyzerService, aiAnalyzerModel, diffs, analysisRequest, cancellationToken);
+        var analysisResults = await ExecuteAnalysisTasksAsync(analyzerService, aiAnalyzerModel, diffFull, analysisRequest, cancellationToken);
 
         // Step 4: Post results to PR
         await PostResultsToPullRequestAsync(prService, analysisRequest, analysisResults, cancellationToken);
 
         // Step 5: Return report
-        return BuildAnalysisReport(analysisRequest, analysisResults, diffs);
+        return BuildAnalysisReport(analysisRequest, analysisResults, diffFull);
     }
 
     private async Task<AnalysisResults> ExecuteAnalysisTasksAsync(
@@ -110,8 +111,12 @@ public sealed class ProcessAnalysisJobCommandHandler(
         }
 
         var tasks = new List<Task>();
-        var summaryTask = CreateSummaryTaskIfEnabled(analyzer, aiAnalyzerModel, diffs, analysisRequest, cancellationToken);
-        var detailedAnalysisTask = CreateDetailedAnalysisTaskIfEnabled(analyzer, aiAnalyzerModel, diffs, analysisRequest, cancellationToken);
+        var diffPartial = await prService.GetCompactDiffsAsync(
+            analysisRequest,
+            contextLines: 3);
+
+        var summaryTask = CreateSummaryTaskIfEnabled(analyzer, aiAnalyzerModel, diffPartial, analysisRequest, cancellationToken);
+        var detailedAnalysisTask = CreateDetailedAnalysisTaskIfEnabled(analyzer, aiAnalyzerModel, diffPartial, analysisRequest, cancellationToken);
         var inlineSuggestionsTask = CreateInlineSuggestionsTaskIfEnabled(analyzer, aiAnalyzerModel, diffs, analysisRequest, cancellationToken);
         var codeOwnerTask = CreateCodeOwnerTaskIfEnabled(analyzer, analysisRequest, [.. diffs.Keys], cancellationToken);
 

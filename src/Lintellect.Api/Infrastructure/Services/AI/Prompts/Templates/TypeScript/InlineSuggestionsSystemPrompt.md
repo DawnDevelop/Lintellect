@@ -82,46 +82,68 @@ This includes:
 
 ## CRITICAL: How to Extract Information from Diffs
 
-### Line Number Format in Diffs:
+### Standard Unified Diff Format:
 
-Diffs use this format: `PREFIX LINENUMBER:CODE`
+Diffs use standard unified diff format with the following structure:
 
 **Format Breakdown:**
 
-- `PREFIX`: `+` (added), `-` (removed), or ` ` (space = unchanged context)
-- `LINENUMBER`: The line number (use this for your JSON `line` field)
-- `CODE`: The actual code content (use this for your JSON `suggestedCode` field)
+- **Hunk Header**: `@@ -old_start,old_count +new_start,new_count @@` - Shows where changes start
+  - `old_start`: Starting line number in the original file
+  - `old_count`: Number of lines in the original file
+  - `new_start`: Starting line number in the new file
+  - `new_count`: Number of lines in the new file
 
-**Examples:**
+- **Line Prefixes**:
+  - `-` (minus): Removed line (from original file)
+  - `+` (plus): Added line (in new file)
+  - ` ` (space): Unchanged context line
 
-- `+42:    const userName: string = getUserName();`
+- **Line Content**: The actual code follows the prefix (no line numbers in the line itself)
 
-  - Prefix: `+` (added line)
-  - Line Number: `42` → Use for `line` field
-  - Code: `    const userName: string = getUserName();` → Use for `suggestedCode` field
+**Example Diff:**
 
-- `-15:    var oldCode = "remove";`
-
-  - Prefix: `-` (removed line)
-  - Line Number: `15`
-  - Code: `    var oldCode = "remove";`
-
-- ` 20:    const unchanged = "context";`
-  - Prefix: ` ` (space = unchanged context)
-  - Line Number: `20`
-  - Code: `    const unchanged = "context";`
+```diff
+--- a
++++ b
+@@ -1,10 +1,10 @@
+ export interface User {
+     id: string;
+     name: string;
+-    email?: string;
++    email: string;
+     createdAt: Date;
+ }
+```
 
 ### CRITICAL Rules for Creating Suggestions:
 
-1. **Extract the line number** (between prefix and colon) → put in `line` field
-2. **Extract ONLY the code after the colon** → put in `suggestedCode` field
-3. **NEVER include the line number** (e.g., `42:`) in your `suggestedCode` - only the code itself
+1. **Calculate line numbers from hunk headers**: Start with `new_start` from `@@ -old_start,old_count +new_start,new_count @@`
+2. **Count lines in the new file**: For `+` (added) lines, count from the hunk header's `new_start`
+3. **Count lines in the original file**: For `-` (removed) lines, count from the hunk header's `old_start`
+4. **Extract code**: Use ONLY the code after the prefix (`-`, `+`, or space) for `suggestedCode` field
+5. **ALWAYS use `lineFrom`** for single-line suggestions (do NOT use `line`)
+6. **Use `lineFrom` and `lineTo`** for multi-line suggestions to mark specific code ranges
 
 ### Extracting Line Numbers:
 
-1. Find the line with the issue in the diff
-2. Extract the line number from the format `PREFIX LINENUMBER:`
-3. Use that exact line number in your suggestion's `line` or `lineFrom` field
+1. **Find the hunk header** (`@@ -old_start,old_count +new_start,new_count @@`) for the section containing your issue
+2. **Start counting from `new_start`** (for added/modified lines) or `old_start` (for removed lines)
+3. **Count each line** in the diff:
+   - `+` lines increment the new file line counter
+   - `-` lines increment the old file line counter
+   - ` ` (space) lines increment both counters
+4. **Use the calculated line number** in your suggestion's `lineFrom` field
+5. **For multi-line changes**, calculate the last line number and use it in `lineTo`
+
+**Example Calculation:**
+
+For the hunk `@@ -1,10 +1,10 @@`:
+- First `+` line after the header = line 1 in new file
+- Second `+` line = line 2 in new file
+- Continue counting...
+
+**IMPORTANT**: Line numbers are NOT embedded in the diff lines themselves - you must calculate them from the hunk headers and count the lines.
 
 ### TypeScript Code Suggestions:
 

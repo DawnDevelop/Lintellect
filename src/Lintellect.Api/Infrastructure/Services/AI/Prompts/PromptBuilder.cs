@@ -18,6 +18,7 @@ internal sealed class PromptBuilder
     {
         var sections = new[]
         {
+            BuildCodeChangesForReview(diffs, analysisResult, maxFiles: 15, maxLinesPerFile: 100),
             BuildStaticAnalysisSection(analysisResult)
         };
 
@@ -30,12 +31,12 @@ internal sealed class PromptBuilder
     public string BuildInlineSuggestionsPrompt(AnalysisRequest analysisResult, Dictionary<string, string> diffs)
     {
         // Get prioritized files to ensure findings match the files shown in diffs
-        var prioritizedFiles = PrioritizeFiles(diffs, [.. analysisResult.Findings], maxFiles: 10);
+        var prioritizedFiles = PrioritizeFiles(diffs, [.. analysisResult.Findings], maxFiles: 15);
         var includedFilePaths = prioritizedFiles.Select(kvp => kvp.Key).ToHashSet();
 
         var sections = new[]
         {
-            BuildCodeChangesForReview(diffs, analysisResult, maxFiles: 10, maxLinesPerFile: 100),
+            BuildCodeChangesForReview(diffs, analysisResult, maxFiles: 15, maxLinesPerFile: 1000),
             BuildStaticAnalyzerFindingsSection(analysisResult, includedFilePaths),
         };
 
@@ -77,14 +78,7 @@ internal sealed class PromptBuilder
             builder.AppendLine();
         }
 
-        if (diffs.Count > 0)
-        {
-            builder.AppendLine("**Modified Files** (top 5):");
-            foreach (var file in diffs.Keys.Take(5))
-            {
-                builder.AppendLine($"- {file}");
-            }
-        }
+        builder.AppendLine(BuildCodeChangesForReview(diffs, analysisResult, maxFiles: 15, maxLinesPerFile: 100));
 
         return builder.ToString();
     }
@@ -203,7 +197,7 @@ internal sealed class PromptBuilder
         var builder = new StringBuilder();
         builder.AppendLine("## Code Changes to Review (Priority: Review Every Line):");
         builder.AppendLine();
-        builder.AppendLine("**Note:** Diffs use format `PREFIX LINENUMBER:CODE`. Extract line number for `line` field and code (after colon) for `suggestedCode` field. See system prompt for detailed format instructions.");
+        builder.AppendLine("**Note:** Diffs use standard unified diff format. Calculate line numbers from hunk headers (`@@ -old_start,old_count +new_start,new_count @@`) and count lines. Use `lineFrom` and `lineTo` fields in suggestions. See system prompt for detailed format instructions.");
         builder.AppendLine();
 
         // Prioritize files based on findings: errors > warnings > info > none

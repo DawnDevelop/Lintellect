@@ -234,6 +234,12 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
             diffs.Count,
             analysisResult.AnalysisResult.McpServer?.Count ?? 0);
 
+        if (diffs.Count == 0)
+        {
+            _logger.LogWarning("No diffs provided for inline suggestions");
+            return [];
+        }
+
         var kernel = await CreateKernelAsync(_options, analysisResult.AnalysisResult.McpServer);
         var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
 
@@ -248,41 +254,117 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
             },
             enableGlobalInstructions: true);
 
-        var chatHistory = new ChatHistory(systemPrompt);
-        chatHistory.AddUserMessage(_promptBuilder.BuildInlineSuggestionsPrompt(analysisResult.AnalysisResult, diffs));
+        // Process files in parallel with concurrency limit to avoid rate limits
+        // Azure OpenAI typically has rate limits (e.g., requests per minute), so we limit concurrency
+        const int maxConcurrency = 5;
+        var allSuggestions = new List<InlineSuggestion>();
+
+        await Parallel.ForEachAsync(
+            diffs,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = maxConcurrency,
+                CancellationToken = cancellationToken
+            },
+            async (kvp, ct) =>
+            {
+                var (filePath, diff) = kvp;
+                var suggestions = await ProcessFileForInlineSuggestionsAsync(
+                    chatCompletionService,
+                    kernel,
+                    systemPrompt,
+                    analysisResult.AnalysisResult,
+                    filePath,
+                    diff,
+                    ct);
+
+                if (suggestions is not null)
+                {
+                    lock (allSuggestions)
+                    {
+                        allSuggestions.AddRange(suggestions);
+                    }
+                }
+            });
+
+        _logger.LogInformation("Inline suggestions generated for all files. TotalCount={TotalCount}", allSuggestions.Count);
+
+        return allSuggestions;
+    }
+
+    /// <summary>
+    /// Processes a single file to generate inline suggestions.
+    /// </summary>
+    private async Task<List<InlineSuggestion>?> ProcessFileForInlineSuggestionsAsync(
+        IChatCompletionService chatCompletionService,
+        Kernel kernel,
+        string systemPrompt,
+        AnalysisRequest analysisResult,
+        string filePath,
+        string diff,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            _logger.LogDebug("Processing inline suggestions for file {FilePath}", filePath);
+
+            var chatHistory = new ChatHistory();
+            var userPrompt = _promptBuilder.BuildInlineSuggestionsPrompt(
+                analysisResult,
+                new Dictionary<string, string> { [filePath] = diff });
+            chatHistory.AddUserMessage(userPrompt);
 
 #pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        var executionSettings = new AzureOpenAIPromptExecutionSettings
-        {
-            MaxTokens = _options.MaxTokens,
-            SetNewMaxCompletionTokensEnabled = true,
-            Temperature = _options.Temperature,
-            FunctionChoiceBehavior = FunctionChoiceBehavior,
-            ResponseFormat = typeof(InlineSuggestionsResponse) // Request JSON output for structured parsing
-        };
+            var executionSettings = new AzureOpenAIPromptExecutionSettings
+            {
+                MaxTokens = _options.MaxTokens,
+                SetNewMaxCompletionTokensEnabled = true,
+                Temperature = _options.Temperature,
+                FunctionChoiceBehavior = FunctionChoiceBehavior,
+                ChatSystemPrompt = systemPrompt,
+                ResponseFormat = typeof(InlineSuggestionsResponse) // Request JSON output for structured parsing
+            };
 #pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
-        var response = await chatCompletionService.GetChatMessageContentAsync(
-            chatHistory,
-            executionSettings: executionSettings,
-            kernel: kernel,
-            cancellationToken: cancellationToken);
+            var response = await chatCompletionService.GetChatMessageContentAsync(
+                chatHistory,
+                executionSettings: executionSettings,
+                kernel: kernel,
+                cancellationToken: cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(response.Content))
-        {
-            _logger.LogWarning("Inline suggestions response was empty");
-            return [];
+            if (string.IsNullOrWhiteSpace(response.Content))
+            {
+                _logger.LogWarning("Inline suggestions response was empty for file {FilePath}", filePath);
+                return null;
+            }
+
+            var result = JsonSerializer.Deserialize<InlineSuggestionsResponse>(response.Content, JsonExtensions.JsonSerializerOptions);
+            if (result is null)
+            {
+                _logger.LogWarning("Failed to deserialize inline suggestions for file {FilePath}", filePath);
+                return null;
+            }
+
+            // Ensure all suggestions have the correct file path (in case AI didn't set it correctly)
+            var correctedSuggestions = result.Suggestions.Select(suggestion =>
+            {
+                if (string.IsNullOrWhiteSpace(suggestion.FilePath) || !suggestion.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogDebug("Correcting file path for suggestion from '{OriginalPath}' to '{CorrectPath}'", suggestion.FilePath, filePath);
+                    // Create a new suggestion with the correct file path
+                    return suggestion with { FilePath = filePath };
+                }
+                return suggestion;
+            }).ToList();
+
+            _logger.LogDebug("Generated {Count} inline suggestions for file {FilePath}", correctedSuggestions.Count, filePath);
+            return correctedSuggestions;
         }
-
-        var result = JsonSerializer.Deserialize<InlineSuggestionsResponse>(response.Content, JsonExtensions.JsonSerializerOptions);
-        if (result is null)
+        catch (Exception ex)
         {
-            _logger.LogWarning("Failed to deserialize inline suggestions");
-            return [];
+            _logger.LogError(ex, "Error generating inline suggestions for file {FilePath}. Continuing with other files.", filePath);
+            return null;
         }
-
-        _logger.LogInformation("Inline suggestions generated. Count={Count}", result.Suggestions.Count);
-        return result.Suggestions;
     }
 
     /// <summary>

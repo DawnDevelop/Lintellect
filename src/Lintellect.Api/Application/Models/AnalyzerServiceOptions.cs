@@ -60,5 +60,5 @@ public sealed class SemanticAnalyzerOptions
     /// <summary>
     /// Temperature for response generation (0.0 to 1.0).
     /// </summary>
-    public double Temperature { get; set; } = 0.7;
+    public double Temperature { get; set; } = 1;
 }
