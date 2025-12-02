@@ -1,4 +1,3 @@
-using System.Text;
 using DiffPlex.Renderer;
 
 namespace Lintellect.Api.Infrastructure.Extensions;
