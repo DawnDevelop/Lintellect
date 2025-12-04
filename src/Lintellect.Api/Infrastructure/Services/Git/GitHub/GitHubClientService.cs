@@ -178,7 +178,9 @@ public sealed class GitHubClientService : IGitClient
         string projectName,
         string repositoryName,
         int pullRequestId,
-        string comment, int? threadId = null)
+        string comment, 
+        int? threadId = null, 
+        bool isResolved = false)
     {
         try
         {

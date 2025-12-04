@@ -16,9 +16,9 @@ public static class DiffGenerationHelper
     /// <param name="originalContent">The original file content (can be null for new files).</param>
     /// <param name="modifiedContent">The modified file content (can be null for deleted files).</param>
     /// <returns>A unified diff format string with line numbers.</returns>
-    public static string GenerateUnifiedDiff(string? originalContent, string? modifiedContent, int contextLines = 20)
+    public static string GenerateUnifiedDiff(string? originalContent = "", string? modifiedContent = "", int contextLines = 20)
     {
-        var diffModel = UnidiffRenderer.GenerateUnidiff(originalContent, modifiedContent, contextLines: contextLines);
+        var diffModel = UnidiffRenderer.GenerateUnidiff(originalContent ?? string.Empty, modifiedContent ?? string.Empty, contextLines: contextLines);
         return diffModel;
     }
 }

@@ -215,7 +215,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
         // Post detailed analysis comment
         if (!string.IsNullOrWhiteSpace(results.DetailedAnalysis) && analysisRequest.EnableSummaryComment)
         {
-            await prService.AddCommentAsync(analysisRequest, results.DetailedAnalysis);
+            await prService.AddCommentAsync(analysisRequest, results.DetailedAnalysis, isResolved: true);
         }
 
         // Append summary to description
@@ -239,7 +239,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
         }
     }
 
-    private async Task PostInlineSuggestionsAsync(
+    private static async Task PostInlineSuggestionsAsync(
         PullRequestService prService,
         AnalysisRequest analysisRequest,
         List<InlineSuggestion> suggestions)

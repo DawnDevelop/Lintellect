@@ -407,9 +407,14 @@ public class AzureDevopsClientService : IGitClient
         string repositoryName,
         int pullRequestId,
         string comment,
-        int? threadId = null)
+        int? threadId = null,
+        bool isResolved = false)
     {
         var gitClient = await GetHttpGitClient();
+
+        var threadStatus = isResolved
+            ? Microsoft.TeamFoundation.SourceControl.WebApi.CommentThreadStatus.Closed
+            : Microsoft.TeamFoundation.SourceControl.WebApi.CommentThreadStatus.Active;
 
         var thread = new GitPullRequestCommentThread
         {
@@ -421,7 +426,7 @@ public class AzureDevopsClientService : IGitClient
                     CommentType = Microsoft.TeamFoundation.SourceControl.WebApi.CommentType.Text
                 }
             ],
-            Status = Microsoft.TeamFoundation.SourceControl.WebApi.CommentThreadStatus.Active
+            Status = threadStatus
         };
 
         GitPullRequestCommentThread threadResult = threadId.HasValue

@@ -71,7 +71,8 @@ public interface IGitClient
         string repositoryName,
         int pullRequestId,
         string comment,
-        int? threadId = null);
+        int? threadId = null,
+        bool isResolved = false);
 
     /// <summary>
     /// Creates a new code change suggestion comment on a pull request.
