@@ -48,12 +48,13 @@ public sealed class MockGitClient : IGitClient
         return Task.FromResult<string?>("Mock file content");
     }
 
-    public Task<PullRequestCommentThread> CreateCommentAsync(string projectName, string repositoryName, int pullRequestId, string comment, int? threadId = null)
+    public Task<PullRequestCommentThread> CreateCommentAsync(string projectName, string repositoryName, int pullRequestId, string comment, int? threadId = null, bool isResolved = false)
     {
         return Task.FromResult(new PullRequestCommentThread
         {
             Id = 1,
-            Comments = [new PullRequestComment { Id = 1, Content = comment }]
+            Comments = [new PullRequestComment { Id = 1, Content = comment }],
+            Status = isResolved ? CommentThreadStatus.Closed : CommentThreadStatus.Active,
         });
     }
 
