@@ -42,7 +42,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.0.0" />
     <PackageVersion Include="System.CommandLine" Version="2.0.0" />
     <!-- Aspire Dependencies -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.0.1" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.0.2" />
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.0.1" />
     <!-- ServiceDefaults Dependencies -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.0.0" />
