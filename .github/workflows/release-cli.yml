@@ -52,7 +52,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -62,7 +62,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
@@ -105,7 +105,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -113,7 +113,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
@@ -130,7 +130,7 @@ jobs:
         run: dotnet pack src/Lintellect.Cli/Lintellect.Cli.csproj --no-build --configuration Release --output ./packages
 
       - name: Upload NuGet package
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: nuget-package
           path: ./packages
@@ -143,7 +143,7 @@ jobs:
 
     steps:
       - name: Download NuGet package
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: nuget-package
           path: ./packages
@@ -179,7 +179,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -187,7 +187,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
@@ -210,7 +210,7 @@ jobs:
         run: tar -czf "./lintellect-cli-${{ needs.extract-version.outputs.version }}-${{ matrix.platform }}.${{ matrix.extension }}" -C ./publish/cli .
 
       - name: Upload binary
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: lintellect-cli-${{ matrix.platform }}
           path: ./lintellect-cli-${{ needs.extract-version.outputs.version }}-${{ matrix.platform }}.${{ matrix.extension }}
@@ -225,7 +225,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -260,10 +260,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Download all binaries
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           path: ./binaries
 
