@@ -5,7 +5,7 @@
   <ItemGroup>
     <!-- API Dependencies -->
     <PackageVersion Include="Aspire.Hosting.Docker" Version="13.0.0-preview.1.25560.3" />
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.0.1" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.1.1" />
     <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
     <PackageVersion Include="DiffPlex" Version="1.9.0" />
@@ -42,7 +42,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.0.0" />
     <PackageVersion Include="System.CommandLine" Version="2.0.0" />
     <!-- Aspire Dependencies -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.0.1" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.1.1" />
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.0.1" />
     <!-- ServiceDefaults Dependencies -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.0.0" />
