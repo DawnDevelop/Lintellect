@@ -81,7 +81,9 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
                 analysisResult.AnalysisResult.Language,
                 new Dictionary<string, string>
                 {
-                    { "customInstructions", analysisResult.CopilotInstructionsPrompt }
+                    { "customInstructions", analysisResult.CopilotInstructionsPrompt },
+                    { "totalFilesInPR", diffs.Count.ToString() },
+                    { "maxSuggestionsPerFile", SemanticAnalyzerService.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString() }
                 });
 
             // Use optimized prompt builder with truncation, prioritization, and filtered findings
@@ -92,7 +94,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
             try
             {
                 var suggestions = JsonSerializer.Deserialize<List<InlineSuggestion>>(response);
-                return suggestions ?? [];
+                return SemanticAnalyzerService.ApplyGlobalCap(suggestions ?? [], _options.MaxInlineSuggestions);
             }
             catch
             {
@@ -208,7 +210,9 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
                 new Dictionary<string, string>
                 {
                     { "customInstructions", analysisResult.CopilotInstructionsPrompt },
-                    { "mcpServers", string.Join(",", analysisResult.AnalysisResult.McpServer ?? []) }
+                    { "mcpServers", string.Join(",", analysisResult.AnalysisResult.McpServer ?? []) },
+                    { "totalFilesInPR", diffs.Count.ToString() },
+                    { "maxSuggestionsPerFile", SemanticAnalyzerService.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString() }
                 }, true);
 
             var summarySystem = _templateService.RenderLanguageTemplate(
@@ -302,11 +306,12 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
                 codeownersRaw = result.CustomId == idCodeOwners.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : codeownersRaw;
             }
 
-            // Parse inline suggestions
+            // Parse inline suggestions and apply global cap
             List<InlineSuggestion> inline;
             try
             {
-                inline = string.IsNullOrWhiteSpace(inlineRaw) ? [] : (JsonSerializer.Deserialize<List<InlineSuggestion>>(inlineRaw) ?? []);
+                var parsed = string.IsNullOrWhiteSpace(inlineRaw) ? [] : (JsonSerializer.Deserialize<List<InlineSuggestion>>(inlineRaw) ?? []);
+                inline = SemanticAnalyzerService.ApplyGlobalCap(parsed, _options.MaxInlineSuggestions);
             }
             catch
             {

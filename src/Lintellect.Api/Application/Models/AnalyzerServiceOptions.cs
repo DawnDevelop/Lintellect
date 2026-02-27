@@ -28,6 +28,13 @@ public sealed class ClaudeAnalyzerOptions
     /// </summary>
     public double Temperature { get; set; } = 0.5;
 
+    /// <summary>
+    /// Maximum number of inline suggestions to post across the entire PR.
+    /// Suggestions are selected by severity (errors first, then warnings, then info).
+    /// Set to 0 to disable the cap.
+    /// </summary>
+    public int MaxInlineSuggestions { get; set; } = 10;
+
 }
 
 /// <summary>
@@ -61,4 +68,11 @@ public sealed class SemanticAnalyzerOptions
     /// Temperature for response generation (0.0 to 1.0).
     /// </summary>
     public double Temperature { get; set; } = 1;
+
+    /// <summary>
+    /// Maximum number of inline suggestions to post across the entire PR.
+    /// Suggestions are selected by severity (errors first, then warnings, then info).
+    /// Set to 0 to disable the cap.
+    /// </summary>
+    public int MaxInlineSuggestions { get; set; } = 10;
 }

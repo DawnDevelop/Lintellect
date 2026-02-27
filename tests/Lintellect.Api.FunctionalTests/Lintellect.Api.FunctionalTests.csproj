@@ -9,6 +9,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <UseAppHost>false</UseAppHost>
+    <UserSecretsId>f449089f-dd13-4e40-a37a-673ff736b7ca</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

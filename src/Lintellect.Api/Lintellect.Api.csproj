@@ -68,6 +68,8 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Microsoft.Extensions.Http.Polly" />
+		<PackageReference Include="Microsoft.SemanticKernel.Agents.Core" />
+		<PackageReference Include="Microsoft.SemanticKernel.Agents.OpenAI" />
 		<PackageReference Include="ModelContextProtocol.Core" />
 		<PackageReference Include="Polly.Extensions.Http" />
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" />
