@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [API v0.0.15] - 2026-02-27
+
+### Added
+
+- Global Cap for comments
+
+### Changed
+
+- TBD
+
+### Fixed
+
+- TBD
+
+### Security
+
+- Updated Dependencies
+
 ## [API v0.0.14] - 2025-11-18
 
 ### Added
