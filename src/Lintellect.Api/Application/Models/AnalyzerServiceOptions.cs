@@ -38,9 +38,9 @@ public sealed class ClaudeAnalyzerOptions
 }
 
 /// <summary>
-/// Configuration options for the Semantic Kernel (AIFoundry) analyzer service.
+/// Configuration options for the Azure OpenAI analyzer service (Microsoft Agent Framework).
 /// </summary>
-public sealed class SemanticAnalyzerOptions
+public sealed class AzureOpenAIAnalyzerOptions
 {
     /// <summary>
     /// The API key for authenticating with the AI service.

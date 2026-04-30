@@ -330,10 +330,10 @@ API-Key: your-api-key
 
 ```json
 {
-  "SemanticAnalyzer": {
+  "AzureOpenAIAnalyzer": {
     "ApiKey": "your-azure-ai-key",
     "Endpoint": "https://your-resource.openai.azure.com/",
-    "Model": "gpt-4o"
+    "DeploymentName": "gpt-4o"
   }
 }
 ```

@@ -68,8 +68,9 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Microsoft.Extensions.Http.Polly" />
-		<PackageReference Include="Microsoft.SemanticKernel.Agents.Core" />
-		<PackageReference Include="Microsoft.SemanticKernel.Agents.OpenAI" />
+		<PackageReference Include="Microsoft.Agents.AI" />
+		<PackageReference Include="Microsoft.Agents.AI.OpenAI" />
+		<PackageReference Include="Azure.AI.OpenAI" />
 		<PackageReference Include="ModelContextProtocol.Core" />
 		<PackageReference Include="Polly.Extensions.Http" />
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" />
@@ -78,9 +79,6 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.SemanticKernel" />
-		<PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" />
-		<PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" />
 		<PackageReference Include="Microsoft.TeamFoundationServer.Client" />
 		<PackageReference Include="Microsoft.TeamFoundationServer.ExtendedClient" />
 		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
@@ -109,6 +107,7 @@
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="Lintellect.Api.UnitTests" />
+		<InternalsVisibleTo Include="Lintellect.Api.IntegrationTests" />
 	</ItemGroup>
 
 	<ItemGroup>

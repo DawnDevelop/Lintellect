@@ -45,7 +45,7 @@ public static class ConfigureServices
         this IServiceCollection services,
         IConfiguration configuration,
         Action<ClaudeAnalyzerOptions>? configureClaudeOptions = null,
-        Action<SemanticAnalyzerOptions>? configureSemanticOptions = null)
+        Action<AzureOpenAIAnalyzerOptions>? configureAzureOpenAIOptions = null)
     {
         // Only register Claude if configured
         var claudeApiKey = configuration.GetValue<string>("CLAUDE_API_KEY") ??
@@ -65,40 +65,42 @@ public static class ConfigureServices
                 {
                     var options = sp.GetRequiredService<IOptions<ClaudeAnalyzerOptions>>().Value;
                     var mcpServiceResolver = sp.GetRequiredService<IMcpServiceResolver>();
+                    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                    var logger = sp.GetRequiredService<ILogger<ClaudeAnalyzerService>>();
 
-                    return new ClaudeAnalyzerService(options, mcpServiceResolver);
+                    return new ClaudeAnalyzerService(options, mcpServiceResolver, httpClientFactory, logger);
                 });
         }
         else
         {
-            var semanticApiKey = configuration.GetValue<string>("SEMANTIC_API_KEY") ??
-                        configuration.GetSection("SemanticAnalyzer:ApiKey").Value;
+            var azureOpenAIApiKey = configuration.GetValue<string>("AZURE_OPENAI_API_KEY") ??
+                        configuration.GetSection("AzureOpenAIAnalyzer:ApiKey").Value;
 
-            var semanticEndpoint = configuration.GetValue<string>("SEMANTIC_ENDPOINT") ??
-                                  configuration.GetSection("SemanticAnalyzer:Endpoint").Value;
+            var azureOpenAIEndpoint = configuration.GetValue<string>("AZURE_OPENAI_ENDPOINT") ??
+                                  configuration.GetSection("AzureOpenAIAnalyzer:Endpoint").Value;
 
-            var semanticDeploymentName = configuration.GetValue<string>("SEMANTIC_DEPLOYMENT_NAME") ??
-                                         configuration.GetSection("SemanticAnalyzer:DeploymentName").Value;
+            var azureOpenAIDeploymentName = configuration.GetValue<string>("AZURE_OPENAI_DEPLOYMENT_NAME") ??
+                                         configuration.GetSection("AzureOpenAIAnalyzer:DeploymentName").Value;
 
-            services.Configure<SemanticAnalyzerOptions>(options =>
+            services.Configure<AzureOpenAIAnalyzerOptions>(options =>
             {
-                configuration.GetSection("SemanticAnalyzer").Bind(options);
-                configureSemanticOptions?.Invoke(options);
+                configuration.GetSection("AzureOpenAIAnalyzer").Bind(options);
+                configureAzureOpenAIOptions?.Invoke(options);
 
-                options.ApiKey ??= semanticApiKey;
-                options.Endpoint ??= semanticEndpoint;
+                options.ApiKey ??= azureOpenAIApiKey;
+                options.Endpoint ??= azureOpenAIEndpoint;
 
-                options.DeploymentName ??= semanticDeploymentName;
+                options.DeploymentName ??= azureOpenAIDeploymentName;
                 options.DeploymentName ??= "gpt-4o"; //fallback
             });
 
-            services.AddScoped<IAnalyzerService, SemanticAnalyzerService>(
+            services.AddScoped<IAnalyzerService, AzureOpenAIAnalyzerService>(
                 (sp) =>
                 {
-                    var options = sp.GetRequiredService<IOptions<SemanticAnalyzerOptions>>().Value;
+                    var options = sp.GetRequiredService<IOptions<AzureOpenAIAnalyzerOptions>>().Value;
                     var mcpResolver = sp.GetRequiredService<IMcpServiceResolver>();
-                    var logger = sp.GetRequiredService<ILogger<SemanticAnalyzerService>>();
-                    return new SemanticAnalyzerService(options, mcpResolver, logger);
+                    var logger = sp.GetRequiredService<ILogger<AzureOpenAIAnalyzerService>>();
+                    return new AzureOpenAIAnalyzerService(options, mcpResolver, logger);
                 });
         }
 

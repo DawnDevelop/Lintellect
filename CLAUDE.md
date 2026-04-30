@@ -79,7 +79,7 @@ Lintellect is an AI-powered PR code review assistant. There are two runtime comp
 
 **CLI** (`Lintellect.Cli`) — stateless, runs in CI/CD pipelines. Reads PR context from CI environment variables, performs Roslyn-based C# analysis, and POSTs an `AnalysisRequest` to the API.
 
-**API** (`Lintellect.Api`) — ASP.NET Core service. Receives the request, persists it as an `AnalysisJob`, enqueues it onto a channel-based `AnalysisJobQueue`, and a background service processes it: calls Claude or Semantic Kernel, then posts review comments back to GitHub/Azure DevOps.
+**API** (`Lintellect.Api`) — ASP.NET Core service. Receives the request, persists it as an `AnalysisJob`, enqueues it onto a channel-based `AnalysisJobQueue`, and a background service processes it: calls Claude or Azure OpenAI (via Microsoft Agent Framework), then posts review comments back to GitHub/Azure DevOps.
 
 **Data flow:**
 
@@ -87,7 +87,7 @@ Lintellect is an AI-powered PR code review assistant. There are two runtime comp
 CI/CD → CLI (Roslyn analysis + Git context extraction)
       → POST /analysis to API
       → AnalysisJob persisted in PostgreSQL
-      → Background service dequeues + calls AI (Claude / Semantic Kernel)
+      → Background service dequeues + calls AI (Claude / Azure OpenAI via Microsoft Agent Framework)
       → Results stored (Summary, DetailedAnalysis, InlineSuggestions)
       → Comments posted to PR via Octokit / TFS client
 ```
@@ -109,7 +109,7 @@ Apis/            → Minimal API endpoints, API key auth filter
 
 | Interface             | Purpose                                                              |
 | --------------------- | -------------------------------------------------------------------- |
-| `IAnalyzerService`    | AI service contract (ClaudeAnalyzerService, SemanticAnalyzerService) |
+| `IAnalyzerService`    | AI service contract (ClaudeAnalyzerService, AzureOpenAIAnalyzerService) |
 | `IGitInfoExtractor`   | Extract PR context from CI env vars                                  |
 | `IGitClientFactory`   | Create GitHub/Azure DevOps clients dynamically                       |
 | `IPullRequestService` | Fetch diffs, post comments                                           |
@@ -129,7 +129,10 @@ Settings fall back to environment variables via `PostConfigure<>()`:
 | ----------------------------------- | ---------------------- |
 | `ApiKey`                            | —                      |
 | `ConnectionStrings:postgresdb`      | —                      |
-| `ClaudeAnalyzer:ApiKey`             | —                      |
+| `ClaudeAnalyzer:ApiKey`             | `CLAUDE_API_KEY`       |
+| `AzureOpenAIAnalyzer:ApiKey`        | `AZURE_OPENAI_API_KEY` |
+| `AzureOpenAIAnalyzer:Endpoint`      | `AZURE_OPENAI_ENDPOINT` |
+| `AzureOpenAIAnalyzer:DeploymentName`| `AZURE_OPENAI_DEPLOYMENT_NAME` |
 | `GitCredentials:GitHub:Token`       | `GITHUB_TOKEN`         |
 | `GitCredentials:AzureDevOps:Pat`    | `AZURE_DEVOPS_PAT`     |
 | `GitCredentials:AzureDevOps:OrgUrl` | `AZURE_DEVOPS_ORG_URL` |
