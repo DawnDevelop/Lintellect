@@ -2,6 +2,52 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+# Working Style & Relationship
+
+- We are colleagues. No hierarchy, no formalities.
+- Do NOT flatter me. Never agree just to be agreeable.
+- ALWAYS call out bad ideas, mistakes, and poor decisions — I depend on this.
+- When you disagree, push back clearly. Cite technical reasons if you have them.
+  If it's a gut feeling, say so explicitly.
+
+# Clarification Protocol
+
+When anything is unclear or would require you to make assumptions:
+
+- STOP. Do NOT guess or assume.
+- Ask me one focused question at a time (interview style).
+- Wait for my answer before proceeding.
+- State explicitly what you still don't know before writing any code.
+- "I assumed X" is never acceptable. Uncertainty must surface before action.
+
+# Writing Code
+
+- YAGNI. The best code is no code.
+- Make the SMALLEST reasonable change that solves the problem.
+- Prefer simple, clean, and maintainable over clever or complex.
+- NEVER throw away or rewrite existing implementations without my explicit permission.
+- MATCH the style of the surrounding code.
+
+# Code Style
+
+- No nesting beyond 2 levels inside a function body.
+- Do NOT use `// Act`, `// Arrange`, `// Assert` comments in unit tests.
+
+## C# Specifics
+
+- Always use `var` instead of explicit types (int, float, etc.) where possible.
+- Max 7 parameters per function/method. Use record classes when exceeded.
+- Always use simplified collection initializations.
+- Prefer LINQ over manual loops.
+
+# Boundaries — NEVER do these without explicit permission
+
+- NEVER throw away or rewrite existing implementations.
+- NEVER delete a failing test — fix it or flag it.
+- NEVER skip a pre-commit hook.
+- NEVER run `git add -A` without checking `git status` first.
+- NEVER implement backward compatibility without approval.
+
 ## Commands
 
 ```bash
@@ -36,6 +82,7 @@ Lintellect is an AI-powered PR code review assistant. There are two runtime comp
 **API** (`Lintellect.Api`) — ASP.NET Core service. Receives the request, persists it as an `AnalysisJob`, enqueues it onto a channel-based `AnalysisJobQueue`, and a background service processes it: calls Claude or Semantic Kernel, then posts review comments back to GitHub/Azure DevOps.
 
 **Data flow:**
+
 ```
 CI/CD → CLI (Roslyn analysis + Git context extraction)
       → POST /analysis to API
@@ -60,13 +107,13 @@ Apis/            → Minimal API endpoints, API key auth filter
 
 ### Key interfaces
 
-| Interface | Purpose |
-|---|---|
-| `IAnalyzerService` | AI service contract (ClaudeAnalyzerService, SemanticAnalyzerService) |
-| `IGitInfoExtractor` | Extract PR context from CI env vars |
-| `IGitClientFactory` | Create GitHub/Azure DevOps clients dynamically |
-| `IPullRequestService` | Fetch diffs, post comments |
-| `IMcpServiceResolver` | Resolve MCP servers for AI context |
+| Interface             | Purpose                                                              |
+| --------------------- | -------------------------------------------------------------------- |
+| `IAnalyzerService`    | AI service contract (ClaudeAnalyzerService, SemanticAnalyzerService) |
+| `IGitInfoExtractor`   | Extract PR context from CI env vars                                  |
+| `IGitClientFactory`   | Create GitHub/Azure DevOps clients dynamically                       |
+| `IPullRequestService` | Fetch diffs, post comments                                           |
+| `IMcpServiceResolver` | Resolve MCP servers for AI context                                   |
 
 Factories (`GitInfoExtractorFactory`, `GitClientFactory`) select implementations based on `EGitProvider` at runtime.
 
@@ -78,13 +125,13 @@ Factories (`GitInfoExtractorFactory`, `GitClientFactory`) select implementations
 
 Settings fall back to environment variables via `PostConfigure<>()`:
 
-| Key | Env var fallback |
-|---|---|
-| `ApiKey` | — |
-| `ConnectionStrings:postgresdb` | — |
-| `ClaudeAnalyzer:ApiKey` | — |
-| `GitCredentials:GitHub:Token` | `GITHUB_TOKEN` |
-| `GitCredentials:AzureDevOps:Pat` | `AZURE_DEVOPS_PAT` |
+| Key                                 | Env var fallback       |
+| ----------------------------------- | ---------------------- |
+| `ApiKey`                            | —                      |
+| `ConnectionStrings:postgresdb`      | —                      |
+| `ClaudeAnalyzer:ApiKey`             | —                      |
+| `GitCredentials:GitHub:Token`       | `GITHUB_TOKEN`         |
+| `GitCredentials:AzureDevOps:Pat`    | `AZURE_DEVOPS_PAT`     |
 | `GitCredentials:AzureDevOps:OrgUrl` | `AZURE_DEVOPS_ORG_URL` |
 
 For Aspire local dev, configure credentials in `src/Lintellect.AppHost/appsettings.json` (user secrets are also wired up).
