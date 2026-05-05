@@ -66,6 +66,14 @@ public sealed class LintellectApiFixture : WebApplicationFactory<Program>
             // Replace external services with mocks
             services.AddScoped<IGitClientFactory, MockGitClientFactory>();
 
+            // Replace analyzer with deterministic mock so prompt-injection assertions are stable
+            var analyzerDescriptors = services.Where(s => s.ServiceType == typeof(IAnalyzerService)).ToList();
+            foreach (var d in analyzerDescriptors)
+            {
+                services.Remove(d);
+            }
+            services.AddScoped<IAnalyzerService, Mocks.AI.MockAnalyzerService>();
+
             // Remove background services for testing to avoid race conditions
             var analysisBackgroundService = services.FirstOrDefault(s => s.ImplementationType == typeof(AnalysisBackgroundService));
             if (analysisBackgroundService != null)

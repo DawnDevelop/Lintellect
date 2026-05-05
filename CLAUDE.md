@@ -114,12 +114,26 @@ Apis/            → Minimal API endpoints, API key auth filter
 | `IGitClientFactory`   | Create GitHub/Azure DevOps clients dynamically                       |
 | `IPullRequestService` | Fetch diffs, post comments                                           |
 | `IMcpServiceResolver` | Resolve MCP servers for AI context                                   |
+| `IWorkItemService`    | Resolve linked work items / issues for a PR (per-provider)           |
+| `IWorkItemSummarizer` | AI-condense linked work items into a tight GOAL + CONTEXT block      |
 
 Factories (`GitInfoExtractorFactory`, `GitClientFactory`) select implementations based on `EGitProvider` at runtime.
 
 ### AI prompt pipeline
 
 `PromptBuilder` assembles prompts from templates in `Infrastructure/Services/AI/Prompts/Templates/{Language}/`. `TokenAwareChunker` splits large diffs to stay within model token limits; `TokenEstimator` estimates token counts without calling the API.
+
+### Work-item context (on by default)
+
+When `AnalysisRequest.EnableWorkItemContext` is true (CLI flag `--enable-work-item-context` / `-ewi`, defaults to true; pass `--enable-work-item-context false` to disable), the orchestrator resolves linked work items via `IWorkItemService` and runs a single `IWorkItemSummarizer` pass that produces a structured response:
+
+```
+GOAL: <one sentence>
+CONTEXT:
+<2-3 short paragraphs>
+```
+
+The full block is injected into the Summary and Detailed-Analysis prompts via `{{workItemContext}}`; only the `GOAL` line is injected into the per-file Inline-Suggestion prompts (per-file calls multiply tokens by file count, so the inline cost stays bounded). Failures during fetch or summarization log + continue with no context. Azure DevOps work items are resolved server-side via the WIT REST API; GitHub uses PR-body parsing for `Closes/Fixes/Resolves #N` keywords.
 
 ### Configuration
 

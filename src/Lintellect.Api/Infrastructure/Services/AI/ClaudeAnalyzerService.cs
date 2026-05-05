@@ -56,7 +56,8 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
             analysisResult.AnalysisResult.Language,
             new Dictionary<string, string>
             {
-                { "customInstructions", analysisResult.CopilotInstructionsPrompt }
+                { "customInstructions", analysisResult.CopilotInstructionsPrompt },
+                { "workItemContext", analysisResult.WorkItemContext }
             });
 
         var userPrompt = _promptBuilder.BuildAnalysisPrompt(analysisResult.AnalysisResult, diffs);
@@ -84,7 +85,8 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
             {
                 { "customInstructions", analysisResult.CopilotInstructionsPrompt },
                 { "totalFilesInPR", diffs.Count.ToString() },
-                { "maxSuggestionsPerFile", AzureOpenAIAnalyzerService.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString() }
+                { "maxSuggestionsPerFile", AzureOpenAIAnalyzerService.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString() },
+                { "workItemContext", analysisResult.WorkItemGoal }
             });
 
         var userPrompt = _promptBuilder.BuildInlineSuggestionsPrompt(analysisResult.AnalysisResult, diffs);
@@ -119,7 +121,8 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
             analysisResult.AnalysisResult.Language,
             new Dictionary<string, string>
             {
-                { "customInstructions", analysisResult.CopilotInstructionsPrompt }
+                { "customInstructions", analysisResult.CopilotInstructionsPrompt },
+                { "workItemContext", analysisResult.WorkItemContext }
             });
 
         var userPrompt = PromptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs);
@@ -156,6 +159,24 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
 
         _logger.LogInformation("Question answered. ContentLength={ContentLength}", content.Length);
         return content;
+    }
+
+    /// <inheritdoc/>
+    public async Task<string> SummarizeContextAsync(
+        string systemPrompt,
+        string userPrompt,
+        int maxOutputTokens,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Running context summarization. SystemLength={SystemLength} UserLength={UserLength} MaxTokens={MaxTokens}",
+            systemPrompt.Length, userPrompt.Length, maxOutputTokens);
+
+        var parameter = CreateMessageParameters(systemPrompt, userPrompt);
+        parameter.PromptCaching = PromptCacheType.None;
+        parameter.MaxTokens = maxOutputTokens;
+
+        var message = await _client.Messages.GetClaudeMessageAsync(parameter, cancellationToken);
+        return message.ContentBlock?.Text ?? string.Empty;
     }
 
     /// <summary>
@@ -200,7 +221,8 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
             analysisResult.AnalysisResult.Language,
             new Dictionary<string, string>
             {
-                { "customInstructions", analysisResult.CopilotInstructionsPrompt }
+                { "customInstructions", analysisResult.CopilotInstructionsPrompt },
+                { "workItemContext", analysisResult.WorkItemContext }
             });
 
         var inlineSystem = _templateService.RenderLanguageTemplate(
@@ -211,13 +233,18 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
                 { "customInstructions", analysisResult.CopilotInstructionsPrompt },
                 { "mcpServers", string.Join(",", analysisResult.AnalysisResult.McpServer ?? []) },
                 { "totalFilesInPR", diffs.Count.ToString() },
-                { "maxSuggestionsPerFile", AzureOpenAIAnalyzerService.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString() }
+                { "maxSuggestionsPerFile", AzureOpenAIAnalyzerService.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString() },
+                { "workItemContext", analysisResult.WorkItemGoal }
             }, true);
 
         var summarySystem = _templateService.RenderLanguageTemplate(
             LanguagePromptTemplates.SummarySystemPrompt,
             analysisResult.AnalysisResult.Language,
-            new Dictionary<string, string> { { "customInstructions", analysisResult.CopilotInstructionsPrompt } });
+            new Dictionary<string, string>
+            {
+                { "customInstructions", analysisResult.CopilotInstructionsPrompt },
+                { "workItemContext", analysisResult.WorkItemContext }
+            });
 
         var analysisUser = _promptBuilder.BuildAnalysisPrompt(analysisResult.AnalysisResult, diffs);
         var inlineUser = _promptBuilder.BuildInlineSuggestionsPrompt(analysisResult.AnalysisResult, diffs);

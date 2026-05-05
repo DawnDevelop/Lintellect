@@ -122,6 +122,8 @@ public sealed class AnalysisJob : BaseAuditableEntity
             EnableInlineSuggestions = request.EnableInlineSuggestions,
             EnableDescriptionSummary = request.EnableDescriptionSummary,
             EnableAzureDevopsCodeOwners = request.EnableAzureDevopsCodeOwners,
+            EnableWorkItemContext = request.EnableWorkItemContext,
+            WorkItems = request.WorkItems is null ? [] : [.. request.WorkItems],
             McpServer = request.McpServer is null ? [] : [.. request.McpServer],
         };
     }

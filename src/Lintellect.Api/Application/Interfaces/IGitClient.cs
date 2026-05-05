@@ -149,4 +149,22 @@ public interface IGitClient
     /// </returns>
     Task<PullRequestCommentThread> GetPullRequestThreadContextAsync(string projectName, string repositoryName, int pullRequestId, int prCommentId);
 
+    /// <summary>
+    /// Retrieves work items / issues linked to a pull request.
+    /// Implementations resolve linked items using the most natural mechanism for the provider:
+    /// Azure DevOps reads PR work-item refs from the WIT API; GitHub parses the PR body for closing
+    /// keywords and fetches the matching issues. Caller-supplied <paramref name="hints"/> (e.g. ids
+    /// already extracted CLI-side) are taken as-is and resolved into rich references.
+    /// </summary>
+    /// <param name="projectName">Project / owner name.</param>
+    /// <param name="repositoryName">Repository name.</param>
+    /// <param name="pullRequestId">Pull request ID / number.</param>
+    /// <param name="hints">Optional work-item ids the caller pre-extracted (CLI body parsing, etc.).</param>
+    /// <returns>Resolved work-item references, possibly empty.</returns>
+    Task<List<WorkItemReference>> GetLinkedWorkItemsAsync(
+        string projectName,
+        string repositoryName,
+        int pullRequestId,
+        IReadOnlyList<WorkItemReference>? hints = null);
+
 }

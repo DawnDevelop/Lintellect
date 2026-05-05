@@ -38,7 +38,8 @@ public sealed class AzureOpenAIAnalyzerService(AzureOpenAIAnalyzerOptions option
             analysisResult.AnalysisResult.Language,
             new Dictionary<string, string>
             {
-                ["customInstructions"] = analysisResult.CopilotInstructionsPrompt
+                ["customInstructions"] = analysisResult.CopilotInstructionsPrompt,
+                ["workItemContext"] = analysisResult.WorkItemContext
             });
 
         var agent = await CreateAgentAsync(_options, systemPrompt, analysisResult.AnalysisResult.McpServer);
@@ -119,7 +120,12 @@ public sealed class AzureOpenAIAnalyzerService(AzureOpenAIAnalyzerOptions option
 
         var systemPrompt = _templateService.RenderLanguageTemplate(
             LanguagePromptTemplates.SummarySystemPrompt,
-            analysisResult.AnalysisResult.Language);
+            analysisResult.AnalysisResult.Language,
+            new Dictionary<string, string>
+            {
+                ["customInstructions"] = analysisResult.CopilotInstructionsPrompt,
+                ["workItemContext"] = analysisResult.WorkItemContext
+            });
 
         var agent = await CreateAgentAsync(_options, systemPrompt, analysisResult.AnalysisResult.McpServer);
 
@@ -179,6 +185,30 @@ public sealed class AzureOpenAIAnalyzerService(AzureOpenAIAnalyzerOptions option
     }
 
     // <inheritdoc/>
+    public async Task<string> SummarizeContextAsync(
+        string systemPrompt,
+        string userPrompt,
+        int maxOutputTokens,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Running context summarization. SystemLength={SystemLength} UserLength={UserLength} MaxTokens={MaxTokens}",
+            systemPrompt.Length, userPrompt.Length, maxOutputTokens);
+
+        var agent = await CreateAgentAsync(_options, systemPrompt);
+
+        var runOptions = new ChatClientAgentRunOptions(new ChatOptions
+        {
+            MaxOutputTokens = maxOutputTokens,
+            Temperature = (float)_options.Temperature,
+            AllowMultipleToolCalls = false,
+            ResponseFormat = ChatResponseFormat.Text
+        });
+
+        var response = await agent.RunAsync(userPrompt, options: runOptions, cancellationToken: cancellationToken);
+        return response.Text ?? string.Empty;
+    }
+
+    // <inheritdoc/>
     public async Task<List<InlineSuggestion>> GenerateInlineSuggestionsAsync(
         AnalyzerServiceModel analysisResult,
         Dictionary<string, string> diffs,
@@ -204,7 +234,8 @@ public sealed class AzureOpenAIAnalyzerService(AzureOpenAIAnalyzerOptions option
                 ["customInstructions"] = analysisResult.CopilotInstructionsPrompt,
                 ["mcpServers"] = analysisResult.AnalysisResult.McpServer is null ? "none" : string.Join(",", analysisResult.AnalysisResult.McpServer.Select(s => s.ToString())),
                 ["totalFilesInPR"] = diffs.Count.ToString(),
-                ["maxSuggestionsPerFile"] = ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString()
+                ["maxSuggestionsPerFile"] = ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString(),
+                ["workItemContext"] = analysisResult.WorkItemGoal
             },
             enableGlobalInstructions: true);
 

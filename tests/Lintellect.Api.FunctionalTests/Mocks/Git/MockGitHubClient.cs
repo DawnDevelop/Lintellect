@@ -7,6 +7,20 @@ namespace Lintellect.Api.FunctionalTests.Mocks.Git;
 /// </summary>
 public sealed class MockGitClient : IGitClient
 {
+    public List<WorkItemReference> WorkItemsToReturn { get; set; } =
+    [
+        new("100", Title: "Add foo support", Body: "Implement foo per spec.", Type: "User Story", State: "Active")
+    ];
+
+    public Task<List<WorkItemReference>> GetLinkedWorkItemsAsync(
+        string projectName,
+        string repositoryName,
+        int pullRequestId,
+        IReadOnlyList<WorkItemReference>? hints = null)
+    {
+        return Task.FromResult(WorkItemsToReturn);
+    }
+
     public Task<List<CheckPermissionResult>> HasSufficientPermissionsAsync(AnalysisRequest request)
     {
         return Task.FromResult(new List<CheckPermissionResult>

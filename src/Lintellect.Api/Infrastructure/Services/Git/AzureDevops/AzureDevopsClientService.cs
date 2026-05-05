@@ -6,6 +6,10 @@ using Lintellect.Api.Infrastructure.Extensions;
 using Lintellect.Shared.Models;
 using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
+using Microsoft.TeamFoundation.WorkItemTracking.WebApi;
+using SharedWorkItemReference = Lintellect.Shared.Models.WorkItemReference;
+using AdoWorkItem = Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models.WorkItem;
+using AdoWorkItemExpand = Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models.WorkItemExpand;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.Identity;
 using Microsoft.VisualStudio.Services.Identity.Client;
@@ -31,6 +35,7 @@ public class AzureDevopsClientService : IGitClient
     private readonly Lazy<Task<ProjectHttpClient>> _projectClient;
     private readonly Lazy<Task<IdentityHttpClient>> _identityClient;
     private readonly Lazy<Task<SecurityHttpClient>> _securityClient;
+    private readonly Lazy<Task<WorkItemTrackingHttpClient>> _witClient;
 
     public AzureDevopsClientService(string devopsPat, Uri orgUri)
     {
@@ -41,6 +46,64 @@ public class AzureDevopsClientService : IGitClient
         _projectClient = new Lazy<Task<ProjectHttpClient>>(() => _connection.GetClientAsync<ProjectHttpClient>());
         _identityClient = new Lazy<Task<IdentityHttpClient>>(() => _connection.GetClientAsync<IdentityHttpClient>());
         _securityClient = new Lazy<Task<SecurityHttpClient>>(() => _connection.GetClientAsync<SecurityHttpClient>());
+        _witClient = new Lazy<Task<WorkItemTrackingHttpClient>>(() => _connection.GetClientAsync<WorkItemTrackingHttpClient>());
+    }
+
+    /// <inheritdoc />
+    public async Task<List<SharedWorkItemReference>> GetLinkedWorkItemsAsync(
+        string projectName,
+        string repositoryName,
+        int pullRequestId,
+        IReadOnlyList<SharedWorkItemReference>? hints = null)
+    {
+        var gitClient = await GetHttpGitClient();
+        var refs = await gitClient.GetPullRequestWorkItemRefsAsync(projectName, repositoryName, pullRequestId);
+
+        var ids = new List<int>();
+        foreach (var r in refs ?? [])
+        {
+            if (int.TryParse(r.Id, out var id))
+            {
+                ids.Add(id);
+            }
+        }
+
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        var witClient = await _witClient.Value;
+        var fields = new[] { "System.Title", "System.Description", "System.WorkItemType", "System.State" };
+        var items = await witClient.GetWorkItemsAsync(ids, fields: fields, expand: AdoWorkItemExpand.None);
+
+        return [.. items.Select(MapWorkItem)];
+    }
+
+    private static SharedWorkItemReference MapWorkItem(AdoWorkItem item)
+    {
+        var fields = item.Fields ?? new Dictionary<string, object>();
+        string? GetField(string key) => fields.TryGetValue(key, out var v) ? v?.ToString() : null;
+
+        return new SharedWorkItemReference(
+            Id: item.Id?.ToString() ?? string.Empty,
+            Url: item.Url,
+            Title: GetField("System.Title"),
+            Body: StripHtml(GetField("System.Description")),
+            State: GetField("System.State"),
+            Type: GetField("System.WorkItemType"));
+    }
+
+    private static string? StripHtml(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return value;
+        }
+
+        var noTags = System.Text.RegularExpressions.Regex.Replace(value, "<[^>]+>", " ");
+        var collapsed = System.Text.RegularExpressions.Regex.Replace(noTags, @"\s+", " ").Trim();
+        return collapsed;
     }
 
     public Task<GitHttpClient> GetHttpGitClient()
@@ -205,8 +268,7 @@ public class AzureDevopsClientService : IGitClient
             {
                 Version = commitId,
                 VersionType = GitVersionType.Commit
-            })
-            ;
+            });
     }
 
     /// <summary>
@@ -295,8 +357,7 @@ public class AzureDevopsClientService : IGitClient
             {
                 Version = pullRequest.SourceRefName?.Replace("refs/heads/", string.Empty),
                 VersionType = GitVersionType.Branch
-            })
-            ;
+            });
 
         var fileDiffs = new Dictionary<string, string>();
 
@@ -631,6 +692,18 @@ public class AzureDevopsClientService : IGitClient
                     await gitClient.UpdatePullRequestAsync(invalidUpdate, project, repoName, pullRequestId);
                 });
                 results.Add(new CheckPermissionResult(Success, Success ? null : $"Pull Request Edit: {Reason}"));
+            }
+
+            // Work item read permission (required for work item context)
+            if (analysisRequest.EnableWorkItemContext)
+            {
+                var (Success, Reason) = await TestPermissionAsync(async () =>
+                {
+                    // Exercises the exact API path used by GetLinkedWorkItemsAsync — validates
+                    // that the PAT has "Work Items (Read)" in addition to "Code (Read)".
+                    _ = await gitClient.GetPullRequestWorkItemRefsAsync(project, repoName, pullRequestId);
+                });
+                results.Add(new CheckPermissionResult(Success, Success ? null : $"Work Item Read: {Reason}"));
             }
 
             // Identity read permission (required for code owners)

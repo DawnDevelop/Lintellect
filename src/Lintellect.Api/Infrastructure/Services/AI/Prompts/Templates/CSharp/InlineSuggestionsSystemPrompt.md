@@ -178,3 +178,5 @@ For the hunk `@@ -1,15 +1,15 @@`:
 ## Custom Project Instructions for this Analysis:
 
 {{customInstructions}}
+
+{{workItemContext}}

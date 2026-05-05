@@ -10,6 +10,7 @@ using Lintellect.Api.Infrastructure.Services.AI.MCPs;
 using Lintellect.Api.Infrastructure.Services.Analysis;
 using Lintellect.Api.Infrastructure.Services.Git;
 using Lintellect.Api.Infrastructure.Services.Webhooks;
+using Lintellect.Api.Infrastructure.Services.WorkItems;
 using Lintellect.Api.Infrastructure.Telemetry;
 using Lintellect.Shared.Models;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +38,10 @@ public static class ConfigureServices
 
         // Register the diff service
         services.AddScoped<PullRequestService>();
+
+        // Register work-item context services (toggled per-job via AnalysisRequest.EnableWorkItemContext)
+        services.AddScoped<IWorkItemService, WorkItemService>();
+        services.AddScoped<IWorkItemSummarizer, WorkItemSummarizer>();
 
         return services;
     }

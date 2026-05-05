@@ -14,3 +14,5 @@ You are an expert Python code reviewer analyzing static analysis findings and co
 ## Custom Project Instructions for this Analysis:
 
 {{customInstructions}}
+
+{{workItemContext}}

@@ -44,3 +44,5 @@ Keep it concise (under 150 words) and actionable for DevOps teams.
 ## Custom Project Instructions for this Analysis:
 
 {{customInstructions}}
+
+{{workItemContext}}

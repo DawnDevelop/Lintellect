@@ -65,6 +65,23 @@ public interface IAnalyzerService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Answer to the question in Markdown format</returns>
     Task<string> AnswerQuestionAsync(AnalyzerServiceModel analysisResult, string threadContext, string question, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Runs a tightly-scoped, single-shot AI call used for ancillary context summarization
+    /// (e.g. condensing linked work items before they are fed into the main review prompts).
+    /// Implementations must not require an <see cref="AnalyzerServiceModel"/>; the caller supplies a
+    /// fully-rendered system + user prompt and an output token cap.
+    /// </summary>
+    /// <param name="systemPrompt">Fully-rendered system prompt.</param>
+    /// <param name="userPrompt">Fully-rendered user prompt.</param>
+    /// <param name="maxOutputTokens">Hard cap on the response token count.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The model's text response, or an empty string if the model produced nothing.</returns>
+    Task<string> SummarizeContextAsync(
+        string systemPrompt,
+        string userPrompt,
+        int maxOutputTokens,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
