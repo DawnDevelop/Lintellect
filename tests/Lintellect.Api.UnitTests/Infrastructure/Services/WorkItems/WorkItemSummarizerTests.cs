@@ -1,7 +1,6 @@
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Infrastructure.Services.WorkItems;
 using Microsoft.Extensions.Logging.Abstractions;
-using Shouldly;
 
 namespace Lintellect.Api.UnitTests.Infrastructure.Services.WorkItems;
 

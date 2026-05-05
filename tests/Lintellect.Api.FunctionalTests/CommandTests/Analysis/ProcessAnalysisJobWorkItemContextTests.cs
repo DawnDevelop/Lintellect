@@ -1,7 +1,5 @@
-using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Messages.Commands.Analysis;
 using Lintellect.Api.FunctionalTests.Mocks.AI;
-using Microsoft.Extensions.DependencyInjection;
 using static Lintellect.Api.FunctionalTests.Testing;
 
 namespace Lintellect.Api.FunctionalTests.CommandTests.Analysis;

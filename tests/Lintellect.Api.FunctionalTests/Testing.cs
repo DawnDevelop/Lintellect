@@ -1,7 +1,6 @@
 using Lintellect.Api.FunctionalTests.Setup;
 using Lintellect.Api.Infrastructure.Persistence;
 using Mediator;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Lintellect.Api.FunctionalTests;

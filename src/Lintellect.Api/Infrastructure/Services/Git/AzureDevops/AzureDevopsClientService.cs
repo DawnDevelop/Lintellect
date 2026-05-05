@@ -7,15 +7,15 @@ using Lintellect.Shared.Models;
 using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi;
-using SharedWorkItemReference = Lintellect.Shared.Models.WorkItemReference;
-using AdoWorkItem = Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models.WorkItem;
-using AdoWorkItemExpand = Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models.WorkItemExpand;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.Identity;
 using Microsoft.VisualStudio.Services.Identity.Client;
 using Microsoft.VisualStudio.Services.OAuth;
 using Microsoft.VisualStudio.Services.Security.Client;
 using Microsoft.VisualStudio.Services.WebApi;
+using AdoWorkItem = Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models.WorkItem;
+using AdoWorkItemExpand = Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models.WorkItemExpand;
+using SharedWorkItemReference = Lintellect.Shared.Models.WorkItemReference;
 
 namespace Lintellect.Api.Infrastructure.Services.Git.AzureDevops;
 

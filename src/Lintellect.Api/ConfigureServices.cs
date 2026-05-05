@@ -13,7 +13,6 @@ using Lintellect.Api.Infrastructure.Services.Webhooks;
 using Lintellect.Api.Infrastructure.Services.WorkItems;
 using Lintellect.Api.Infrastructure.Telemetry;
 using Lintellect.Shared.Models;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Lintellect.Api;
