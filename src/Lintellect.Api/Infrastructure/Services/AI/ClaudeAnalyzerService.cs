@@ -6,7 +6,6 @@ using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
 using Lintellect.Api.Infrastructure.Services.AI.Prompts;
 using Lintellect.Shared.Models;
-using Polly;
 
 namespace Lintellect.Api.Infrastructure.Services.AI;
 
@@ -20,25 +19,25 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
     private readonly PromptTemplateService _templateService;
     private readonly PromptBuilder _promptBuilder;
     private readonly AnthropicClient _client;
-    private readonly IAsyncPolicy _retryPolicy;
     private readonly IMcpServiceResolver _mcpServiceResolver;
+    private readonly ILogger<ClaudeAnalyzerService> _logger;
 
-    public ClaudeAnalyzerService(ClaudeAnalyzerOptions options, IMcpServiceResolver mcpServiceResolver)
+    public ClaudeAnalyzerService(
+        ClaudeAnalyzerOptions options,
+        IMcpServiceResolver mcpServiceResolver,
+        IHttpClientFactory httpClientFactory,
+        ILogger<ClaudeAnalyzerService> logger)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _mcpServiceResolver = mcpServiceResolver ?? throw new ArgumentNullException(nameof(mcpServiceResolver));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _templateService = new PromptTemplateService();
         _promptBuilder = new PromptBuilder();
-        _client = new AnthropicClient(_options.ApiKey!);
 
-        // Configure retry policy for Claude API calls
-        _retryPolicy = Policy
-            .Handle<HttpRequestException>()
-            .Or<TimeoutException>()
-            .WaitAndRetryAsync(
-                retryCount: 3,
-                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                onRetry: (outcome, timespan, retryCount, context) => Console.WriteLine($"Claude API retry {retryCount} in {timespan} seconds due to: {outcome?.Message}"));
+        // The "ClaudeApi" HttpClient is registered in ConfigureServices.AddResiliencePolicies
+        // with retry + 5-minute timeout via Microsoft.Extensions.Http.Polly.
+        var httpClient = httpClientFactory.CreateClient("ClaudeApi");
+        _client = new AnthropicClient(new APIAuthentication(_options.ApiKey!), httpClient, requestInterceptor: null);
     }
 
     /// <summary>
@@ -49,21 +48,23 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         Dictionary<string, string> diffs,
         CancellationToken cancellationToken = default)
     {
-        return await _retryPolicy.ExecuteAsync(async () =>
-        {
-            var systemPrompt = _templateService.RenderLanguageTemplate(
-                LanguagePromptTemplates.DetailedAnalysisSystemPrompt,
-                analysisResult.AnalysisResult.Language,
-                new Dictionary<string, string>
-                {
-                    { "customInstructions", analysisResult.CopilotInstructionsPrompt }
-                });
+        _logger.LogInformation("Starting detailed analysis for language {Language}. DiffCount={DiffCount}",
+            analysisResult.AnalysisResult.Language, diffs.Count);
 
-            // Use optimized prompt builder with truncation and prioritization
-            var userPrompt = _promptBuilder.BuildAnalysisPrompt(analysisResult.AnalysisResult, diffs);
+        var systemPrompt = _templateService.RenderLanguageTemplate(
+            LanguagePromptTemplates.DetailedAnalysisSystemPrompt,
+            analysisResult.AnalysisResult.Language,
+            new Dictionary<string, string>
+            {
+                { "customInstructions", analysisResult.CopilotInstructionsPrompt },
+                { "workItemContext", analysisResult.WorkItemContext }
+            });
 
-            return await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
-        });
+        var userPrompt = _promptBuilder.BuildAnalysisPrompt(analysisResult.AnalysisResult, diffs);
+
+        var content = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
+        _logger.LogInformation("Detailed analysis generated. ContentLength={ContentLength}", content.Length);
+        return content;
     }
 
     /// <summary>
@@ -74,33 +75,34 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         Dictionary<string, string> diffs,
         CancellationToken cancellationToken = default)
     {
-        return await _retryPolicy.ExecuteAsync(async () =>
+        _logger.LogInformation("Starting inline suggestions for language {Language}. DiffCount={DiffCount}",
+            analysisResult.AnalysisResult.Language, diffs.Count);
+
+        var systemPrompt = _templateService.RenderLanguageTemplate(
+            LanguagePromptTemplates.InlineSuggestionsSystemPrompt,
+            analysisResult.AnalysisResult.Language,
+            new Dictionary<string, string>
+            {
+                { "customInstructions", analysisResult.CopilotInstructionsPrompt },
+                { "totalFilesInPR", diffs.Count.ToString() },
+                { "maxSuggestionsPerFile", AzureOpenAIAnalyzerService.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString() },
+                { "workItemContext", analysisResult.WorkItemGoal }
+            });
+
+        var userPrompt = _promptBuilder.BuildInlineSuggestionsPrompt(analysisResult.AnalysisResult, diffs);
+
+        var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
+
+        try
         {
-            var systemPrompt = _templateService.RenderLanguageTemplate(
-                LanguagePromptTemplates.InlineSuggestionsSystemPrompt,
-                analysisResult.AnalysisResult.Language,
-                new Dictionary<string, string>
-                {
-                    { "customInstructions", analysisResult.CopilotInstructionsPrompt },
-                    { "totalFilesInPR", diffs.Count.ToString() },
-                    { "maxSuggestionsPerFile", SemanticAnalyzerService.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString() }
-                });
-
-            // Use optimized prompt builder with truncation, prioritization, and filtered findings
-            var userPrompt = _promptBuilder.BuildInlineSuggestionsPrompt(analysisResult.AnalysisResult, diffs);
-
-            var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
-
-            try
-            {
-                var suggestions = JsonSerializer.Deserialize<List<InlineSuggestion>>(response);
-                return SemanticAnalyzerService.ApplyGlobalCap(suggestions ?? [], _options.MaxInlineSuggestions);
-            }
-            catch
-            {
-                return [];
-            }
-        });
+            var suggestions = JsonSerializer.Deserialize<List<InlineSuggestion>>(response);
+            return AzureOpenAIAnalyzerService.ApplyGlobalCap(suggestions ?? [], _options.MaxInlineSuggestions, _logger);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize inline suggestions response from Claude. ResponseLength={ResponseLength}", response.Length);
+            return [];
+        }
     }
 
     /// <summary>
@@ -111,23 +113,23 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         Dictionary<string, string> diffs,
         CancellationToken cancellationToken = default)
     {
-        return await _retryPolicy.ExecuteAsync(async () =>
-        {
-            var systemPrompt = _templateService.RenderLanguageTemplate(
-                LanguagePromptTemplates.SummarySystemPrompt,
-                analysisResult.AnalysisResult.Language,
-                new Dictionary<string, string>
-                {
-                    { "customInstructions", analysisResult.CopilotInstructionsPrompt }
-                });
+        _logger.LogInformation("Starting summary generation for language {Language}. DiffCount={DiffCount}",
+            analysisResult.AnalysisResult.Language, diffs.Count);
 
+        var systemPrompt = _templateService.RenderLanguageTemplate(
+            LanguagePromptTemplates.SummarySystemPrompt,
+            analysisResult.AnalysisResult.Language,
+            new Dictionary<string, string>
+            {
+                { "customInstructions", analysisResult.CopilotInstructionsPrompt },
+                { "workItemContext", analysisResult.WorkItemContext }
+            });
 
-            var userPrompt = PromptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs);
+        var userPrompt = PromptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs);
 
-            var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
-
-            return response;
-        });
+        var content = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
+        _logger.LogInformation("Summary generated. ContentLength={ContentLength}", content.Length);
+        return content;
     }
 
     /// <summary>
@@ -139,23 +141,42 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         string question,
         CancellationToken cancellationToken = default)
     {
-        return await _retryPolicy.ExecuteAsync(async () =>
-        {
-            var systemPrompt = _templateService.RenderTemplate(
-                AvailablePrompts.GeneralPrompts[GeneralPromptTemplates.QuestionAnsweringPrompt],
-                new Dictionary<string, string>
-                {
-                    { "customInstructions", analysisResult.CopilotInstructionsPrompt },
-                    { "threadContext", threadContext }
-                });
+        _logger.LogInformation("Answering question for PR.");
 
+        var systemPrompt = _templateService.RenderTemplate(
+            AvailablePrompts.GeneralPrompts[GeneralPromptTemplates.QuestionAnsweringPrompt],
+            new Dictionary<string, string>
+            {
+                { "customInstructions", analysisResult.CopilotInstructionsPrompt },
+                { "threadContext", threadContext }
+            });
 
-            return await SendClaudeMessageAsync(systemPrompt, $"""
+        var content = await SendClaudeMessageAsync(systemPrompt, $"""
             this is my question:
 
             {question}
             """, cancellationToken);
-        });
+
+        _logger.LogInformation("Question answered. ContentLength={ContentLength}", content.Length);
+        return content;
+    }
+
+    /// <inheritdoc/>
+    public async Task<string> SummarizeContextAsync(
+        string systemPrompt,
+        string userPrompt,
+        int maxOutputTokens,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Running context summarization. SystemLength={SystemLength} UserLength={UserLength} MaxTokens={MaxTokens}",
+            systemPrompt.Length, userPrompt.Length, maxOutputTokens);
+
+        var parameter = CreateMessageParameters(systemPrompt, userPrompt);
+        parameter.PromptCaching = PromptCacheType.None;
+        parameter.MaxTokens = maxOutputTokens;
+
+        var message = await _client.Messages.GetClaudeMessageAsync(parameter, cancellationToken);
+        return message.ContentBlock?.Text ?? string.Empty;
     }
 
     /// <summary>
@@ -163,23 +184,22 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
     /// </summary>
     public async Task<CodeOwnersResult?> GetCodeOwnersAsync(string codeOwnerFileContent, List<string> changedFilePaths, CancellationToken cancellationToken = default)
     {
-        return await _retryPolicy.ExecuteAsync(async () =>
+        _logger.LogInformation("Generating CODEOWNERS suggestions. ChangedFiles={ChangedFiles}", changedFilePaths.Count);
+
+        var systemPrompt = _templateService.RenderTemplate("CodeOwnerSystemPrompt");
+        var userPrompt = $"CODEOWNERS file content:\n{codeOwnerFileContent}\n\nChanged files:\n{string.Join("\n", changedFilePaths)}";
+
+        var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
+
+        try
         {
-            var systemPrompt = _templateService.RenderTemplate("CodeOwnerSystemPrompt");
-            var userPrompt = $"CODEOWNERS file content:\n{codeOwnerFileContent}\n\nChanged files:\n{string.Join("\n", changedFilePaths)}";
-
-            var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
-
-            try
-            {
-                var result = JsonSerializer.Deserialize<CodeOwnersResult>(response);
-                return result;
-            }
-            catch
-            {
-                return null;
-            }
-        });
+            return JsonSerializer.Deserialize<CodeOwnersResult>(response);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize CODEOWNERS response from Claude. ResponseLength={ResponseLength}", response.Length);
+            return null;
+        }
     }
 
     /// <summary>
@@ -193,150 +213,152 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         List<string> changedFilePaths,
         CancellationToken cancellationToken = default)
     {
-        return await _retryPolicy.ExecuteAsync(async () =>
-        {
-            // Build message parameters for each operation
-            var detailedSystem = _templateService.RenderLanguageTemplate(
-                LanguagePromptTemplates.DetailedAnalysisSystemPrompt,
-                analysisResult.AnalysisResult.Language,
-                new Dictionary<string, string>
-                {
-                    { "customInstructions", analysisResult.CopilotInstructionsPrompt }
-                });
+        _logger.LogInformation("Starting batched analysis for language {Language}. DiffCount={DiffCount}",
+            analysisResult.AnalysisResult.Language, diffs.Count);
 
-            var inlineSystem = _templateService.RenderLanguageTemplate(
-                LanguagePromptTemplates.InlineSuggestionsSystemPrompt,
-                analysisResult.AnalysisResult.Language,
-                new Dictionary<string, string>
-                {
-                    { "customInstructions", analysisResult.CopilotInstructionsPrompt },
-                    { "mcpServers", string.Join(",", analysisResult.AnalysisResult.McpServer ?? []) },
-                    { "totalFilesInPR", diffs.Count.ToString() },
-                    { "maxSuggestionsPerFile", SemanticAnalyzerService.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString() }
-                }, true);
-
-            var summarySystem = _templateService.RenderLanguageTemplate(
-                LanguagePromptTemplates.SummarySystemPrompt,
-                analysisResult.AnalysisResult.Language,
-                new Dictionary<string, string> { { "customInstructions", analysisResult.CopilotInstructionsPrompt } });
-
-            // Use optimized prompt builders with truncation and prioritization
-            var analysisUser = _promptBuilder.BuildAnalysisPrompt(analysisResult.AnalysisResult, diffs);
-            var inlineUser = _promptBuilder.BuildInlineSuggestionsPrompt(analysisResult.AnalysisResult, diffs);
-            var summaryUser = PromptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs);
-
-            var codeownersSystem = _templateService.RenderTemplate(AvailablePrompts.GeneralPrompts[GeneralPromptTemplates.CodeOwnerSystemPrompt]);
-            // Optimize CODEOWNERS prompt - more concise format
-            var codeownersUser = $"CODEOWNERS:\n{codeOwnerFileContent}\n\nChanged files: {string.Join(", ", changedFilePaths)}";
-
-            var commonMcp = BuildMcpServerConfigs(analysisResult.AnalysisResult.McpServer ?? []);
-
-            var requests = new List<BatchRequest>();
-
-            // Create batch requests based on enabled features
-            var idDescriptionSummary = BuildDescriptionSummaryRequest(detailedSystem, analysisUser, commonMcp);
-            var idInlineSuggestions = BuildInlineRequest(inlineSystem, inlineUser, commonMcp);
-            var idSummary = BuildSummaryCommentRequest(summarySystem, summaryUser, commonMcp);
-            var idCodeOwners = BuildCodeOwnersRequest(codeownersSystem, codeownersUser, commonMcp);
-
-
-            var tokenCount = await _client.Messages.CountMessageTokensAsync(new()
+        var detailedSystem = _templateService.RenderLanguageTemplate(
+            LanguagePromptTemplates.DetailedAnalysisSystemPrompt,
+            analysisResult.AnalysisResult.Language,
+            new Dictionary<string, string>
             {
-                Messages = idDescriptionSummary.MessageParameters.Messages,
-                Tools = idDescriptionSummary.MessageParameters.Tools,
-                Model = idDescriptionSummary.MessageParameters.Model,
-                System = idDescriptionSummary.MessageParameters.System
+                { "customInstructions", analysisResult.CopilotInstructionsPrompt },
+                { "workItemContext", analysisResult.WorkItemContext }
             });
 
-            // EnableSummaryComment = detailed analysis comment on PR
-            if (analysisResult.AnalysisResult.EnableSummaryComment)
+        var inlineSystem = _templateService.RenderLanguageTemplate(
+            LanguagePromptTemplates.InlineSuggestionsSystemPrompt,
+            analysisResult.AnalysisResult.Language,
+            new Dictionary<string, string>
             {
-                requests.Add(idDescriptionSummary);
+                { "customInstructions", analysisResult.CopilotInstructionsPrompt },
+                { "mcpServers", string.Join(",", analysisResult.AnalysisResult.McpServer ?? []) },
+                { "totalFilesInPR", diffs.Count.ToString() },
+                { "maxSuggestionsPerFile", AzureOpenAIAnalyzerService.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString() },
+                { "workItemContext", analysisResult.WorkItemGoal }
+            }, true);
+
+        var summarySystem = _templateService.RenderLanguageTemplate(
+            LanguagePromptTemplates.SummarySystemPrompt,
+            analysisResult.AnalysisResult.Language,
+            new Dictionary<string, string>
+            {
+                { "customInstructions", analysisResult.CopilotInstructionsPrompt },
+                { "workItemContext", analysisResult.WorkItemContext }
+            });
+
+        var analysisUser = _promptBuilder.BuildAnalysisPrompt(analysisResult.AnalysisResult, diffs);
+        var inlineUser = _promptBuilder.BuildInlineSuggestionsPrompt(analysisResult.AnalysisResult, diffs);
+        var summaryUser = PromptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs);
+
+        var codeownersSystem = _templateService.RenderTemplate(AvailablePrompts.GeneralPrompts[GeneralPromptTemplates.CodeOwnerSystemPrompt]);
+        var codeownersUser = $"CODEOWNERS:\n{codeOwnerFileContent}\n\nChanged files: {string.Join(", ", changedFilePaths)}";
+
+        var commonMcp = BuildMcpServerConfigs(analysisResult.AnalysisResult.McpServer ?? []);
+
+        var requests = new List<BatchRequest>();
+
+        var idDescriptionSummary = BuildDescriptionSummaryRequest(detailedSystem, analysisUser, commonMcp);
+        var idInlineSuggestions = BuildInlineRequest(inlineSystem, inlineUser, commonMcp);
+        var idSummary = BuildSummaryCommentRequest(summarySystem, summaryUser, commonMcp);
+        var idCodeOwners = BuildCodeOwnersRequest(codeownersSystem, codeownersUser, commonMcp);
+
+        //await _client.Messages.CountMessageTokensAsync(new()
+        //{
+        //    Messages = idDescriptionSummary.MessageParameters.Messages,
+        //    Tools = idDescriptionSummary.MessageParameters.Tools,
+        //    Model = idDescriptionSummary.MessageParameters.Model,
+        //    System = idDescriptionSummary.MessageParameters.System
+        //});
+
+        // EnableSummaryComment = detailed analysis comment on PR
+        if (analysisResult.AnalysisResult.EnableSummaryComment)
+        {
+            requests.Add(idDescriptionSummary);
+        }
+
+        if (analysisResult.AnalysisResult.EnableInlineSuggestions)
+        {
+            requests.Add(idInlineSuggestions);
+        }
+
+        // EnableDescriptionSummary = summary appended to PR description
+        if (analysisResult.AnalysisResult.EnableDescriptionSummary)
+        {
+            requests.Add(idSummary);
+        }
+
+        if (analysisResult.AnalysisResult.EnableAzureDevopsCodeOwners && !string.IsNullOrWhiteSpace(codeOwnerFileContent))
+        {
+            requests.Add(idCodeOwners);
+        }
+
+        if (requests.Count == 0)
+        {
+            _logger.LogInformation("Batched analysis skipped: no operations enabled");
+            return new BatchedAnalysisResult();
+        }
+
+        _logger.LogInformation("Submitting Claude batch with {RequestCount} request(s)", requests.Count);
+        var created = await _client.Batches.CreateBatchAsync(requests);
+
+        BatchResponse currentStatus;
+        do
+        {
+            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+            currentStatus = await _client.Batches.RetrieveBatchStatusAsync(created.Id, cancellationToken);
+        } while (currentStatus.ProcessingStatus is "in_progress");
+
+        _logger.LogInformation("Batch {BatchId} completed with status {Status}", created.Id, currentStatus.ProcessingStatus);
+
+        var detailed = string.Empty;
+        var inlineRaw = string.Empty;
+        var summary = string.Empty;
+        var codeownersRaw = string.Empty;
+
+        await foreach (var result in _client.Batches.RetrieveBatchResultsAsync(created.Id, cancellationToken))
+        {
+            if (result.Result.Type is "errored")
+            {
+                _logger.LogWarning("Batch result {CustomId} errored — skipping", result.CustomId);
+                continue;
             }
 
-            if (analysisResult.AnalysisResult.EnableInlineSuggestions)
-            {
-                requests.Add(idInlineSuggestions);
-            }
+            detailed = result.CustomId == idDescriptionSummary.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : detailed;
+            inlineRaw = result.CustomId == idInlineSuggestions.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : inlineRaw;
+            summary = result.CustomId == idSummary.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : summary;
+            codeownersRaw = result.CustomId == idCodeOwners.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : codeownersRaw;
+        }
 
-            // EnableDescriptionSummary = summary appended to PR description
-            if (analysisResult.AnalysisResult.EnableDescriptionSummary)
-            {
-                requests.Add(idSummary);
-            }
+        List<InlineSuggestion> inline;
+        try
+        {
+            var parsed = string.IsNullOrWhiteSpace(inlineRaw) ? [] : (JsonSerializer.Deserialize<List<InlineSuggestion>>(inlineRaw) ?? []);
+            inline = AzureOpenAIAnalyzerService.ApplyGlobalCap(parsed, _options.MaxInlineSuggestions, _logger);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize inline suggestions from batch result. RawLength={RawLength}", inlineRaw.Length);
+            inline = [];
+        }
 
-            if (analysisResult.AnalysisResult.EnableAzureDevopsCodeOwners && !string.IsNullOrWhiteSpace(codeOwnerFileContent))
-            {
-                requests.Add(idCodeOwners);
-            }
+        CodeOwnersResult? codeowners;
+        try
+        {
+            codeowners = string.IsNullOrWhiteSpace(codeownersRaw) ? null : JsonSerializer.Deserialize<CodeOwnersResult>(codeownersRaw);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize CODEOWNERS from batch result. RawLength={RawLength}", codeownersRaw.Length);
+            codeowners = null;
+        }
 
-            // If no requests, return empty result
-            if (requests.Count == 0)
-            {
-                return new BatchedAnalysisResult();
-            }
-
-            // Create batch
-            var created = await _client.Batches.CreateBatchAsync(requests);
-
-            // Poll until completed
-            BatchResponse currentStatus;
-            do
-            {
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
-                currentStatus = await _client.Batches.RetrieveBatchStatusAsync(created.Id, cancellationToken);
-            } while (currentStatus.ProcessingStatus is "in_progress");
-
-            // Retrieve results
-            var detailed = string.Empty;
-            var inlineRaw = string.Empty;
-            var summary = string.Empty;
-            var codeownersRaw = string.Empty;
-
-            await foreach (var result in _client.Batches.RetrieveBatchResultsAsync(created.Id, cancellationToken))
-            {
-                if (result.Result.Type is "errored")
-                {
-                    continue;
-                }
-
-                detailed = result.CustomId == idDescriptionSummary.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : detailed;
-                inlineRaw = result.CustomId == idInlineSuggestions.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : inlineRaw;
-                summary = result.CustomId == idSummary.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : summary;
-                codeownersRaw = result.CustomId == idCodeOwners.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : codeownersRaw;
-            }
-
-            // Parse inline suggestions and apply global cap
-            List<InlineSuggestion> inline;
-            try
-            {
-                var parsed = string.IsNullOrWhiteSpace(inlineRaw) ? [] : (JsonSerializer.Deserialize<List<InlineSuggestion>>(inlineRaw) ?? []);
-                inline = SemanticAnalyzerService.ApplyGlobalCap(parsed, _options.MaxInlineSuggestions);
-            }
-            catch
-            {
-                inline = [];
-            }
-
-            // Parse code owners
-            CodeOwnersResult? codeowners;
-            try
-            {
-                codeowners = string.IsNullOrWhiteSpace(codeownersRaw) ? null : JsonSerializer.Deserialize<CodeOwnersResult>(codeownersRaw);
-            }
-            catch
-            {
-                codeowners = null;
-            }
-
-            return new BatchedAnalysisResult
-            {
-                DetailedAnalysis = detailed,
-                InlineSuggestions = inline,
-                Summary = summary,
-                CodeOwners = codeowners
-            };
-        });
+        return new BatchedAnalysisResult
+        {
+            DetailedAnalysis = detailed,
+            InlineSuggestions = inline,
+            Summary = summary,
+            CodeOwners = codeowners
+        };
     }
 
     /// <summary>
@@ -453,8 +475,4 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         return servers;
     }
 
-    public Task<string> GetDetailedAnalysis(AnalyzerServiceModel analysisResult, Dictionary<string, string> diffs, CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
 }

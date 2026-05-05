@@ -9,7 +9,7 @@ This is a **multi-project .NET 10.0 solution** for AI-powered static code analys
 - **Shared** (`Lintellect.Shared`): Data contracts (`AnalysisRequest`, `GitInfo`, `AnalyzerFindings`) shared between CLI and API
 - **AppHost** (`Lintellect.AppHost`) & **ServiceDefaults** (`Lintellect.ServiceDefaults`): .NET Aspire orchestration for local development with OpenTelemetry, health checks, and service discovery
 
-**Key Data Flow**: CI/CD runs CLI → Roslyn analyzes code → CLI detects Git context → Results posted to API → API processes with AI (Claude/Semantic Kernel) → DevOps integration
+**Key Data Flow**: CI/CD runs CLI → Roslyn analyzes code → CLI detects Git context → Results posted to API → API processes with AI (Claude / Azure OpenAI via Microsoft Agent Framework) → DevOps integration
 
 ## Solution Structure
 
@@ -24,6 +24,7 @@ This is a **multi-project .NET 10.0 solution** for AI-powered static code analys
 ### Test Projects
 
 - **Lintellect.Api.FunctionalTests**: Functional tests using Testcontainers, Respawn, and Shouldly
+- **Lintellect.Api.IntegrationTests**: End-to-end tests against real AI providers (Azure OpenAI, Anthropic). Self-skip when credentials are missing.
 - **Lintellect.Api.UnitTests**: Unit tests using NUnit, NSubstitute, and Shouldly
 - **Lintellect.Cli.UnitTests**: Unit tests for the CLI project using NUnit and Shouldly
 
@@ -33,7 +34,7 @@ This is a **multi-project .NET 10.0 solution** for AI-powered static code analys
 - **C# Version**: 14.0 (latest)
 - **Key Technologies**:
   - **Roslyn** (Microsoft.CodeAnalysis.CSharp.Workspaces) for code analysis
-  - **AI Integration**: Anthropic Claude API and Microsoft Semantic Kernel
+  - **AI Integration**: Anthropic Claude API and Azure OpenAI via Microsoft Agent Framework
   - **Database**: PostgreSQL with Entity Framework Core
   - **Messaging**: Channel-based job queue (no Azure Service Bus currently)
   - **CLI**: System.CommandLine for command-line interface
@@ -114,7 +115,7 @@ This is a **multi-project .NET 10.0 solution** for AI-powered static code analys
   - **Unit Tests**: Fast, isolated tests with mocks
   - **Integration Tests**: Test with real dependencies (CLI with real solution files)
   - **Functional Tests**: End-to-end API tests with test database
-- **InternalsVisibleTo**: The CLI project exposes internals to the test project
+- **InternalsVisibleTo**: The CLI project exposes internals to its unit tests; the API project exposes internals to `Lintellect.Api.UnitTests` and `Lintellect.Api.IntegrationTests`
 - **Test Data Builders**: Use fluent builders for creating test data (see `TestDataBuilder`)
 
 ## CI/CD Integration
@@ -143,7 +144,7 @@ When working on the API project:
 
 1. **Architecture**: Follow Clean Architecture with Domain → Application → Infrastructure layers
 2. **CQRS**: Use Mediator pattern for commands and queries
-3. **AI Integration**: Support both Anthropic Claude and Microsoft Semantic Kernel
+3. **AI Integration**: Support both Anthropic Claude and Azure OpenAI via Microsoft Agent Framework
 4. **Background Processing**: Use Channel-based job queue for async analysis processing
 5. **Database**: PostgreSQL with Entity Framework Core and JSONB for flexible data storage
 6. **API Design**: Use minimal APIs and controllers as appropriate
@@ -175,7 +176,7 @@ When working with code analysis:
 4. **Docker**: API project supports Docker with Linux target OS
 5. **User Secrets**: Both API and AppHost have user secrets configured
 6. **Package Management**: Centralized package version management via `Directory.Packages.props`
-7. **AI Providers**: Support for both Anthropic Claude and Microsoft Semantic Kernel
+7. **AI Providers**: Support for both Anthropic Claude and Azure OpenAI via Microsoft Agent Framework
 8. **Database**: PostgreSQL with JSONB for flexible data storage
 9. **Background Processing**: Channel-based job queue instead of Azure Service Bus
 10. **Testing**: Comprehensive test coverage with unit, integration, and functional tests
@@ -232,7 +233,8 @@ When working with code analysis:
 
 - [Microsoft.CodeAnalysis Documentation](https://learn.microsoft.com/en-us/dotnet/csharp/roslyn-sdk/)
 - [System.CommandLine Documentation](https://learn.microsoft.com/en-us/dotnet/standard/commandline/)
-- [Semantic Kernel Documentation](https://learn.microsoft.com/en-us/semantic-kernel/)
+- [Microsoft Agent Framework Documentation](https://learn.microsoft.com/en-us/agent-framework/)
+- [Microsoft.Extensions.AI Documentation](https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.ai)
 - [Anthropic Claude API Documentation](https://docs.anthropic.com/)
 - [.NET Aspire Documentation](https://learn.microsoft.com/en-us/dotnet/aspire/)
 - [Entity Framework Core Documentation](https://learn.microsoft.com/en-us/ef/core/)

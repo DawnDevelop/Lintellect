@@ -12,3 +12,5 @@ You are an expert C# code reviewer analyzing static analysis findings and code d
 ## Custom Project Instructions for this Analysis:
 
 {{customInstructions}}
+
+{{workItemContext}}

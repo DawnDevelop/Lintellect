@@ -1,27 +1,26 @@
+using System.ClientModel;
 using System.Text.Json;
+using Azure.AI.OpenAI;
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
 using Lintellect.Api.Infrastructure.Extensions;
 using Lintellect.Api.Infrastructure.Services.AI.Prompts;
 using Lintellect.Shared.Models;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
+using Microsoft.Agents.AI;
+using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
 
 namespace Lintellect.Api.Infrastructure.Services.AI;
 
 /// <summary>
-/// Analyzer service using Semantic Kernel (AIFoundry) for code analysis.
+/// Analyzer service using the Microsoft Agent Framework over Azure OpenAI for code analysis.
 /// </summary>
-public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMcpServiceResolver resolver, ILogger<SemanticAnalyzerService> logger) : IAnalyzerService
+public sealed class AzureOpenAIAnalyzerService(AzureOpenAIAnalyzerOptions options, IMcpServiceResolver resolver, ILogger<AzureOpenAIAnalyzerService> logger) : IAnalyzerService
 {
-    private readonly SemanticAnalyzerOptions _options = options ?? throw new ArgumentNullException(nameof(options));
+    private readonly AzureOpenAIAnalyzerOptions _options = options ?? throw new ArgumentNullException(nameof(options));
     private readonly PromptTemplateService _templateService = new();
     private readonly PromptBuilder _promptBuilder = new();
-    private readonly ILogger<SemanticAnalyzerService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-    private static FunctionChoiceBehavior FunctionChoiceBehavior => FunctionChoiceBehavior.Auto(options: new() { AllowParallelCalls = true, AllowConcurrentInvocation = true });
+    private readonly ILogger<AzureOpenAIAnalyzerService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
     // <inheritdoc/>
     public async Task<string> GetDetailedAnalysisAsync(
@@ -34,38 +33,29 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
             diffs.Count,
             analysisResult.AnalysisResult.McpServer?.Count ?? 0);
 
-        var kernel = await CreateKernelAsync(_options, analysisResult.AnalysisResult.McpServer);
-        var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
-
         var systemPrompt = _templateService.RenderLanguageTemplate(
             LanguagePromptTemplates.DetailedAnalysisSystemPrompt,
             analysisResult.AnalysisResult.Language,
             new Dictionary<string, string>
             {
-                ["customInstructions"] = analysisResult.CopilotInstructionsPrompt
+                ["customInstructions"] = analysisResult.CopilotInstructionsPrompt,
+                ["workItemContext"] = analysisResult.WorkItemContext
             });
 
-        var chatHistory = new ChatHistory(systemPrompt);
-        chatHistory.AddUserMessage(_promptBuilder.BuildAnalysisPrompt(analysisResult.AnalysisResult, diffs));
+        var agent = await CreateAgentAsync(_options, systemPrompt, analysisResult.AnalysisResult.McpServer);
 
-#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        var executionSettings = new AzureOpenAIPromptExecutionSettings
+        var runOptions = new ChatClientAgentRunOptions(new ChatOptions
         {
-            MaxTokens = _options.MaxTokens,
-            Temperature = _options.Temperature,
-            FunctionChoiceBehavior = FunctionChoiceBehavior,
-            SetNewMaxCompletionTokensEnabled = true,
-            ResponseFormat = "text" // Use text for detailed markdown analysis
-        };
-#pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+            MaxOutputTokens = _options.MaxTokens,
+            Temperature = (float)_options.Temperature,
+            AllowMultipleToolCalls = true,
+            ResponseFormat = ChatResponseFormat.Text
+        });
 
-        var response = await chatCompletionService.GetChatMessageContentAsync(
-            chatHistory,
-            executionSettings: executionSettings,
-            kernel: kernel,
-            cancellationToken: cancellationToken);
+        var userPrompt = _promptBuilder.BuildAnalysisPrompt(analysisResult.AnalysisResult, diffs);
+        var response = await agent.RunAsync(userPrompt, options: runOptions, cancellationToken: cancellationToken);
 
-        var content = response.Content ?? "No analysis generated.";
+        var content = string.IsNullOrEmpty(response.Text) ? "No analysis generated." : response.Text;
         _logger.LogInformation("Detailed analysis generated. ContentLength={ContentLength}", content.Length);
         return content;
     }
@@ -76,17 +66,20 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
         List<string> changedFilePaths,
         CancellationToken cancellationToken = default)
     {
-
         _logger.LogInformation("Generating CODEOWNERS suggestions. ChangedFiles={ChangedFiles}", changedFilePaths.Count);
-
-        var kernel = await CreateKernelAsync(_options);
-        var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
 
         var systemPrompt = _templateService.RenderTemplate(AvailablePrompts.GeneralPrompts[GeneralPromptTemplates.CodeOwnerSystemPrompt]);
 
-        var chatHistory = new ChatHistory(systemPrompt);
+        var agent = await CreateAgentAsync(_options, systemPrompt);
 
-        // Create a message that includes both the CODEOWNERS content and the changed file paths
+        var runOptions = new ChatClientAgentRunOptions(new ChatOptions
+        {
+            MaxOutputTokens = _options.MaxTokens,
+            Temperature = (float)_options.Temperature,
+            AllowMultipleToolCalls = true,
+            ResponseFormat = ChatResponseFormat.Json
+        });
+
         var userMessage = $"""
             CODEOWNERS file content:
             {codeOwnerFileContent}
@@ -95,32 +88,15 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
             {string.Join("\n", changedFilePaths.Select(path => $"- {path}"))}
             """;
 
-        chatHistory.AddUserMessage(userMessage);
+        var response = await agent.RunAsync(userMessage, options: runOptions, cancellationToken: cancellationToken);
 
-#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        var executionSettings = new AzureOpenAIPromptExecutionSettings
-        {
-            MaxTokens = _options.MaxTokens,
-            Temperature = _options.Temperature, // Lower temperature for more precise suggestions
-            FunctionChoiceBehavior = FunctionChoiceBehavior,
-            SetNewMaxCompletionTokensEnabled = true,
-            ResponseFormat = "json_object" // Request JSON output for structured parsing
-        };
-#pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-
-        var response = await chatCompletionService.GetChatMessageContentAsync(
-            chatHistory,
-            executionSettings: executionSettings,
-            kernel: kernel,
-            cancellationToken: cancellationToken);
-
-        if (string.IsNullOrWhiteSpace(response.Content))
+        if (string.IsNullOrWhiteSpace(response.Text))
         {
             _logger.LogWarning("CODEOWNERS suggestions response was empty");
             return null;
         }
 
-        var result = JsonSerializer.Deserialize<CodeOwnersResult>(response.Content, JsonExtensions.JsonSerializerOptions);
+        var result = JsonSerializer.Deserialize<CodeOwnersResult>(response.Text, JsonExtensions.JsonSerializerOptions);
         if (result is null)
         {
             _logger.LogWarning("Failed to deserialize CODEOWNERS suggestions");
@@ -129,7 +105,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
         {
             _logger.LogInformation("CODEOWNERS suggestions deserialized successfully");
         }
-        return result is null ? null : result;
+        return result;
     }
 
     // <inheritdoc/>
@@ -142,33 +118,28 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
             analysisResult.AnalysisResult.Language,
             diffs.Count);
 
-        var kernel = await CreateKernelAsync(_options, analysisResult.AnalysisResult.McpServer);
-        var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
-
         var systemPrompt = _templateService.RenderLanguageTemplate(
             LanguagePromptTemplates.SummarySystemPrompt,
-            analysisResult.AnalysisResult.Language);
+            analysisResult.AnalysisResult.Language,
+            new Dictionary<string, string>
+            {
+                ["customInstructions"] = analysisResult.CopilotInstructionsPrompt,
+                ["workItemContext"] = analysisResult.WorkItemContext
+            });
 
-        var chatHistory = new ChatHistory(systemPrompt);
-        chatHistory.AddUserMessage(PromptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs));
+        var agent = await CreateAgentAsync(_options, systemPrompt, analysisResult.AnalysisResult.McpServer);
 
-#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        var executionSettings = new AzureOpenAIPromptExecutionSettings
+        var runOptions = new ChatClientAgentRunOptions(new ChatOptions
         {
-            MaxTokens = 500, // Keep summaries concise
-            Temperature = _options.Temperature, // Lower temperature for more focused summaries
-            SetNewMaxCompletionTokensEnabled = true,
-            FunctionChoiceBehavior = FunctionChoiceBehavior
-        };
-#pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+            MaxOutputTokens = 500,
+            Temperature = (float)_options.Temperature,
+            AllowMultipleToolCalls = true
+        });
 
-        var response = await chatCompletionService.GetChatMessageContentAsync(
-            chatHistory,
-            executionSettings: executionSettings,
-            kernel: kernel,
-            cancellationToken: cancellationToken);
+        var userPrompt = PromptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs);
+        var response = await agent.RunAsync(userPrompt, options: runOptions, cancellationToken: cancellationToken);
 
-        var content = response.Content ?? "No summary generated.";
+        var content = string.IsNullOrEmpty(response.Text) ? "No summary generated." : response.Text;
         _logger.LogInformation("Summary generated. ContentLength={ContentLength}", content.Length);
         return content;
     }
@@ -183,9 +154,6 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
         _logger.LogInformation("Answering question for PR. McpServers={McpServers}",
             analysisResult.AnalysisResult.McpServer?.Count ?? 0);
 
-        var kernel = await CreateKernelAsync(_options, analysisResult.AnalysisResult.McpServer);
-        var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
-
         var systemPrompt = _templateService.RenderTemplate(
             AvailablePrompts.GeneralPrompts[GeneralPromptTemplates.QuestionAnsweringPrompt],
             new Dictionary<string, string>
@@ -194,33 +162,50 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
                 ["threadContext"] = threadContext
             });
 
-        var chatHistory = new ChatHistory(systemPrompt);
-        chatHistory.AddUserMessage($"""
+        var agent = await CreateAgentAsync(_options, systemPrompt, analysisResult.AnalysisResult.McpServer);
+
+        var runOptions = new ChatClientAgentRunOptions(new ChatOptions
+        {
+            MaxOutputTokens = _options.MaxTokens,
+            Temperature = (float)_options.Temperature,
+            AllowMultipleToolCalls = true,
+            ResponseFormat = ChatResponseFormat.Text
+        });
+
+        var userPrompt = $"""
             this is my question:
 
             {question}
-            """);
+            """;
+        var response = await agent.RunAsync(userPrompt, options: runOptions, cancellationToken: cancellationToken);
 
-#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        var executionSettings = new AzureOpenAIPromptExecutionSettings
-        {
-            MaxTokens = _options.MaxTokens,
-            Temperature = _options.Temperature,
-            FunctionChoiceBehavior = FunctionChoiceBehavior,
-            SetNewMaxCompletionTokensEnabled = true,
-            ResponseFormat = "text" // Use text for markdown answers
-        };
-#pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-
-        var response = await chatCompletionService.GetChatMessageContentAsync(
-            chatHistory,
-            executionSettings: executionSettings,
-            kernel: kernel,
-            cancellationToken: cancellationToken);
-
-        var content = response.Content ?? "No answer generated.";
+        var content = string.IsNullOrEmpty(response.Text) ? "No answer generated." : response.Text;
         _logger.LogInformation("Question answered. ContentLength={ContentLength}", content.Length);
         return content;
+    }
+
+    // <inheritdoc/>
+    public async Task<string> SummarizeContextAsync(
+        string systemPrompt,
+        string userPrompt,
+        int maxOutputTokens,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Running context summarization. SystemLength={SystemLength} UserLength={UserLength} MaxTokens={MaxTokens}",
+            systemPrompt.Length, userPrompt.Length, maxOutputTokens);
+
+        var agent = await CreateAgentAsync(_options, systemPrompt);
+
+        var runOptions = new ChatClientAgentRunOptions(new ChatOptions
+        {
+            MaxOutputTokens = maxOutputTokens,
+            Temperature = (float)_options.Temperature,
+            AllowMultipleToolCalls = false,
+            ResponseFormat = ChatResponseFormat.Text
+        });
+
+        var response = await agent.RunAsync(userPrompt, options: runOptions, cancellationToken: cancellationToken);
+        return response.Text ?? string.Empty;
     }
 
     // <inheritdoc/>
@@ -240,9 +225,6 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
             return [];
         }
 
-        var kernel = await CreateKernelAsync(_options, analysisResult.AnalysisResult.McpServer);
-        var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
-
         var systemPrompt = _templateService.RenderLanguageTemplate(
             LanguagePromptTemplates.InlineSuggestionsSystemPrompt,
             analysisResult.AnalysisResult.Language,
@@ -252,9 +234,12 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
                 ["customInstructions"] = analysisResult.CopilotInstructionsPrompt,
                 ["mcpServers"] = analysisResult.AnalysisResult.McpServer is null ? "none" : string.Join(",", analysisResult.AnalysisResult.McpServer.Select(s => s.ToString())),
                 ["totalFilesInPR"] = diffs.Count.ToString(),
-                ["maxSuggestionsPerFile"] = ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString()
+                ["maxSuggestionsPerFile"] = ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString(),
+                ["workItemContext"] = analysisResult.WorkItemGoal
             },
             enableGlobalInstructions: true);
+
+        var agent = await CreateAgentAsync(_options, systemPrompt, analysisResult.AnalysisResult.McpServer);
 
         // Process files in parallel with concurrency limit to avoid rate limits
         // Azure OpenAI typically has rate limits (e.g., requests per minute), so we limit concurrency
@@ -272,9 +257,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
             {
                 var (filePath, diff) = kvp;
                 var suggestions = await ProcessFileForInlineSuggestionsAsync(
-                    chatCompletionService,
-                    kernel,
-                    systemPrompt,
+                    agent,
                     analysisResult.AnalysisResult,
                     filePath,
                     diff,
@@ -337,9 +320,7 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
     /// Processes a single file to generate inline suggestions.
     /// </summary>
     private async Task<List<InlineSuggestion>?> ProcessFileForInlineSuggestionsAsync(
-        IChatCompletionService chatCompletionService,
-        Kernel kernel,
-        string systemPrompt,
+        AIAgent agent,
         AnalysisRequest analysisResult,
         string filePath,
         string diff,
@@ -349,37 +330,27 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
         {
             _logger.LogDebug("Processing inline suggestions for file {FilePath}", filePath);
 
-            var chatHistory = new ChatHistory();
             var userPrompt = _promptBuilder.BuildInlineSuggestionsPrompt(
                 analysisResult,
                 new Dictionary<string, string> { [filePath] = diff });
-            chatHistory.AddUserMessage(userPrompt);
 
-#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-            var executionSettings = new AzureOpenAIPromptExecutionSettings
+            var runOptions = new ChatClientAgentRunOptions(new ChatOptions
             {
-                MaxTokens = _options.MaxTokens,
-                SetNewMaxCompletionTokensEnabled = true,
-                Temperature = _options.Temperature,
-                FunctionChoiceBehavior = FunctionChoiceBehavior,
-                ChatSystemPrompt = systemPrompt,
-                ResponseFormat = typeof(InlineSuggestionsResponse) // Request JSON output for structured parsing
-            };
-#pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+                MaxOutputTokens = _options.MaxTokens,
+                Temperature = (float)_options.Temperature,
+                AllowMultipleToolCalls = true,
+                ResponseFormat = ChatResponseFormat.ForJsonSchema<InlineSuggestionsResponse>(JsonExtensions.JsonSerializerOptions)
+            });
 
-            var response = await chatCompletionService.GetChatMessageContentAsync(
-                chatHistory,
-                executionSettings: executionSettings,
-                kernel: kernel,
-                cancellationToken: cancellationToken);
+            var response = await agent.RunAsync(userPrompt, options: runOptions, cancellationToken: cancellationToken);
 
-            if (string.IsNullOrWhiteSpace(response.Content))
+            if (string.IsNullOrWhiteSpace(response.Text))
             {
                 _logger.LogWarning("Inline suggestions response was empty for file {FilePath}", filePath);
                 return null;
             }
 
-            var result = JsonSerializer.Deserialize<InlineSuggestionsResponse>(response.Content, JsonExtensions.JsonSerializerOptions);
+            var result = JsonSerializer.Deserialize<InlineSuggestionsResponse>(response.Text, JsonExtensions.JsonSerializerOptions);
             if (result is null)
             {
                 _logger.LogWarning("Failed to deserialize inline suggestions for file {FilePath}", filePath);
@@ -392,7 +363,6 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
                 if (string.IsNullOrWhiteSpace(suggestion.FilePath) || !suggestion.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase))
                 {
                     _logger.LogDebug("Correcting file path for suggestion from '{OriginalPath}' to '{CorrectPath}'", suggestion.FilePath, filePath);
-                    // Create a new suggestion with the correct file path
                     return suggestion with { FilePath = filePath };
                 }
                 return suggestion;
@@ -409,53 +379,52 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
     }
 
     /// <summary>
-    /// Creates a new Kernel instance with the specified options.
-    /// This allows for per-request configuration in the future.
+    /// Creates an Azure OpenAI–backed AIAgent with the given system prompt and (optional) MCP tools.
     /// </summary>
-    private async Task<Kernel> CreateKernelAsync(SemanticAnalyzerOptions options, List<EMcpServer>? mcpServers = null)
+    private async Task<AIAgent> CreateAgentAsync(AzureOpenAIAnalyzerOptions options, string instructions, List<EMcpServer>? mcpServers = null)
     {
-        _logger.LogDebug("Creating Kernel for deployment {Deployment} at {Endpoint}", options.DeploymentName, options.Endpoint);
-        var builder = Kernel.CreateBuilder();
+        _logger.LogDebug("Creating AIAgent for deployment {Deployment} at {Endpoint}", options.DeploymentName, options.Endpoint);
 
         if (options.Endpoint is null)
         {
-            throw new InvalidOperationException("Endpoint must be provided for SemanticAnalyzerService.");
+            throw new InvalidOperationException("Endpoint must be provided for AzureOpenAIAnalyzerService.");
         }
 
+        AzureOpenAIClient azureClient;
         if (!string.IsNullOrWhiteSpace(options.ApiKey))
         {
-
-
-            _logger.LogDebug("Using ApiKey authentication for Azure OpenAI chat completion");
-            builder.AddAzureOpenAIChatCompletion(
-                     deploymentName: options.DeploymentName!,
-                     endpoint: options.Endpoint,
-                     apiKey: options.ApiKey);
+            _logger.LogDebug("Using ApiKey authentication for Azure OpenAI");
+            azureClient = new AzureOpenAIClient(new Uri(options.Endpoint), new ApiKeyCredential(options.ApiKey));
         }
         else
         {
             if (options.TokenCredential is null)
             {
-                throw new InvalidOperationException("Either ApiKey and Endpoint or TokenCredential must be provided for SemanticAnalyzerService.");
+                throw new InvalidOperationException("Either ApiKey and Endpoint or TokenCredential must be provided for AzureOpenAIAnalyzerService.");
             }
 
-            _logger.LogDebug("Using TokenCredential authentication for Azure OpenAI chat completion");
-            builder.AddAzureOpenAIChatCompletion(
-                     deploymentName: options.DeploymentName!,
-                     endpoint: options.Endpoint!,
-                     options.TokenCredential);
+            _logger.LogDebug("Using TokenCredential authentication for Azure OpenAI");
+            azureClient = new AzureOpenAIClient(new Uri(options.Endpoint), options.TokenCredential);
         }
 
-        var chatCompletionService = builder.Build();
+        var tools = await CollectMcpToolsAsync(mcpServers);
 
+        return azureClient
+            .GetChatClient(options.DeploymentName!)
+            .AsIChatClient()
+            .AsAIAgent(instructions: instructions, tools: tools);
+    }
+
+    private async Task<List<AITool>> CollectMcpToolsAsync(List<EMcpServer>? mcpServers)
+    {
+        var tools = new List<AITool>();
         if (mcpServers is null || mcpServers.Count == 0)
         {
-            _logger.LogDebug("No MCP servers configured. Returning Kernel without tools.");
-            return chatCompletionService;
+            _logger.LogDebug("No MCP servers configured. Returning agent without tools.");
+            return tools;
         }
 
         _logger.LogInformation("Configuring {Count} MCP server(s) for tool calling", mcpServers.Count);
-        var totalTools = 0;
         foreach (var mcpServer in mcpServers)
         {
             _logger.LogDebug("Resolving MCP server config for {Server}", mcpServer);
@@ -467,22 +436,17 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
                 continue;
             }
 
-            var tools = await McpFunctionToolsAsync(config);
-
-            chatCompletionService.Plugins.AddFromFunctions(config.Name, tools);
-            _logger.LogInformation("Added {ToolCount} tool(s) from MCP server {ServerName}", tools.Count(), config.Name);
-            totalTools += tools.Count();
+            var serverTools = await McpToolsAsync(config);
+            tools.AddRange(serverTools);
+            _logger.LogInformation("Added {ToolCount} tool(s) from MCP server {ServerName}", serverTools.Count, config.Name);
         }
 
-        _logger.LogInformation("Total MCP tools registered: {TotalTools}", totalTools);
-        return chatCompletionService;
+        _logger.LogInformation("Total MCP tools registered: {TotalTools}", tools.Count);
+        return tools;
     }
 
-
-    private static async Task<IEnumerable<KernelFunction>> McpFunctionToolsAsync(McpConfig config)
+    private static async Task<List<AITool>> McpToolsAsync(McpConfig config)
     {
-        List<KernelFunction> tools = [];
-
         var httpTransport = new HttpClientTransport(new HttpClientTransportOptions()
         {
             Endpoint = new Uri(config.Url),
@@ -492,11 +456,6 @@ public sealed class SemanticAnalyzerService(SemanticAnalyzerOptions options, IMc
         });
         var client = await McpClient.CreateAsync(httpTransport);
         var toolsList = await client.ListToolsAsync();
-        foreach (var tool in toolsList)
-        {
-            tools.Add(tool.AsKernelFunction());
-        }
-
-        return tools;
+        return [.. toolsList.Cast<AITool>()];
     }
 }

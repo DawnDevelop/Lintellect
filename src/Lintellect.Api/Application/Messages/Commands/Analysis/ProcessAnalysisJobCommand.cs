@@ -22,7 +22,10 @@ public sealed record ProcessAnalysisJobCommand(
 public sealed class ProcessAnalysisJobCommandHandler(
     IApplicationDbContext context,
     PullRequestService prService,
-    IAnalyzerService analyzerService) : IRequestHandler<ProcessAnalysisJobCommand, PullRequestAnalysisReportModel>
+    IAnalyzerService analyzerService,
+    IWorkItemService workItemService,
+    IWorkItemSummarizer workItemSummarizer,
+    ILogger<ProcessAnalysisJobCommandHandler> logger) : IRequestHandler<ProcessAnalysisJobCommand, PullRequestAnalysisReportModel>
 {
     public async ValueTask<PullRequestAnalysisReportModel> Handle(ProcessAnalysisJobCommand request, CancellationToken cancellationToken)
     {
@@ -68,7 +71,15 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
         // Step 2: Prepare analyzer and custom instructions
         var customInstructions = await prService.GetCustomInstructionsAsync(analysisRequest);
-        var aiAnalyzerModel = new AnalyzerServiceModel(analysisRequest, customInstructions ?? string.Empty);
+
+        // Step 2b: Resolve and summarize linked work items (graceful degradation on failure)
+        var workItemSummary = await ResolveWorkItemContextAsync(analysisRequest, cancellationToken);
+
+        var aiAnalyzerModel = new AnalyzerServiceModel(
+            analysisRequest,
+            customInstructions ?? string.Empty,
+            WorkItemContext: workItemSummary.FullContext,
+            WorkItemGoal: workItemSummary.Goal);
 
         // Step 3: Execute analysis tasks in parallel
         var analysisResults = await ExecuteAnalysisTasksAsync(analyzerService, aiAnalyzerModel, diffFull, analysisRequest, cancellationToken);
@@ -323,6 +334,34 @@ public sealed class ProcessAnalysisJobCommandHandler(
             LinesAdded = linesAdded,
             LinesRemoved = linesRemoved
         };
+    }
+
+    private async Task<WorkItemSummary> ResolveWorkItemContextAsync(AnalysisRequest analysisRequest, CancellationToken cancellationToken)
+    {
+        if (!analysisRequest.EnableWorkItemContext)
+        {
+            return WorkItemSummary.Empty;
+        }
+
+        try
+        {
+            var items = await workItemService.ResolveAsync(analysisRequest, cancellationToken);
+            if (items.Count == 0)
+            {
+                logger.LogInformation("Work item context enabled but no linked items found for PR #{PullRequestId}",
+                    analysisRequest.GitInfo?.PullRequestId);
+                return WorkItemSummary.Empty;
+            }
+
+            return await workItemSummarizer.SummarizeAsync(items, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Work item context resolution failed for PR #{PullRequestId}; continuing without context",
+                analysisRequest.GitInfo?.PullRequestId);
+            return WorkItemSummary.Empty;
+        }
     }
 
     private async Task<bool> CheckForDuplicateAnalysisAsync(AnalysisRequest analysisRequest, CancellationToken cancellationToken)

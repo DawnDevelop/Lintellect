@@ -1,5 +1,6 @@
 using System.CommandLine;
 using Lintellect.Cli.Services;
+using Lintellect.Cli.Services.Git;
 using Lintellect.Shared.Models;
 
 namespace Lintellect.Cli.Commands;
@@ -95,6 +96,13 @@ internal class StaticAnalysisCommand : Command
             Aliases = { "-eac" }
         };
 
+        var enableWorkItemContext = new Option<bool>("--enable-work-item-context")
+        {
+            Description = "Fetch linked work items / issues and feed an AI-condensed summary into the review prompts (default: true)",
+            DefaultValueFactory = _ => true,
+            Aliases = { "-ewi" }
+        };
+
         // Semgrep analysis options
         var enableSemgrep = new Option<bool>("--enable-semgrep")
         {
@@ -122,6 +130,7 @@ internal class StaticAnalysisCommand : Command
         Options.Add(enableInlineSuggestions);
         Options.Add(enableDescriptionSummary);
         Options.Add(enableCodeOwners);
+        Options.Add(enableWorkItemContext);
 
         Options.Add(enableSemgrep);
 
@@ -163,6 +172,12 @@ internal class StaticAnalysisCommand : Command
             analysisResult.EnableSummaryComment = parseResult.GetValue(enableSummaryComment);
             analysisResult.FileExclusions = [.. exclusionPatterns];
             analysisResult.EnableAzureDevopsCodeOwners = parseResult.GetValue(enableCodeOwners);
+            analysisResult.EnableWorkItemContext = parseResult.GetValue(enableWorkItemContext);
+
+            if (analysisResult.EnableWorkItemContext)
+            {
+                analysisResult.WorkItems = [.. WorkItemReferenceExtractor.ExtractFromEnvironment()];
+            }
 
             var mcpServers = mcpServerValue ?? [];
             analysisResult.McpServer = [.. mcpServers];

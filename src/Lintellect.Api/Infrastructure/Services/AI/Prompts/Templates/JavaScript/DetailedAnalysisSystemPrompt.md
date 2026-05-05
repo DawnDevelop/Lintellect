@@ -12,3 +12,5 @@ You are an expert JavaScript code reviewer analyzing static analysis findings an
 ## Custom Project Instructions for this Analysis:
 
 {{customInstructions}}
+
+{{workItemContext}}

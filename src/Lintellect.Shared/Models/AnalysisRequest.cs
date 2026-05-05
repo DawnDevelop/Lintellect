@@ -18,5 +18,9 @@ public class AnalysisRequest
 
     public bool EnableAzureDevopsCodeOwners { get; set; } = false;
 
+    public bool EnableWorkItemContext { get; set; } = true;
+
+    public List<WorkItemReference> WorkItems { get; set; } = [];
+
     public List<EMcpServer> McpServer { get; set; } = [];
 }

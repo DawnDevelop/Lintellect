@@ -154,6 +154,15 @@ Lintellect analyze \
   --enable-inline-suggestions \
   --enable-azure-devops-code-owners
 
+# Linked work items / issues are used as PR context by default.
+# Azure DevOps: linked work items resolved server-side via the WIT REST API.
+# GitHub: PR body parsed for "Closes/Fixes/Resolves #N" keywords.
+# To opt out:
+Lintellect analyze \
+  --language "csharp" \
+  --enable-summary-comment \
+  --enable-work-item-context false
+
 # Python analysis with Semgrep
 Lintellect analyze \
   --language "python" \
@@ -330,10 +339,10 @@ API-Key: your-api-key
 
 ```json
 {
-  "SemanticAnalyzer": {
+  "AzureOpenAIAnalyzer": {
     "ApiKey": "your-azure-ai-key",
     "Endpoint": "https://your-resource.openai.azure.com/",
-    "Model": "gpt-4o"
+    "DeploymentName": "gpt-4o"
   }
 }
 ```

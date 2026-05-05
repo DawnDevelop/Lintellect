@@ -5,6 +5,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Lintellect.Api.FunctionalTests/Lintellect.Api.FunctionalTests.csproj" />
+    <Project Path="tests/Lintellect.Api.IntegrationTests/Lintellect.Api.IntegrationTests.csproj" />
     <Project Path="tests/Lintellect.Api.UnitTests/Lintellect.Api.UnitTests.csproj" />
     <Project Path="tests/Lintellect.Cli.UnitTests/Lintellect.Cli.UnitTests.csproj" Id="23001e5e-e6a8-4b2e-be18-36aa87a4422f" />
   </Folder>

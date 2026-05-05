@@ -4,5 +4,7 @@ namespace Lintellect.Api.Application.Models;
 
 public record AnalyzerServiceModel(
     AnalysisRequest AnalysisResult,
-    string CopilotInstructionsPrompt
+    string CopilotInstructionsPrompt,
+    string WorkItemContext = "",
+    string WorkItemGoal = ""
 );

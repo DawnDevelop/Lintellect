@@ -516,6 +516,13 @@ public sealed class GitHubClientService : IGitClient
                 results.Add(new CheckPermissionResult(hasEditScope, hasEditScope ? null : "Pull Request Edit: Missing 'repo' or 'public_repo' scope"));
             }
 
+            // Issue read permission (required for work item context — GitHub linked issues)
+            if (analysisRequest.EnableWorkItemContext)
+            {
+                var hasIssueScope = scopes.Contains("repo") || scopes.Contains("public_repo");
+                results.Add(new CheckPermissionResult(hasIssueScope, hasIssueScope ? null : "Issue Read (Work Item Context): Missing 'repo' or 'public_repo' scope"));
+            }
+
             return results;
         }
         catch (Octokit.AuthorizationException)
@@ -569,6 +576,93 @@ public sealed class GitHubClientService : IGitClient
     /// <summary>
     /// Maps a GitHub PullRequestState to the generic PullRequestStatus enum.
     /// </summary>
+    /// <inheritdoc />
+    public async Task<List<WorkItemReference>> GetLinkedWorkItemsAsync(
+        string projectName,
+        string repositoryName,
+        int pullRequestId,
+        IReadOnlyList<WorkItemReference>? hints = null)
+    {
+        try
+        {
+            var ids = new HashSet<int>();
+
+            foreach (var hint in hints ?? [])
+            {
+                if (int.TryParse(hint.Id, out var hintId))
+                {
+                    ids.Add(hintId);
+                }
+            }
+
+            if (ids.Count == 0)
+            {
+                var pr = await _client.PullRequest.Get(projectName, repositoryName, pullRequestId);
+                foreach (var id in ParseLinkedIssueIds(pr.Body))
+                {
+                    ids.Add(id);
+                }
+            }
+
+            if (ids.Count == 0)
+            {
+                return [];
+            }
+
+            var results = new List<WorkItemReference>();
+            foreach (var id in ids)
+            {
+                try
+                {
+                    var issue = await _client.Issue.Get(projectName, repositoryName, id);
+                    if (issue.PullRequest is not null)
+                    {
+                        continue;
+                    }
+
+                    results.Add(new WorkItemReference(
+                        Id: id.ToString(),
+                        Url: issue.HtmlUrl,
+                        Title: issue.Title,
+                        Body: issue.Body,
+                        State: issue.State.StringValue,
+                        Type: "Issue"));
+                }
+                catch (NotFoundException)
+                {
+                    _logger.LogDebug("Linked issue #{IssueId} not found in {Owner}/{Repo}", id, projectName, repositoryName);
+                }
+            }
+
+            return results;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve linked work items for GitHub PR #{PullRequestId}", pullRequestId);
+            throw;
+        }
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex LinkedIssueRegex =
+        new(@"\b(?:close[sd]?|fix(?:es|ed)?|resolve[sd]?)\s+#(\d+)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    internal static IEnumerable<int> ParseLinkedIssueIds(string? body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            yield break;
+        }
+
+        foreach (System.Text.RegularExpressions.Match match in LinkedIssueRegex.Matches(body))
+        {
+            if (int.TryParse(match.Groups[1].Value, out var id))
+            {
+                yield return id;
+            }
+        }
+    }
+
     private static Lintellect.Api.Application.Models.Git.PullRequestStatus MapPullRequestStatus(StringEnum<ItemState> state)
     {
         return state.Value switch

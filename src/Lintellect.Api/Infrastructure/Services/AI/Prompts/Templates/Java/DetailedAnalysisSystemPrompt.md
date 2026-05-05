@@ -12,3 +12,5 @@ You are an expert Java code reviewer analyzing static analysis findings and code
 ## Custom Project Instructions for this Analysis:
 
 {{customInstructions}}
+
+{{workItemContext}}

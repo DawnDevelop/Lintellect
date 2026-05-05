@@ -9,3 +9,5 @@ You are an expert TypeScript code reviewer analyzing static analysis findings an
 - 🔧 Quality: Best practice improvements
 - ✨ Positives: Good practices found
 
+
+{{workItemContext}}
