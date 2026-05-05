@@ -40,6 +40,8 @@ public sealed class AnalysisJobConfiguration : IEntityTypeConfiguration<Analysis
             ar.OwnsOne(a => a.GitInfo);
             // Findings is part of the JSON, ignore it as a navigation property
             ar.Ignore(a => a.Findings);
+            // WorkItems are CLI-provided hints, in-memory only during processing
+            ar.Ignore(a => a.WorkItems);
         });
 
         // Configure indexes

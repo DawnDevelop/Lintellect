@@ -262,13 +262,13 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         var idSummary = BuildSummaryCommentRequest(summarySystem, summaryUser, commonMcp);
         var idCodeOwners = BuildCodeOwnersRequest(codeownersSystem, codeownersUser, commonMcp);
 
-        await _client.Messages.CountMessageTokensAsync(new()
-        {
-            Messages = idDescriptionSummary.MessageParameters.Messages,
-            Tools = idDescriptionSummary.MessageParameters.Tools,
-            Model = idDescriptionSummary.MessageParameters.Model,
-            System = idDescriptionSummary.MessageParameters.System
-        });
+        //await _client.Messages.CountMessageTokensAsync(new()
+        //{
+        //    Messages = idDescriptionSummary.MessageParameters.Messages,
+        //    Tools = idDescriptionSummary.MessageParameters.Tools,
+        //    Model = idDescriptionSummary.MessageParameters.Model,
+        //    System = idDescriptionSummary.MessageParameters.System
+        //});
 
         // EnableSummaryComment = detailed analysis comment on PR
         if (analysisResult.AnalysisResult.EnableSummaryComment)
