@@ -124,7 +124,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
         var tasks = new List<Task>();
         var diffPartial = await prService.GetCompactDiffsAsync(
             analysisRequest,
-            contextLines: 3);
+            contextLines: 20);
 
         var summaryTask = CreateSummaryTaskIfEnabled(analyzer, aiAnalyzerModel, diffPartial, analysisRequest, cancellationToken);
         var detailedAnalysisTask = CreateDetailedAnalysisTaskIfEnabled(analyzer, aiAnalyzerModel, diffPartial, analysisRequest, cancellationToken);
