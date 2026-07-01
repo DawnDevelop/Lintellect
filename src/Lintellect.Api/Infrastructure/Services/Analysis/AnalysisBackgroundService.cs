@@ -134,12 +134,7 @@ public sealed class AnalysisBackgroundService(
             var duration = (DateTimeOffset.UtcNow - startTime).TotalSeconds;
             metrics.RecordJobFailed(analyzerType, "exception", duration);
 
-            // Update job status to Failed using Mediator
-            await mediator.Send(new UpdateAnalysisJobStatusCommand(
-                job.Id,
-                AnalysisStatus.Failed,
-                ErrorMessage: ex.Message),
-                cancellationToken);
+            await TryUpdateJobStatusAsync(job.Id, AnalysisStatus.Failed, ex.Message);
         }
     }
 
