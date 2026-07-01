@@ -54,7 +54,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
         var diffFull = await prService.GetCompactDiffsAsync(
             analysisRequest,
-            contextLines: 10);
+            contextLines: 3);
 
 
         // Apply file exclusions if specified
@@ -102,7 +102,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
         if (analyzer is IBatchAnalyzerService batchAnalyzer)
         {
             var codeOwnersContent = analysisRequest.EnableAzureDevopsCodeOwners
-                ? await prService.GetCodeOwnersFileAsync(analysisRequest)
+                ? await ResolveMatchingCodeOwnersAsync(analysisRequest, diffs.Keys)
                 : null;
 
             var batchedResult = await batchAnalyzer.RunBatchedAnalysisAsync(
@@ -212,9 +212,30 @@ public sealed class ProcessAnalysisJobCommandHandler(
             return null;
         }
 
-        var codeOwnersContent = await prService.GetCodeOwnersFileAsync(analysisRequest);
+        var filtered = await ResolveMatchingCodeOwnersAsync(analysisRequest, changedFilePaths);
+        if (filtered is null)
+        {
+            return null;
+        }
 
-        return codeOwnersContent == null ? null : await analyzer.GetCodeOwnersAsync(codeOwnersContent, changedFilePaths, cancellationToken);
+        return await analyzer.GetCodeOwnersAsync(filtered, changedFilePaths, cancellationToken);
+    }
+
+    /// <summary>
+    /// Fetches the CODEOWNERS file and returns only the lines whose rules match the changed
+    /// paths, or <c>null</c> when the file is absent/empty or nothing matches — letting callers
+    /// skip the LLM round-trip.
+    /// </summary>
+    private async Task<string?> ResolveMatchingCodeOwnersAsync(AnalysisRequest analysisRequest, IEnumerable<string> changedFilePaths)
+    {
+        var codeOwnersContent = await prService.GetCodeOwnersFileAsync(analysisRequest);
+        if (string.IsNullOrWhiteSpace(codeOwnersContent))
+        {
+            return null;
+        }
+
+        var filtered = CodeOwnersPathFilter.FilterMatchingLines(codeOwnersContent, changedFilePaths);
+        return string.IsNullOrEmpty(filtered) ? null : filtered;
     }
 
     private async Task PostResultsToPullRequestAsync(

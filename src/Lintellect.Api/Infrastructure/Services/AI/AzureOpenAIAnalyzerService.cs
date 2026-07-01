@@ -3,6 +3,7 @@ using System.Text.Json;
 using Azure.AI.OpenAI;
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
+using Lintellect.Api.Application.Services;
 using Lintellect.Api.Infrastructure.Extensions;
 using Lintellect.Api.Infrastructure.Services.AI.Prompts;
 using Lintellect.Shared.Models;
@@ -230,11 +231,10 @@ public sealed class AzureOpenAIAnalyzerService(AzureOpenAIAnalyzerOptions option
             analysisResult.AnalysisResult.Language,
             new Dictionary<string, string>
             {
-                ["gitProvider"] = analysisResult.AnalysisResult.GitProvider.ToString(),
                 ["customInstructions"] = analysisResult.CopilotInstructionsPrompt,
                 ["mcpServers"] = analysisResult.AnalysisResult.McpServer is null ? "none" : string.Join(",", analysisResult.AnalysisResult.McpServer.Select(s => s.ToString())),
                 ["totalFilesInPR"] = diffs.Count.ToString(),
-                ["maxSuggestionsPerFile"] = ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString(),
+                ["maxSuggestionsPerFile"] = InlineSuggestionLimiter.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString(),
                 ["workItemContext"] = analysisResult.WorkItemGoal
             },
             enableGlobalInstructions: true);
@@ -274,46 +274,7 @@ public sealed class AzureOpenAIAnalyzerService(AzureOpenAIAnalyzerOptions option
 
         _logger.LogInformation("Inline suggestions generated for all files. TotalCount={TotalCount}", allSuggestions.Count);
 
-        return ApplyGlobalCap(allSuggestions, _options.MaxInlineSuggestions, _logger);
-    }
-
-    /// <summary>
-    /// Applies a global cap to inline suggestions, selecting the highest-severity ones first.
-    /// </summary>
-    internal static List<InlineSuggestion> ApplyGlobalCap(List<InlineSuggestion> suggestions, int maxInlineSuggestions, ILogger? logger = null)
-    {
-        if (maxInlineSuggestions <= 0 || suggestions.Count <= maxInlineSuggestions)
-        {
-            return suggestions;
-        }
-
-        var capped = suggestions
-            .OrderByDescending(s => s.Severity?.ToLowerInvariant() switch
-            {
-                "error" => 3,
-                "warning" => 2,
-                "info" => 1,
-                _ => 0
-            })
-            .Take(maxInlineSuggestions)
-            .ToList();
-
-        logger?.LogInformation(
-            "Inline suggestions capped from {Original} to {Capped} (MaxInlineSuggestions={Max})",
-            suggestions.Count, capped.Count, maxInlineSuggestions);
-
-        return capped;
-    }
-
-    /// <summary>
-    /// Computes the per-file suggestion limit based on PR size and global cap.
-    /// For small PRs the budget is generous; for large PRs it tightens automatically.
-    /// </summary>
-    internal static int ComputeMaxSuggestionsPerFile(int fileCount, int globalMax)
-    {
-        if (fileCount <= 0) return 5;
-        var perFile = globalMax > 0 ? Math.Max(1, globalMax / fileCount) : 5;
-        return Math.Min(perFile, 5); // never exceed 5 per file even for very small PRs
+        return InlineSuggestionLimiter.ApplyGlobalCap(allSuggestions, _options.MaxInlineSuggestions, _logger);
     }
 
     /// <summary>

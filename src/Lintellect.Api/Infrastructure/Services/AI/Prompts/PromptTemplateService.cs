@@ -49,6 +49,17 @@ internal sealed class PromptTemplateService
             template = $"{globalInstructionsPrompt}\n\n{template}";
         }
 
+        // Inline templates share a chunk of boilerplate (suggestion budget, JSON format rules,
+        // diff-extraction rules) that we keep in one shared file. Inject it as a variable so
+        // the language file controls placement via a {{commonInlineRules}} placeholder.
+        if (languagePromptTemplate == LanguagePromptTemplates.InlineSuggestionsSystemPrompt)
+        {
+            var commonRulesName = AvailablePrompts.GeneralPrompts[GeneralPromptTemplates.InlineSuggestionsCommonRules];
+            var commonRules = LoadTemplate(commonRulesName);
+            variables ??= [];
+            variables.TryAdd("commonInlineRules", commonRules);
+        }
+
         return variables is null || variables.Count == 0 ? template : ReplaceVariables(template, variables);
     }
 

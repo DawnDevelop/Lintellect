@@ -1,4 +1,5 @@
 using System.Text;
+using Lintellect.Api.Infrastructure.Extensions;
 using Lintellect.Shared.Models;
 
 namespace Lintellect.Api.Infrastructure.Services.AI.Prompts;
@@ -127,11 +128,11 @@ internal sealed class PromptBuilder
 
         foreach (var finding in findings)
         {
-            builder.AppendLine($"- **{finding.RuleId}** at `{finding.FilePath}:{finding.Line}`");
-
-            // Always show messages inline (no code blocks) - saves tokens and improves readability
+            // Compact one-line form: "- {file}:{line} [{sev}] {ruleId}: {msg}" — half the tokens
+            // of the previous two-line layout while preserving everything the model needs.
+            var sev = ShortSeverity(finding.Severity);
             var message = SummarizeMessage(finding.Message);
-            builder.AppendLine($"  {message}");
+            builder.AppendLine($"- {finding.FilePath}:{finding.Line} [{sev}] {finding.RuleId}: {message}");
         }
 
         if (totalCount.HasValue && totalCount.Value > findings.Count)
@@ -197,7 +198,7 @@ internal sealed class PromptBuilder
         var builder = new StringBuilder();
         builder.AppendLine("## Code Changes to Review (Priority: Review Every Line):");
         builder.AppendLine();
-        builder.AppendLine("**Note:** Diffs use standard unified diff format. Calculate line numbers from hunk headers (`@@ -old_start,old_count +new_start,new_count @@`) and count lines. Use `lineFrom` and `lineTo` fields in suggestions. See system prompt for detailed format instructions.");
+        builder.AppendLine("**Note:** Each diff line is prefixed with `<new-file line number>|<diff marker><code>`. Use the number before the `|` directly for `lineFrom`/`lineTo` — do not calculate it. Removed lines have a blank number. See system prompt for details.");
         builder.AppendLine();
 
         // Prioritize files based on findings: errors > warnings > info > none
@@ -208,10 +209,11 @@ internal sealed class PromptBuilder
             builder.AppendLine($"### File: `{filePath}`");
             builder.AppendLine("```diff");
 
-            var diffLines = diff.Split('\n');
+            var annotatedDiff = DiffGenerationHelper.AnnotateWithLineNumbers(diff);
+            var diffLines = annotatedDiff.Split('\n');
             var truncatedDiff = diffLines.Length > maxLinesPerFile
                 ? string.Join('\n', diffLines.Take(maxLinesPerFile)) + "\n... (truncated)"
-                : diff;
+                : annotatedDiff;
 
             builder.AppendLine(truncatedDiff);
             builder.AppendLine("```");
@@ -257,18 +259,28 @@ internal sealed class PromptBuilder
 
         foreach (var (filePath, fileFindings) in findingsByFile.OrderBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase))
         {
-            builder.AppendLine($"### File: `{filePath}`");
+            builder.AppendLine($"### {filePath}");
 
             foreach (var finding in fileFindings.OrderBy(f => f.Line))
             {
-                builder.AppendLine($"- **Line {finding.Line}** - [{finding.Severity}] {finding.RuleId}");
-                builder.AppendLine($"  Message: {SummarizeMessage(finding.Message)}");
-                builder.AppendLine();
+                // Compact one-line form: "- L42 [W] CA1234: msg"
+                var sev = ShortSeverity(finding.Severity);
+                builder.AppendLine($"- L{finding.Line} [{sev}] {finding.RuleId}: {SummarizeMessage(finding.Message)}");
             }
+
+            builder.AppendLine();
         }
 
         return builder.ToString();
     }
+
+    private static string ShortSeverity(string? severity) => severity?.ToUpperInvariant() switch
+    {
+        "ERROR" => "E",
+        "WARNING" => "W",
+        "INFO" => "I",
+        _ => "?"
+    };
 
     private static string SummarizeMessage(string? message, int maxLength = 150)
     {
