@@ -34,6 +34,32 @@ public class DiffGenerationHelperTests
     }
 
     [Test]
+    public void AnnotateWithLineNumbers_MatchesRealDiffPlexLinePositions()
+    {
+        var original = "line1\nline2\nline3\n";
+        var modified = "line1\nline2-changed\nline3\ninserted4\n";
+
+        var diff = DiffGenerationHelper.GenerateUnifiedDiff(original, modified, contextLines: 3);
+        // DiffPlex emits CRLF; the annotator is line-oriented, so trim the trailing \r for comparison.
+        var annotated = DiffGenerationHelper.AnnotateWithLineNumbers(diff)
+            .Split('\n')
+            .Select(l => l.TrimEnd('\r'))
+            .ToArray();
+
+        // "inserted4" is the 4th line of the modified file → annotated with new-file line 4.
+        var insertedLine = annotated.Single(l => l.Contains("inserted4"));
+        insertedLine.ShouldBe("     4|+inserted4");
+
+        // "line2-changed" is the 2nd line of the modified file.
+        var changedLine = annotated.Single(l => l.Contains("+line2-changed"));
+        changedLine.ShouldBe("     2|+line2-changed");
+
+        // The removed "line2" carries no new-file number.
+        var removedLine = annotated.Single(l => l.Contains("-line2") && !l.Contains("changed"));
+        removedLine.ShouldStartWith("      |-line2");
+    }
+
+    [Test]
     public void AnnotateWithLineNumbers_ContentBeforeFirstHunk_HasBlankNumber()
     {
         var diff = string.Join('\n',

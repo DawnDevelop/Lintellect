@@ -6,6 +6,7 @@ using Lintellect.Shared.Extensions;
 using Lintellect.Shared.Models;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Lintellect.Api.Application.Messages.Commands.Analysis;
 
@@ -25,8 +26,11 @@ public sealed class ProcessAnalysisJobCommandHandler(
     IAnalyzerService analyzerService,
     IWorkItemService workItemService,
     IWorkItemSummarizer workItemSummarizer,
+    IOptions<AnalysisOptions> analysisOptions,
     ILogger<ProcessAnalysisJobCommandHandler> logger) : IRequestHandler<ProcessAnalysisJobCommand, PullRequestAnalysisReportModel>
 {
+    private readonly AnalysisOptions _analysisOptions = analysisOptions.Value;
+
     public async ValueTask<PullRequestAnalysisReportModel> Handle(ProcessAnalysisJobCommand request, CancellationToken cancellationToken)
     {
         var analysisRequest = request.AnalysisRequest;
@@ -54,7 +58,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
         var diffFull = await prService.GetCompactDiffsAsync(
             analysisRequest,
-            contextLines: 3);
+            contextLines: _analysisOptions.ContextLines);
 
 
         // Apply file exclusions if specified
@@ -124,7 +128,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
         var tasks = new List<Task>();
         var diffPartial = await prService.GetCompactDiffsAsync(
             analysisRequest,
-            contextLines: 20);
+            contextLines: _analysisOptions.DetailedContextLines);
 
         var summaryTask = CreateSummaryTaskIfEnabled(analyzer, aiAnalyzerModel, diffPartial, analysisRequest, cancellationToken);
         var detailedAnalysisTask = CreateDetailedAnalysisTaskIfEnabled(analyzer, aiAnalyzerModel, diffPartial, analysisRequest, cancellationToken);
