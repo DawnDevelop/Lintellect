@@ -2,9 +2,9 @@
 
 [![.NET](https://img.shields.io/badge/.NET-10.0-blue.svg)](https://dotnet.microsoft.com/download)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/your-org/lintellect/workflows/CI/badge.svg)](https://github.com/your-org/lintellect/actions)
-[![API Version](https://img.shields.io/badge/API-v1.0.0-blue.svg)](https://github.com/your-org/lintellect/releases)
-[![CLI Version](https://img.shields.io/badge/CLI-v1.0.0-green.svg)](https://www.nuget.org/packages/lintellect)
+[![CI](https://github.com/DawnDevelop/Lintellect/workflows/CI/badge.svg)](https://github.com/DawnDevelop/Lintellect/actions)
+[![API Version](https://img.shields.io/badge/API-v1.0.0-blue.svg)](https://github.com/DawnDevelop/Lintellect/releases)
+[![CLI Version](https://img.shields.io/badge/CLI-v1.0.0-green.svg)](https://www.nuget.org/packages/Lintellect.Cli)
 
 > **AI-powered code review assistant that enhances pull request analysis with intelligent insights and automated suggestions.**
 
@@ -43,7 +43,7 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/lintellect.git
+git clone https://github.com/DawnDevelop/Lintellect.git
 cd lintellect
 ```
 
@@ -66,7 +66,7 @@ This will:
 
 ### 3. Configure Environment
 
-The Aspire AppHost will automatically configure the environment. For custom configuration, modify `src/AppHost/appsettings.json`:
+The Aspire AppHost will automatically configure the environment. For custom configuration, modify `src/Lintellect.AppHost/appsettings.json`:
 
 ```json
 {
@@ -89,8 +89,8 @@ The Aspire AppHost will automatically configure the environment. For custom conf
 
 - **Aspire Dashboard**: https://localhost:15000
 - **API**: https://localhost:7000
-- **API Documentation**: https://localhost:7000/scalar-api-reference
-- **Health Check**: https://localhost:7000/health
+- **API Documentation**: https://localhost:7000/scalar/v1 (Scalar UI, Development only)
+- **Health Check**: https://localhost:7000/health (readiness: /health/ready)
 
 ## Installation
 
@@ -290,11 +290,29 @@ stages:
 
 ### Authentication
 
-All API endpoints require authentication using an API key:
+All `api/analysis/*` endpoints require an API key, passed via the `Api-Key` request header:
 
 ```bash
-API-Key: your-api-key
+Api-Key: your-api-key
 ```
+
+Requests with a missing or incorrect key receive `401 Unauthorized`.
+
+### Endpoints
+
+| Method   | Route                              | Description                                          |
+| -------- | ---------------------------------- | ---------------------------------------------------- |
+| `POST`   | `/api/analysis/analyze`            | Submit a new analysis job for background processing. |
+| `GET`    | `/api/analysis/status/{jobId}`     | Get the status and results of an analysis job.       |
+| `GET`    | `/api/analysis/history`            | List analysis jobs (supports optional filtering).    |
+| `DELETE` | `/api/analysis/history`            | Delete analysis history (all, or a single `jobId`).  |
+| `POST`   | `/api/azuredevops/webhooks/pr/commented-on` | Azure DevOps PR-comment webhook.            |
+| `POST`   | `/api/azuredevops/webhooks/pr/updated`      | Azure DevOps PR-updated webhook.            |
+| `GET`    | `/health`, `/health/ready`         | Liveness / readiness health checks (no auth).        |
+
+In Development, an interactive OpenAPI reference (Scalar) is served at `/scalar/v1`, backed by the OpenAPI document at `/openapi/v1.json`.
+
+The CLI submits jobs to `POST /api/analysis/analyze`; the API persists the job, queues it, and processes it asynchronously in the background. `GET /api/analysis/status/{jobId}` returns the response below once processing completes.
 
 ### Response Format
 
@@ -422,7 +440,7 @@ export AZURE_DEVOPS_ORG_URL="https://dev.azure.com/your-org"
 1. **Clone and Setup**
 
    ```bash
-   git clone https://github.com/your-org/lintellect.git
+   git clone https://github.com/DawnDevelop/Lintellect.git
    cd lintellect
    dotnet restore
    ```
@@ -514,9 +532,9 @@ Lintellect has **two independent releases**:
 
 See [Git Workflow Documentation](docs/GIT_WORKFLOW.md) for detailed release process.
 
-### GitHub Configuration
+### Git Provider Credentials
 
-For setting up the repository on GitHub, see [GitHub Setup Guide](docs/GITHUB_SETUP.md).
+For configuring GitHub / Azure DevOps credentials on the API server, see [Git Credentials Configuration](docs/GIT_CREDENTIALS_CONFIGURATION.md).
 
 ## Contributing
 
@@ -549,15 +567,15 @@ This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.t
 
 ## Support
 
-- [Documentation](https://github.com/your-org/lintellect/wiki)
-- [Issue Tracker](https://github.com/your-org/lintellect/issues)
-- [Discussions](https://github.com/your-org/lintellect/discussions)
+- [Documentation](https://github.com/DawnDevelop/Lintellect/wiki)
+- [Issue Tracker](https://github.com/DawnDevelop/Lintellect/issues)
+- [Discussions](https://github.com/DawnDevelop/Lintellect/discussions)
 - [Email Support](mailto:support@lintellect.ai)
 
 ---
 
 <div align="center">
 
-[Star this repo](https://github.com/your-org/lintellect) • [Report Bug](https://github.com/your-org/lintellect/issues) • [Request Feature](https://github.com/your-org/lintellect/issues)
+[Star this repo](https://github.com/DawnDevelop/Lintellect) • [Report Bug](https://github.com/DawnDevelop/Lintellect/issues) • [Request Feature](https://github.com/DawnDevelop/Lintellect/issues)
 
 </div>
