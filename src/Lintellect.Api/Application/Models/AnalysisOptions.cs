@@ -10,7 +10,7 @@ public sealed class AnalysisOptions
     /// Number of context lines around changes in the compact diff used for batched analysis
     /// and inline suggestions. Kept tight to bound token usage.
     /// </summary>
-    public int ContextLines { get; set; } = 3;
+    public int ContextLines { get; set; } = 20;
 
     /// <summary>
     /// Number of context lines around changes in the wider diff used for the narrative
