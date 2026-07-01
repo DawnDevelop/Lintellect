@@ -123,6 +123,12 @@ Factories (`GitInfoExtractorFactory`, `GitClientFactory`) select implementations
 
 `PromptBuilder` assembles prompts from templates in `Infrastructure/Services/AI/Prompts/Templates/{Language}/`. `TokenAwareChunker` splits large diffs to stay within model token limits; `TokenEstimator` estimates token counts without calling the API.
 
+Before a diff is embedded, `DiffGenerationHelper.AnnotateWithLineNumbers` prefixes each line with its new-file line number (`<line>|<marker><code>`); the prompts tell the model to read that number for `lineFrom`/`lineTo` instead of computing it from hunk headers.
+
+`InlineSuggestionLimiter` (`Application/Services`) is the shared, provider-agnostic policy for bounding inline suggestions — `ComputeMaxSuggestionsPerFile` (per-file budget) and `ApplyGlobalCap` (global cap, highest-severity first). Both `ClaudeAnalyzerService` and `AzureOpenAIAnalyzerService` use it, so neither analyzer depends on the other.
+
+`JsonExtensions.DeserializeModelJson<T>` strips Markdown code fences before parsing model output. Claude inline parsing (`ClaudeAnalyzerService.ParseInlineSuggestions`) tolerates both a `{ "suggestions": [...] }` wrapper and a bare `[...]` array.
+
 ### Work-item context (on by default)
 
 When `AnalysisRequest.EnableWorkItemContext` is true (CLI flag `--enable-work-item-context` / `-ewi`, defaults to true; pass `--enable-work-item-context false` to disable), the orchestrator resolves linked work items via `IWorkItemService` and runs a single `IWorkItemSummarizer` pass that produces a structured response:

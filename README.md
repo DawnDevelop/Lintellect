@@ -53,7 +53,7 @@ The application is designed to run with .NET Aspire for optimal development expe
 
 ```bash
 # Start the Aspire AppHost
-cd src/AppHost
+cd src/Lintellect.AppHost
 dotnet run
 ```
 
@@ -121,7 +121,7 @@ Lintellect --help
 ### CLI Analysis
 
 ```bash
-# Basic C# analysis with AI features (Semgrep disabled by default)
+# Basic C# analysis with AI features (Semgrep runs by default)
 Lintellect analyze \
   --language "csharp" \
   --enable-summary-comment \
@@ -217,7 +217,7 @@ jobs:
 
       - name: Install DevOps PR Analyzer
         run: |
-          dotnet tool install --global Lintellect
+          dotnet tool install --global Lintellect.Cli
 
       - name: Basic C# Analysis
         run: |
@@ -227,9 +227,10 @@ jobs:
             --enable-inline-suggestions \
             --enable-description-summary
         env:
+          # The CLI only needs the Lintellect API URL + key. Git provider tokens
+          # (GITHUB_TOKEN / AZURE_DEVOPS_PAT) are configured on the Lintellect API, not here.
           LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
           LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 #### Azure DevOps Pipelines
@@ -243,7 +244,8 @@ trigger: none # Trigger on every pull request by setting build validation inside
 #
 # Optional Environment Variables:
 # - LINTELLECT_API_URL and LINTELLECT_API_KEY can be provided via command line arguments instead
-# - AZURE_DEVOPS_PAT: Azure DevOps Personal Access Token (for Azure DevOps integration)
+# Note: git provider credentials (AZURE_DEVOPS_PAT / GITHUB_TOKEN) are configured on the
+#       Lintellect API server, not in this pipeline. The CLI only talks to the Lintellect API.
 
 pool:
   vmImage: "ubuntu-latest"
@@ -269,7 +271,7 @@ stages:
             inputs:
               command: "custom"
               custom: "tool"
-              arguments: "install --global Lintellect"
+              arguments: "install --global Lintellect.Cli"
 
           - task: DotNetCoreCLI@2
             displayName: "Basic C# Analysis"
@@ -278,9 +280,10 @@ stages:
               custom: "Lintellect"
               arguments: 'analyze --language "csharp" --enable-summary-comment --enable-inline-suggestions --enable-description-summary'
             env:
+              # The CLI only needs the Lintellect API URL + key. Git provider tokens
+              # (AZURE_DEVOPS_PAT / GITHUB_TOKEN) are configured on the Lintellect API, not here.
               LINTELLECT_API_URL: $(LINTELLECT_API_URL)
               LINTELLECT_API_KEY: $(LINTELLECT_API_KEY)
-              GITHUB_TOKEN: $(GITHUB_TOKEN)
 ```
 
 ## API Reference
@@ -328,9 +331,9 @@ API-Key: your-api-key
 {
   "ClaudeAnalyzer": {
     "ApiKey": "sk-ant-api03-...",
-    "Model": "claude-3-5-sonnet-20241022",
-    "MaxTokens": 4000,
-    "Temperature": 0.1
+    "Model": "claude-sonnet-4-5-20250929",
+    "MaxTokens": 40960,
+    "Temperature": 0.5
   }
 }
 ```
@@ -428,7 +431,7 @@ export AZURE_DEVOPS_ORG_URL="https://dev.azure.com/your-org"
 
    ```bash
    # Start the Aspire AppHost - this handles everything automatically
-   cd src/AppHost
+   cd src/Lintellect.AppHost
    dotnet run
    ```
 
