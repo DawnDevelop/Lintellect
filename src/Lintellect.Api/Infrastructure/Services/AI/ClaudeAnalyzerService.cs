@@ -4,6 +4,8 @@ using Anthropic.SDK.Batches;
 using Anthropic.SDK.Messaging;
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
+using Lintellect.Api.Application.Services;
+using Lintellect.Api.Infrastructure.Extensions;
 using Lintellect.Api.Infrastructure.Services.AI.Prompts;
 using Lintellect.Shared.Models;
 
@@ -15,6 +17,9 @@ namespace Lintellect.Api.Infrastructure.Services.AI;
 /// </summary>
 internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
 {
+    private static readonly TimeSpan BatchPollInterval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan BatchPollTimeout = TimeSpan.FromHours(1);
+
     private readonly ClaudeAnalyzerOptions _options;
     private readonly PromptTemplateService _templateService;
     private readonly PromptBuilder _promptBuilder;
@@ -62,7 +67,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
 
         var userPrompt = _promptBuilder.BuildAnalysisPrompt(analysisResult.AnalysisResult, diffs);
 
-        var content = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
+        var content = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken, analysisResult.AnalysisResult.McpServer);
         _logger.LogInformation("Detailed analysis generated. ContentLength={ContentLength}", content.Length);
         return content;
     }
@@ -85,24 +90,49 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
             {
                 { "customInstructions", analysisResult.CopilotInstructionsPrompt },
                 { "totalFilesInPR", diffs.Count.ToString() },
-                { "maxSuggestionsPerFile", AzureOpenAIAnalyzerService.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString() },
+                { "maxSuggestionsPerFile", InlineSuggestionLimiter.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString() },
                 { "workItemContext", analysisResult.WorkItemGoal }
             });
 
         var userPrompt = _promptBuilder.BuildInlineSuggestionsPrompt(analysisResult.AnalysisResult, diffs);
 
-        var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
+        var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken, analysisResult.AnalysisResult.McpServer);
 
         try
         {
-            var suggestions = JsonSerializer.Deserialize<List<InlineSuggestion>>(response);
-            return AzureOpenAIAnalyzerService.ApplyGlobalCap(suggestions ?? [], _options.MaxInlineSuggestions, _logger);
+            var suggestions = ParseInlineSuggestions(response);
+            return InlineSuggestionLimiter.ApplyGlobalCap(suggestions, _options.MaxInlineSuggestions, _logger);
         }
         catch (JsonException ex)
         {
             _logger.LogError(ex, "Failed to deserialize inline suggestions response from Claude. ResponseLength={ResponseLength}", response.Length);
             return [];
         }
+    }
+
+    /// <summary>
+    /// Parses inline suggestions from a Claude response. Prefers the documented
+    /// <c>{ "suggestions": [...] }</c> wrapper; falls back to a bare <c>[...]</c> array in case the
+    /// model emits one anyway (unlike Azure, Claude output is not schema-enforced here).
+    /// </summary>
+    internal static List<InlineSuggestion> ParseInlineSuggestions(string raw)
+    {
+        try
+        {
+            // A successful object parse means it was the wrapper shape — trust its
+            // (possibly empty) Suggestions rather than retrying as an array.
+            var wrapped = JsonExtensions.DeserializeModelJson<InlineSuggestionsResponse>(raw);
+            if (wrapped is not null)
+            {
+                return wrapped.Suggestions;
+            }
+        }
+        catch (JsonException)
+        {
+            // Not a { "suggestions": [...] } object — fall through to the bare-array shape.
+        }
+
+        return JsonExtensions.DeserializeModelJson<List<InlineSuggestion>>(raw) ?? [];
     }
 
     /// <summary>
@@ -127,7 +157,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
 
         var userPrompt = PromptBuilder.BuildSummaryPrompt(analysisResult.AnalysisResult, diffs);
 
-        var content = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
+        var content = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken, analysisResult.AnalysisResult.McpServer);
         _logger.LogInformation("Summary generated. ContentLength={ContentLength}", content.Length);
         return content;
     }
@@ -155,7 +185,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
             this is my question:
 
             {question}
-            """, cancellationToken);
+            """, cancellationToken, analysisResult.AnalysisResult.McpServer);
 
         _logger.LogInformation("Question answered. ContentLength={ContentLength}", content.Length);
         return content;
@@ -193,7 +223,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
 
         try
         {
-            return JsonSerializer.Deserialize<CodeOwnersResult>(response);
+            return JsonExtensions.DeserializeModelJson<CodeOwnersResult>(response);
         }
         catch (JsonException ex)
         {
@@ -233,7 +263,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
                 { "customInstructions", analysisResult.CopilotInstructionsPrompt },
                 { "mcpServers", string.Join(",", analysisResult.AnalysisResult.McpServer ?? []) },
                 { "totalFilesInPR", diffs.Count.ToString() },
-                { "maxSuggestionsPerFile", AzureOpenAIAnalyzerService.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString() },
+                { "maxSuggestionsPerFile", InlineSuggestionLimiter.ComputeMaxSuggestionsPerFile(diffs.Count, _options.MaxInlineSuggestions).ToString() },
                 { "workItemContext", analysisResult.WorkItemGoal }
             }, true);
 
@@ -301,12 +331,23 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         _logger.LogInformation("Submitting Claude batch with {RequestCount} request(s)", requests.Count);
         var created = await _client.Batches.CreateBatchAsync(requests);
 
+        // Poll until the batch reaches its terminal state ("ended"). Non-terminal states
+        // ("in_progress", "canceling") must keep polling — exiting early would read results
+        // from a batch that hasn't finished. A deadline guards against an unbounded loop.
+        var deadline = DateTimeOffset.UtcNow + BatchPollTimeout;
         BatchResponse currentStatus;
         do
         {
-            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+            await Task.Delay(BatchPollInterval, cancellationToken);
             currentStatus = await _client.Batches.RetrieveBatchStatusAsync(created.Id, cancellationToken);
-        } while (currentStatus.ProcessingStatus is "in_progress");
+        } while (currentStatus.ProcessingStatus is not "ended" && DateTimeOffset.UtcNow < deadline);
+
+        if (currentStatus.ProcessingStatus is not "ended")
+        {
+            _logger.LogWarning("Batch {BatchId} did not complete within {Timeout}; last status {Status}",
+                created.Id, BatchPollTimeout, currentStatus.ProcessingStatus);
+            return new BatchedAnalysisResult();
+        }
 
         _logger.LogInformation("Batch {BatchId} completed with status {Status}", created.Id, currentStatus.ProcessingStatus);
 
@@ -332,8 +373,8 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         List<InlineSuggestion> inline;
         try
         {
-            var parsed = string.IsNullOrWhiteSpace(inlineRaw) ? [] : (JsonSerializer.Deserialize<List<InlineSuggestion>>(inlineRaw) ?? []);
-            inline = AzureOpenAIAnalyzerService.ApplyGlobalCap(parsed, _options.MaxInlineSuggestions, _logger);
+            var parsed = string.IsNullOrWhiteSpace(inlineRaw) ? [] : ParseInlineSuggestions(inlineRaw);
+            inline = InlineSuggestionLimiter.ApplyGlobalCap(parsed, _options.MaxInlineSuggestions, _logger);
         }
         catch (JsonException ex)
         {
@@ -344,7 +385,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         CodeOwnersResult? codeowners;
         try
         {
-            codeowners = string.IsNullOrWhiteSpace(codeownersRaw) ? null : JsonSerializer.Deserialize<CodeOwnersResult>(codeownersRaw);
+            codeowners = string.IsNullOrWhiteSpace(codeownersRaw) ? null : JsonExtensions.DeserializeModelJson<CodeOwnersResult>(codeownersRaw);
         }
         catch (JsonException ex)
         {

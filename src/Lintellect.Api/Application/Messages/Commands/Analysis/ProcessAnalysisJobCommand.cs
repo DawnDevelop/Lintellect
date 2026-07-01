@@ -6,6 +6,7 @@ using Lintellect.Shared.Extensions;
 using Lintellect.Shared.Models;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Lintellect.Api.Application.Messages.Commands.Analysis;
 
@@ -25,8 +26,11 @@ public sealed class ProcessAnalysisJobCommandHandler(
     IAnalyzerService analyzerService,
     IWorkItemService workItemService,
     IWorkItemSummarizer workItemSummarizer,
+    IOptions<AnalysisOptions> analysisOptions,
     ILogger<ProcessAnalysisJobCommandHandler> logger) : IRequestHandler<ProcessAnalysisJobCommand, PullRequestAnalysisReportModel>
 {
+    private readonly AnalysisOptions _analysisOptions = analysisOptions.Value;
+
     public async ValueTask<PullRequestAnalysisReportModel> Handle(ProcessAnalysisJobCommand request, CancellationToken cancellationToken)
     {
         var analysisRequest = request.AnalysisRequest;
@@ -54,7 +58,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
         var diffFull = await prService.GetCompactDiffsAsync(
             analysisRequest,
-            contextLines: 10);
+            contextLines: _analysisOptions.ContextLines);
 
 
         // Apply file exclusions if specified
@@ -102,7 +106,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
         if (analyzer is IBatchAnalyzerService batchAnalyzer)
         {
             var codeOwnersContent = analysisRequest.EnableAzureDevopsCodeOwners
-                ? await prService.GetCodeOwnersFileAsync(analysisRequest)
+                ? await ResolveMatchingCodeOwnersAsync(analysisRequest, diffs.Keys)
                 : null;
 
             var batchedResult = await batchAnalyzer.RunBatchedAnalysisAsync(
@@ -124,7 +128,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
         var tasks = new List<Task>();
         var diffPartial = await prService.GetCompactDiffsAsync(
             analysisRequest,
-            contextLines: 3);
+            contextLines: _analysisOptions.DetailedContextLines);
 
         var summaryTask = CreateSummaryTaskIfEnabled(analyzer, aiAnalyzerModel, diffPartial, analysisRequest, cancellationToken);
         var detailedAnalysisTask = CreateDetailedAnalysisTaskIfEnabled(analyzer, aiAnalyzerModel, diffPartial, analysisRequest, cancellationToken);
@@ -212,9 +216,30 @@ public sealed class ProcessAnalysisJobCommandHandler(
             return null;
         }
 
-        var codeOwnersContent = await prService.GetCodeOwnersFileAsync(analysisRequest);
+        var filtered = await ResolveMatchingCodeOwnersAsync(analysisRequest, changedFilePaths);
+        if (filtered is null)
+        {
+            return null;
+        }
 
-        return codeOwnersContent == null ? null : await analyzer.GetCodeOwnersAsync(codeOwnersContent, changedFilePaths, cancellationToken);
+        return await analyzer.GetCodeOwnersAsync(filtered, changedFilePaths, cancellationToken);
+    }
+
+    /// <summary>
+    /// Fetches the CODEOWNERS file and returns only the lines whose rules match the changed
+    /// paths, or <c>null</c> when the file is absent/empty or nothing matches — letting callers
+    /// skip the LLM round-trip.
+    /// </summary>
+    private async Task<string?> ResolveMatchingCodeOwnersAsync(AnalysisRequest analysisRequest, IEnumerable<string> changedFilePaths)
+    {
+        var codeOwnersContent = await prService.GetCodeOwnersFileAsync(analysisRequest);
+        if (string.IsNullOrWhiteSpace(codeOwnersContent))
+        {
+            return null;
+        }
+
+        var filtered = CodeOwnersPathFilter.FilterMatchingLines(codeOwnersContent, changedFilePaths);
+        return string.IsNullOrEmpty(filtered) ? null : filtered;
     }
 
     private async Task PostResultsToPullRequestAsync(

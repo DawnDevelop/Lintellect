@@ -51,6 +51,8 @@ public static class ConfigureServices
         Action<ClaudeAnalyzerOptions>? configureClaudeOptions = null,
         Action<AzureOpenAIAnalyzerOptions>? configureAzureOpenAIOptions = null)
     {
+        services.Configure<AnalysisOptions>(configuration.GetSection("Analysis"));
+
         // Only register Claude if configured
         var claudeApiKey = configuration.GetValue<string>("CLAUDE_API_KEY") ??
                           configuration.GetSection("ClaudeAnalyzer:ApiKey").Value;
