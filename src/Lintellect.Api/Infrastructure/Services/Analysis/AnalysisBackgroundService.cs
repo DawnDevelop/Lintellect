@@ -76,9 +76,9 @@ public sealed class AnalysisBackgroundService(
         await using var scope = serviceProvider.CreateAsyncScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-        // Add job timeout (10 minutes)
+        // Add job timeout (30 minutes)
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(TimeSpan.FromMinutes(10));
+        timeoutCts.CancelAfter(TimeSpan.FromMinutes(30));
 
         try
         {
@@ -114,7 +114,7 @@ public sealed class AnalysisBackgroundService(
         }
         catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            logger.LogError("Job {JobId} timed out after 10 minutes", job.Id);
+            logger.LogError("Job {JobId} timed out after 30 minutes", job.Id);
 
             // Record failed job
             var duration = (DateTimeOffset.UtcNow - startTime).TotalSeconds;
@@ -123,7 +123,7 @@ public sealed class AnalysisBackgroundService(
             await mediator.Send(new UpdateAnalysisJobStatusCommand(
                 job.Id,
                 AnalysisStatus.Failed,
-                ErrorMessage: "Job timed out after 10 minutes"),
+                ErrorMessage: "Job timed out after 30 minutes"),
                 cancellationToken);
         }
         catch (Exception ex)
