@@ -46,7 +46,7 @@ public sealed class GitClientFactory(
         var client = _clientCache.GetOrAdd(token!, _ =>
         {
             _logger.LogInformation("Caching Azure DevOps client for PAT.");
-            return new AzureDevopsClientService(token!, orgUri);
+            return new AzureDevopsClientService(token!, orgUri, _logger);
         });
 
         return (AzureDevopsClientService)client;

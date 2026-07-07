@@ -235,11 +235,20 @@ public sealed class ProcessAnalysisJobCommandHandler(
         var codeOwnersContent = await prService.GetCodeOwnersFileAsync(analysisRequest);
         if (string.IsNullOrWhiteSpace(codeOwnersContent))
         {
+            logger.LogInformation(
+                "Code owners enabled but no CODEOWNERS file found in repository {RepositoryName}",
+                analysisRequest.GitInfo?.RepositoryName);
             return null;
         }
 
         var filtered = CodeOwnersPathFilter.FilterMatchingLines(codeOwnersContent, changedFilePaths);
-        return string.IsNullOrEmpty(filtered) ? null : filtered;
+        if (string.IsNullOrEmpty(filtered))
+        {
+            logger.LogInformation("Code owners enabled but no CODEOWNERS rules match the changed files");
+            return null;
+        }
+
+        return filtered;
     }
 
     private async Task PostResultsToPullRequestAsync(
@@ -279,6 +288,10 @@ public sealed class ProcessAnalysisJobCommandHandler(
             await prService.AddCodeOwnersToPullRequest(
                 analysisRequest,
                 results.CodeOwners);
+        }
+        else if (analysisRequest.EnableAzureDevopsCodeOwners)
+        {
+            logger.LogInformation("Code owners enabled but analysis produced no code owners to assign");
         }
     }
 
