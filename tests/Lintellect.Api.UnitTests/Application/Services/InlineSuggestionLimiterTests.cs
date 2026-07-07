@@ -1,6 +1,5 @@
 using Lintellect.Api.Application.Models;
 using Lintellect.Api.Application.Services;
-using Shouldly;
 
 namespace Lintellect.Api.UnitTests.Application.Services;
 

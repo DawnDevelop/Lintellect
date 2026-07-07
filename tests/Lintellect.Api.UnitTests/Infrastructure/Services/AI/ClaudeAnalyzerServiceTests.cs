@@ -1,5 +1,4 @@
 using Lintellect.Api.Infrastructure.Services.AI;
-using Shouldly;
 
 namespace Lintellect.Api.UnitTests.Infrastructure.Services.AI;
 

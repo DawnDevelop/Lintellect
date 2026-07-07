@@ -16,7 +16,7 @@ public sealed class ClaudeAnalyzerOptions
     /// <summary>
     /// The model version to use (e.g., "claude-sonnet-4-5-20250929").
     /// </summary>
-    public string Model { get; set; } = "claude-sonnet-4-5-20250929";
+    public string Model { get; set; } = "claude-sonnet-5";
 
     /// <summary>
     /// Maximum tokens for the response.
@@ -26,7 +26,7 @@ public sealed class ClaudeAnalyzerOptions
     /// <summary>
     /// Temperature for response generation (0.0 to 1.0).
     /// </summary>
-    public double Temperature { get; set; } = 0.5;
+    public double? Temperature { get; set; } = null;
 
     /// <summary>
     /// Maximum number of inline suggestions to post across the entire PR.

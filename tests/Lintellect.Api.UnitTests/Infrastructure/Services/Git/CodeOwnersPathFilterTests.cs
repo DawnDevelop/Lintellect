@@ -1,5 +1,4 @@
 using Lintellect.Api.Infrastructure.Services.Git;
-using Shouldly;
 
 namespace Lintellect.Api.UnitTests.Infrastructure.Services.Git;
 

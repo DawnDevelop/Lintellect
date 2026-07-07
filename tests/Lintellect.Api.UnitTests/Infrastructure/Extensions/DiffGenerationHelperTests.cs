@@ -1,5 +1,4 @@
 using Lintellect.Api.Infrastructure.Extensions;
-using Shouldly;
 
 namespace Lintellect.Api.UnitTests.Infrastructure.Extensions;
 

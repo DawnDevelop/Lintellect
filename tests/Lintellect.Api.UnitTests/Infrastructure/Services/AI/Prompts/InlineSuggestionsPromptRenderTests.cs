@@ -1,6 +1,4 @@
 using Lintellect.Api.Infrastructure.Services.AI.Prompts;
-using Lintellect.Shared.Models;
-using Shouldly;
 
 namespace Lintellect.Api.UnitTests.Infrastructure.Services.AI.Prompts;
 
