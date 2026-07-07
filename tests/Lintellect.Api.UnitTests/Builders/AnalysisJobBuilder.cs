@@ -5,12 +5,15 @@ namespace Lintellect.Api.UnitTests.Builders;
 /// </summary>
 public sealed class AnalysisJobBuilder
 {
+    private int? _initialCommentThreadId;
+
     private AnalysisRequest _analysisRequest = new()
     {
         GitInfo = new GitInfo(123, "commit123", "TestRepo", EGitInfoType.PullRequest, "TestProject"),
         Language = EProgrammingLanguage.CSharp,
         GitProvider = EGitProvider.GitHub,
         EnableSummaryComment = true,
+        EnableInitialComment = true,
         EnableDescriptionSummary = true,
         EnableInlineSuggestions = true,
         EnableAzureDevopsCodeOwners = true,
@@ -51,9 +54,22 @@ public sealed class AnalysisJobBuilder
         return this;
     }
 
+    public AnalysisJobBuilder WithInitialCommentThreadId(int threadId)
+    {
+        _initialCommentThreadId = threadId;
+        return this;
+    }
+
     public AnalysisJob Build()
     {
-        return new AnalysisJob(_analysisRequest);
+        var job = new AnalysisJob(_analysisRequest);
+
+        if (_initialCommentThreadId.HasValue)
+        {
+            job.SetInitialCommentThreadId(_initialCommentThreadId.Value);
+        }
+
+        return job;
     }
 
     public static AnalysisJob ValidJob()

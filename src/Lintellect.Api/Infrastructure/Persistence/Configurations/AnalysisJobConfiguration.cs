@@ -34,6 +34,8 @@ public sealed class AnalysisJobConfiguration : IEntityTypeConfiguration<Analysis
         builder.Property(e => e.AnalyzerUsed)
             .HasMaxLength(100);
 
+        builder.Property(e => e.InitialCommentThreadId);
+
         builder.OwnsOne(j => j.AnalysisRequest, ar =>
         {
             ar.ToJson(); // Maps to a JSON column

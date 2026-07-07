@@ -18,6 +18,7 @@ public sealed class AnalysisJob : BaseAuditableEntity
     public string? DetailedAnalysis { get; private set; }
     public string? InlineSuggestions { get; private set; }
     public string? AnalyzerUsed { get; private set; }
+    public int? InitialCommentThreadId { get; private set; }
 
     public AnalysisRequest? AnalysisRequest { get; private set; }
 
@@ -45,6 +46,11 @@ public sealed class AnalysisJob : BaseAuditableEntity
         }
 
         return CloneAnalysisRequest(AnalysisRequest);
+    }
+
+    public void SetInitialCommentThreadId(int threadId)
+    {
+        InitialCommentThreadId = threadId;
     }
 
     public void Start()
@@ -119,6 +125,7 @@ public sealed class AnalysisJob : BaseAuditableEntity
             GitProvider = request.GitProvider,
             FileExclusions = request.FileExclusions is null ? [] : [.. request.FileExclusions],
             EnableSummaryComment = request.EnableSummaryComment,
+            EnableInitialComment = request.EnableInitialComment,
             EnableInlineSuggestions = request.EnableInlineSuggestions,
             EnableDescriptionSummary = request.EnableDescriptionSummary,
             EnableAzureDevopsCodeOwners = request.EnableAzureDevopsCodeOwners,

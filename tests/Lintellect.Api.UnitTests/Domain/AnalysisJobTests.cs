@@ -238,6 +238,33 @@ public class AnalysisJobTests
     }
 
     [Test]
+    public void SetInitialCommentThreadId_SetsProperty()
+    {
+        // Arrange
+        var job = AnalysisJobBuilder.ValidJob();
+
+        // Act
+        job.SetInitialCommentThreadId(99);
+
+        // Assert
+        job.InitialCommentThreadId.ShouldBe(99);
+    }
+
+    [Test]
+    public void SetInitialCommentThreadId_DoesNotRaiseDomainEvent()
+    {
+        // Arrange
+        var job = AnalysisJobBuilder.ValidJob();
+        job.ClearDomainEvents(); // Clear constructor event
+
+        // Act
+        job.SetInitialCommentThreadId(99);
+
+        // Assert
+        job.DomainEvents.Count.ShouldBe(0);
+    }
+
+    [Test]
     public void ClearDomainEvents_RemovesAllEvents()
     {
         // Arrange

@@ -75,6 +75,13 @@ internal class StaticAnalysisCommand : Command
             Aliases = { "-esc" }
         };
 
+        var enableInitialComment = new Option<bool>("--enable-initial-comment")
+        {
+            Description = "Post a placeholder 'analysis in progress' comment immediately and edit it in place with the final results when analysis completes (default: true)",
+            DefaultValueFactory = _ => true,
+            Aliases = { "-eic" }
+        };
+
         var enableInlineSuggestions = new Option<bool>("--enable-inline-suggestions")
         {
             Description = "Enable inline suggestions (default: true)",
@@ -127,6 +134,7 @@ internal class StaticAnalysisCommand : Command
         Options.Add(exclusions);
 
         Options.Add(enableSummaryComment);
+        Options.Add(enableInitialComment);
         Options.Add(enableInlineSuggestions);
         Options.Add(enableDescriptionSummary);
         Options.Add(enableCodeOwners);
@@ -170,6 +178,7 @@ internal class StaticAnalysisCommand : Command
             analysisResult.EnableDescriptionSummary = parseResult.GetValue(enableDescriptionSummary);
             analysisResult.EnableInlineSuggestions = parseResult.GetValue(enableInlineSuggestions);
             analysisResult.EnableSummaryComment = parseResult.GetValue(enableSummaryComment);
+            analysisResult.EnableInitialComment = parseResult.GetValue(enableInitialComment);
             analysisResult.FileExclusions = [.. exclusionPatterns];
             analysisResult.EnableAzureDevopsCodeOwners = parseResult.GetValue(enableCodeOwners);
             analysisResult.EnableWorkItemContext = parseResult.GetValue(enableWorkItemContext);

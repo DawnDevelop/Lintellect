@@ -89,7 +89,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
         var analysisResults = await ExecuteAnalysisTasksAsync(analyzerService, aiAnalyzerModel, diffFull, analysisRequest, cancellationToken);
 
         // Step 4: Post results to PR
-        await PostResultsToPullRequestAsync(prService, analysisRequest, analysisResults, cancellationToken);
+        await PostResultsToPullRequestAsync(prService, request.JobId, analysisRequest, analysisResults, cancellationToken);
 
         // Step 5: Return report
         return BuildAnalysisReport(analysisRequest, analysisResults, diffFull);
@@ -244,6 +244,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
     private async Task PostResultsToPullRequestAsync(
         PullRequestService prService,
+        Guid jobId,
         AnalysisRequest analysisRequest,
         AnalysisResults results,
         CancellationToken cancellationToken)
@@ -251,7 +252,13 @@ public sealed class ProcessAnalysisJobCommandHandler(
         // Post detailed analysis comment
         if (!string.IsNullOrWhiteSpace(results.DetailedAnalysis) && analysisRequest.EnableSummaryComment)
         {
-            await prService.AddCommentAsync(analysisRequest, results.DetailedAnalysis, isResolved: true);
+            var initialCommentThreadId = await GetInitialCommentThreadIdAsync(jobId, cancellationToken);
+
+            await prService.AddCommentAsync(
+                analysisRequest,
+                results.DetailedAnalysis,
+                threadId: initialCommentThreadId,
+                isResolved: true);
         }
 
         // Append summary to description
@@ -387,6 +394,14 @@ public sealed class ProcessAnalysisJobCommandHandler(
                 analysisRequest.GitInfo?.PullRequestId);
             return WorkItemSummary.Empty;
         }
+    }
+
+    private async Task<int?> GetInitialCommentThreadIdAsync(Guid jobId, CancellationToken cancellationToken)
+    {
+        return await context.AnalysisJobs
+            .Where(job => job.Id == jobId)
+            .Select(job => job.InitialCommentThreadId)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private async Task<bool> CheckForDuplicateAnalysisAsync(AnalysisRequest analysisRequest, CancellationToken cancellationToken)

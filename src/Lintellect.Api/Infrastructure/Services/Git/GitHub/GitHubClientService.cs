@@ -184,41 +184,47 @@ public sealed class GitHubClientService : IGitClient
     {
         try
         {
-            var issueComment = await _client.Issue.Comment.Create(
-                projectName,
-                repositoryName,
-                pullRequestId,
-                comment);
+            // GitHub has no "resolved" concept for general issue comments (only inline review
+            // threads support that), so isResolved is intentionally unused here.
+            var issueComment = threadId.HasValue
+                ? await _client.Issue.Comment.Update(projectName, repositoryName, threadId.Value, comment)
+                : await _client.Issue.Comment.Create(projectName, repositoryName, pullRequestId, comment);
 
-            return new PullRequestCommentThread
-            {
-                Id = (int)issueComment.Id,
-                Comments =
-                [
-                    new PullRequestComment
-                    {
-                        Id = (int)issueComment.Id,
-                        Content = issueComment.Body ?? string.Empty,
-                        Author = new IdentityRef
-                        {
-                            DisplayName = issueComment.User.Login,
-                            UniqueName = issueComment.User.Login,
-                            Id = issueComment.User.Id.ToString(),
-                            Url = issueComment.User.HtmlUrl,
-                            ImageUrl = issueComment.User.AvatarUrl
-                        },
-                        PublishedDate = issueComment.CreatedAt.UtcDateTime,
-                        LastUpdatedDate = issueComment.UpdatedAt?.UtcDateTime,
-                        CommentType = CommentType.Text
-                    }
-                ]
-            };
+            return MapToCommentThread(issueComment);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create comment on GitHub PR #{PullRequestId}", pullRequestId);
+            _logger.LogError(ex, "Failed to {Action} comment on GitHub PR #{PullRequestId}",
+                threadId.HasValue ? "update" : "create", pullRequestId);
             throw;
         }
+    }
+
+    private static PullRequestCommentThread MapToCommentThread(IssueComment issueComment)
+    {
+        return new PullRequestCommentThread
+        {
+            Id = (int)issueComment.Id,
+            Comments =
+            [
+                new PullRequestComment
+                {
+                    Id = (int)issueComment.Id,
+                    Content = issueComment.Body ?? string.Empty,
+                    Author = new IdentityRef
+                    {
+                        DisplayName = issueComment.User.Login,
+                        UniqueName = issueComment.User.Login,
+                        Id = issueComment.User.Id.ToString(),
+                        Url = issueComment.User.HtmlUrl,
+                        ImageUrl = issueComment.User.AvatarUrl
+                    },
+                    PublishedDate = issueComment.CreatedAt.UtcDateTime,
+                    LastUpdatedDate = issueComment.UpdatedAt?.UtcDateTime,
+                    CommentType = CommentType.Text
+                }
+            ]
+        };
     }
 
 

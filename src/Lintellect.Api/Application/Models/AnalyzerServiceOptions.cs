@@ -1,3 +1,4 @@
+using Anthropic.SDK.Messaging;
 using Azure.Core;
 
 namespace Lintellect.Api.Application.Models;
@@ -34,6 +35,18 @@ public sealed class ClaudeAnalyzerOptions
     /// Set to 0 to disable the cap.
     /// </summary>
     public int MaxInlineSuggestions { get; set; } = 10;
+
+    /// <summary>
+    /// Controls how much effort (and thus tokens) Claude spends per response. Null uses the API default (high).
+    /// </summary>
+    public ThinkingEffort? Effort { get; set; } = null;
+
+    /// <summary>
+    /// Sets the "thinking" mode (e.g. adaptive). Null omits the field, leaving the model's own default
+    /// (e.g. Claude Sonnet 5 defaults to adaptive thinking already). There is no "disabled" value here —
+    /// the installed Anthropic.SDK version has no such ThinkingType member.
+    /// </summary>
+    public ThinkingType? Thinking { get; set; } = null;
 
 }
 

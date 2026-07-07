@@ -11,6 +11,7 @@ public sealed class AnalysisRequestBuilder
         Language = EProgrammingLanguage.CSharp,
         GitProvider = EGitProvider.GitHub,
         EnableSummaryComment = true,
+        EnableInitialComment = true,
         EnableDescriptionSummary = true,
         EnableInlineSuggestions = true,
         EnableAzureDevopsCodeOwners = true,
@@ -63,6 +64,12 @@ public sealed class AnalysisRequestBuilder
     public AnalysisRequestBuilder WithGitProvider(EGitProvider provider)
     {
         _request.GitProvider = provider;
+        return this;
+    }
+
+    public AnalysisRequestBuilder WithInitialCommentDisabled()
+    {
+        _request.EnableInitialComment = false;
         return this;
     }
 

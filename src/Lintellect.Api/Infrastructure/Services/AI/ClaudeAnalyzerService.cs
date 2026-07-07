@@ -364,10 +364,10 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
                 continue;
             }
 
-            detailed = result.CustomId == idDescriptionSummary.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : detailed;
-            inlineRaw = result.CustomId == idInlineSuggestions.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : inlineRaw;
-            summary = result.CustomId == idSummary.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : summary;
-            codeownersRaw = result.CustomId == idCodeOwners.CustomId ? result.Result.Message.FirstMessage.Text ?? string.Empty : codeownersRaw;
+            detailed = result.CustomId == idDescriptionSummary.CustomId ? ExtractText(result.Result.Message) : detailed;
+            inlineRaw = result.CustomId == idInlineSuggestions.CustomId ? ExtractText(result.Result.Message) : inlineRaw;
+            summary = result.CustomId == idSummary.CustomId ? ExtractText(result.Result.Message) : summary;
+            codeownersRaw = result.CustomId == idCodeOwners.CustomId ? ExtractText(result.Result.Message) : codeownersRaw;
         }
 
         List<InlineSuggestion> inline;
@@ -403,6 +403,14 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
     }
 
     /// <summary>
+    /// Extracts the first text block from a message's content. Extended thinking places a "thinking"
+    /// block before the "text" block, so the SDK's own <c>MessageResponse.FirstMessage</c> (which casts
+    /// Content[0] unconditionally) returns null and cannot be used here.
+    /// </summary>
+    private static string ExtractText(MessageResponse message) =>
+        message.Content?.OfType<TextContent>().FirstOrDefault()?.Text ?? string.Empty;
+
+    /// <summary>
     /// Creates a MessageParameters object with common settings for batch requests.
     /// </summary>
     private MessageParameters CreateMessageParameters(string systemPrompt, string userPrompt, List<MCPServer>? mcpServers = null)
@@ -416,8 +424,10 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
             MaxTokens = _options.MaxTokens,
             Temperature = (decimal?)_options.Temperature,
             Stream = false,
+            OutputConfig = _options.Effort is null ? null : new OutputConfig { Effort = _options.Effort },
             ToolChoice = new ToolChoice { Type = ToolChoiceType.Auto },
             Tools = [],
+            Thinking = _options.Thinking is null ? null : new ThinkingParameters { Type = _options.Thinking.Value },
             System = [new(systemPrompt, new CacheControl { TTL = CacheDuration.OneHour })],
             Messages = [new Message { Role = RoleType.User, Content = [new TextContent { Text = userPrompt }] }]
         };

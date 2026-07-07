@@ -12,6 +12,8 @@ public class AnalysisRequest
 
     public bool EnableSummaryComment { get; set; } = true;
 
+    public bool EnableInitialComment { get; set; } = true;
+
     public bool EnableInlineSuggestions { get; set; } = true;
 
     public bool EnableDescriptionSummary { get; set; } = true;
