@@ -1,9 +1,11 @@
 using Lintellect.Api.Application.Common.Interfaces;
 using Lintellect.Api.Domain.Entities;
+using Lintellect.Api.Domain.Enums;
 using Lintellect.Api.Infrastructure.Services.Analysis;
 using Lintellect.Api.Infrastructure.Services.Git;
 using Lintellect.Shared.Models;
 using Mediator;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lintellect.Api.Application.Messages.Commands.Analysis;
 
@@ -27,6 +29,17 @@ public sealed class SubmitAnalysisCommandHandler(
 
     public async ValueTask<Guid> Handle(SubmitAnalysisCommand request, CancellationToken cancellationToken)
     {
+        var existingJobId = await FindTriggeredJobIdAsync(request.AnalysisRequest, cancellationToken);
+        if (existingJobId is not null)
+        {
+            logger.LogInformation(
+                "Analysis for PR #{PullRequestId} in {RepositoryName} was already triggered as job {JobId}; skipping",
+                request.AnalysisRequest.GitInfo?.PullRequestId,
+                request.AnalysisRequest.GitInfo?.RepositoryName,
+                existingJobId);
+            return existingJobId.Value;
+        }
+
         var analysisJob = new AnalysisJob(request.AnalysisRequest);
 
         if (request.AnalysisRequest.EnableInitialComment && request.AnalysisRequest.EnableSummaryComment)
@@ -40,6 +53,26 @@ public sealed class SubmitAnalysisCommandHandler(
         await queue.EnqueueAsync(analysisJob, cancellationToken);
 
         return analysisJob.Id;
+    }
+
+    private async Task<Guid?> FindTriggeredJobIdAsync(AnalysisRequest analysisRequest, CancellationToken cancellationToken)
+    {
+        var gitInfo = analysisRequest.GitInfo;
+        if (gitInfo is null)
+        {
+            return null;
+        }
+
+        return await context.AnalysisJobs
+            .Where(job =>
+                job.Status != AnalysisStatus.Failed &&
+                job.AnalysisRequest!.GitProvider == analysisRequest.GitProvider &&
+                job.AnalysisRequest.GitInfo!.PullRequestId == gitInfo.PullRequestId &&
+                job.AnalysisRequest.GitInfo.RepositoryName == gitInfo.RepositoryName &&
+                job.AnalysisRequest.GitInfo.ProjectName == gitInfo.ProjectName)
+            .OrderByDescending(job => job.Created)
+            .Select(job => (Guid?)job.Id)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private async Task TryPostInitialCommentAsync(AnalysisJob analysisJob, AnalysisRequest analysisRequest)

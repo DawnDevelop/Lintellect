@@ -1,5 +1,6 @@
 using Lintellect.Api.Application.Common.Exceptions;
 using Lintellect.Api.Application.Messages.Commands.Analysis;
+using Microsoft.EntityFrameworkCore;
 using static Lintellect.Api.FunctionalTests.Testing;
 
 namespace Lintellect.Api.FunctionalTests.CommandTests.Analysis;
@@ -27,6 +28,23 @@ public class SubmitAnalysisCommandTests : BaseTestFixture
             job.ShouldNotBeNull();
             job!.Status.ShouldBe(AnalysisStatus.Pending);
             job.AnalysisRequest.ShouldNotBeNull();
+        }
+    }
+
+    [Test]
+    public async Task Handle_WhenJobForSamePullRequestAlreadyExists_ReturnsExistingJobIdWithoutCreatingSecondJob()
+    {
+        var firstJobId = await SendAsync(new SubmitAnalysisCommand(TestDataBuilder.ValidRequest()));
+
+        var secondJobId = await SendAsync(new SubmitAnalysisCommand(TestDataBuilder.ValidRequest()));
+
+        secondJobId.ShouldBe(firstJobId);
+
+        var (scope, context) = GetDbContext();
+        using (scope)
+        {
+            var jobCount = await context.AnalysisJobs.CountAsync();
+            jobCount.ShouldBe(1);
         }
     }
 

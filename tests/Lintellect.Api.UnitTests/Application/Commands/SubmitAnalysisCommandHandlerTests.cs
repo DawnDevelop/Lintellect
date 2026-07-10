@@ -3,7 +3,7 @@ using Lintellect.Api.Application.Messages.Commands.Analysis;
 using Lintellect.Api.Application.Models.Git;
 using Lintellect.Api.Infrastructure.Services.Analysis;
 using Lintellect.Api.Infrastructure.Services.Git;
-using Microsoft.EntityFrameworkCore;
+using Lintellect.Api.UnitTests.TestHelpers;
 using Microsoft.Extensions.Logging;
 
 namespace Lintellect.Api.UnitTests.Application.Commands;
@@ -21,7 +21,7 @@ public class SubmitAnalysisCommandHandlerTests
     public void SetUp()
     {
         _mockContext = Substitute.For<IApplicationDbContext>();
-        var mockDbSet = Substitute.For<DbSet<AnalysisJob>>();
+        var mockDbSet = Array.Empty<AnalysisJob>().ToMockDbSet();
         _mockContext.AnalysisJobs.Returns(mockDbSet);
         _queue = new AnalysisJobQueue();
 
@@ -52,7 +52,7 @@ public class SubmitAnalysisCommandHandlerTests
         // Assert
         result.ShouldNotBe(Guid.Empty);
 
-        _mockContext.Received(1).AnalysisJobs.Add(Arg.Is<AnalysisJob>(j =>
+        _mockContext.AnalysisJobs.Received(1).Add(Arg.Is<AnalysisJob>(j =>
             j.Status == AnalysisStatus.Pending &&
             j.AnalysisRequest != null));
         await _mockContext.Received(1).SaveChangesAsync(cancellationToken);
@@ -105,7 +105,7 @@ public class SubmitAnalysisCommandHandlerTests
             request.GitInfo!.ProjectName!, request.GitInfo.RepositoryName, request.GitInfo.PullRequestId,
             Arg.Any<string>(), null, false);
 
-        _mockContext.Received(1).AnalysisJobs.Add(Arg.Is<AnalysisJob>(j =>
+        _mockContext.AnalysisJobs.Received(1).Add(Arg.Is<AnalysisJob>(j =>
             j.Id == result && j.InitialCommentThreadId == 42));
     }
 
@@ -125,7 +125,7 @@ public class SubmitAnalysisCommandHandlerTests
         await _mockGitClient.DidNotReceive().CreateCommentAsync(
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<bool>());
 
-        _mockContext.Received(1).AnalysisJobs.Add(Arg.Is<AnalysisJob>(j =>
+        _mockContext.AnalysisJobs.Received(1).Add(Arg.Is<AnalysisJob>(j =>
             j.Id == result && j.InitialCommentThreadId == null));
     }
 
@@ -166,12 +166,67 @@ public class SubmitAnalysisCommandHandlerTests
         // Assert
         result.ShouldNotBe(Guid.Empty);
 
-        _mockContext.Received(1).AnalysisJobs.Add(Arg.Is<AnalysisJob>(j =>
+        _mockContext.AnalysisJobs.Received(1).Add(Arg.Is<AnalysisJob>(j =>
             j.Id == result && j.InitialCommentThreadId == null));
         await _mockContext.Received(1).SaveChangesAsync(cancellationToken);
 
         var dequeuedJob = await _queue.DequeueAsync(cancellationToken);
         dequeuedJob.ShouldNotBeNull();
         dequeuedJob.Id.ShouldBe(result);
+    }
+
+    [Test]
+    public async Task Handle_WhenJobForSamePullRequestAlreadyExists_ReturnsExistingJobIdWithoutCreatingNewJob()
+    {
+        var request = AnalysisRequestBuilder.ValidRequest();
+        var existingJob = new AnalysisJobBuilder().Build();
+        var mockDbSet = new[] { existingJob }.ToMockDbSet();
+        _mockContext.AnalysisJobs.Returns(mockDbSet);
+        var command = new SubmitAnalysisCommand(request);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.ShouldBe(existingJob.Id);
+        mockDbSet.DidNotReceive().Add(Arg.Any<AnalysisJob>());
+        await _mockContext.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _mockGitClient.DidNotReceive().CreateCommentAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<bool>());
+        _queue.Reader.Count.ShouldBe(0);
+    }
+
+    [Test]
+    public async Task Handle_WhenPreviousJobForPullRequestFailed_CreatesNewJob()
+    {
+        var request = AnalysisRequestBuilder.ValidRequest();
+        request.EnableInitialComment = false;
+        var failedJob = new AnalysisJobBuilder().Build();
+        failedJob.Fail("previous run failed");
+        var mockDbSet = new[] { failedJob }.ToMockDbSet();
+        _mockContext.AnalysisJobs.Returns(mockDbSet);
+        var command = new SubmitAnalysisCommand(request);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.ShouldNotBe(failedJob.Id);
+        mockDbSet.Received(1).Add(Arg.Is<AnalysisJob>(j => j.Id == result));
+        await _mockContext.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task Handle_WhenExistingJobIsForDifferentPullRequest_CreatesNewJob()
+    {
+        var request = AnalysisRequestBuilder.ValidRequest();
+        request.EnableInitialComment = false;
+        var otherPrJob = new AnalysisJobBuilder()
+            .WithAnalysisRequest(new AnalysisRequestBuilder().WithPullRequestId(999).Build())
+            .Build();
+        var mockDbSet = new[] { otherPrJob }.ToMockDbSet();
+        _mockContext.AnalysisJobs.Returns(mockDbSet);
+        var command = new SubmitAnalysisCommand(request);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.ShouldNotBe(otherPrJob.Id);
+        mockDbSet.Received(1).Add(Arg.Is<AnalysisJob>(j => j.Id == result));
     }
 }

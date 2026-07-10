@@ -35,25 +35,6 @@ public sealed class ProcessAnalysisJobCommandHandler(
     {
         var analysisRequest = request.AnalysisRequest;
 
-        // Step 0: Check for duplicate analysis job with same PullRequestId and GitProvider
-        if (await CheckForDuplicateAnalysisAsync(analysisRequest, cancellationToken))
-        {
-            return new PullRequestAnalysisReportModel
-            {
-                AnalysisResult = analysisRequest,
-                Summary = "Duplicate analysis job detected. This pull request has already been analyzed.",
-                DetailedAnalysis = string.Empty,
-                DiffStatistics = new DiffStatistics
-                {
-                    FilesChanged = 0,
-                    LinesAdded = 0,
-                    LinesRemoved = 0
-                },
-                AnalyzedAt = DateTimeOffset.UtcNow,
-                InlineSuggestions = null
-            };
-        }
-
         // Step 1: Get and filter diffs and findings
 
         var diffFull = await prService.GetCompactDiffsAsync(
@@ -415,26 +396,6 @@ public sealed class ProcessAnalysisJobCommandHandler(
             .Where(job => job.Id == jobId)
             .Select(job => job.InitialCommentThreadId)
             .FirstOrDefaultAsync(cancellationToken);
-    }
-
-    private async Task<bool> CheckForDuplicateAnalysisAsync(AnalysisRequest analysisRequest, CancellationToken cancellationToken)
-    {
-
-        var pullRequestId = analysisRequest.GitInfo!.PullRequestId;
-
-        // Query for existing analysis jobs with the same PullRequestId and GitProvider
-        var existingJob = await context.AnalysisJobs
-            .Where(job =>
-                job.AnalysisRequest != null &&
-                job.Status == Domain.Enums.AnalysisStatus.Completed &&
-                job.AnalysisRequest.GitInfo != null &&
-                job.AnalysisRequest.GitInfo.PullRequestId == pullRequestId &&
-                job.AnalysisRequest.GitProvider == analysisRequest.GitProvider)
-            .OrderByDescending(job => job.Created)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        return existingJob != null;
-
     }
 }
 
