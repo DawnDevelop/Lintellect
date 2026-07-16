@@ -67,7 +67,7 @@ public static class ResiliencePolicies
                 sleepDurationProvider: retryAttempt =>
                     TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
 
-        var timeoutPolicy = Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromMinutes(5));
+        var timeoutPolicy = Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromMinutes(10));
 
         return Policy.WrapAsync(retryPolicy, timeoutPolicy);
     }

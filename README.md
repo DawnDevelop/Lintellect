@@ -8,180 +8,187 @@
 
 > **AI-powered code review assistant that enhances pull request analysis with intelligent insights and automated suggestions.**
 
-## Features
+Lintellect reviews your pull requests with AI. A small CLI runs in your CI pipeline and sends the PR context to a self-hosted Lintellect API, which calls Claude or Azure AI Foundry and posts the review back to GitHub or Azure DevOps:
 
-- **AI-Powered Analysis**: Integrates with Claude and Azure AI Foundry for intelligent code review
-- **Multi-Platform Support**: Works with GitHub and Azure DevOps
-- **Real-time Processing**: Asynchronous job processing with background services
-- **Enterprise Ready**: Clean Architecture, comprehensive testing, and production-grade features
-- **Rich Analytics**: Detailed analysis reports with metrics and telemetry
-- **CLI Integration**: Command-line tool for CI/CD pipeline integration
-- **RESTful API**: Complete REST API with OpenAPI documentation
+```
+Your CI pipeline (Lintellect CLI)
+      → your Lintellect API (self-hosted, one instance per organization)
+      → AI analysis (Claude / Azure AI Foundry)
+      → review comment, inline suggestions and description summary on the PR
+```
+
+The review is work-item aware (linked work items / issues, including acceptance criteria and repro steps, are fed into the analysis) and respects repo-level instruction files (`copilot-instructions.md`, `AGENTS.md`, `CLAUDE.md`).
 
 ## Table of Contents
 
 - [Quick Start](#quick-start)
-- [Installation](#installation)
 - [Usage](#usage)
-- [API Reference](#api-reference)
 - [Configuration](#configuration)
-- [Architecture](#architecture)
-- [Development](#development)
-- [Git Workflow](#git-workflow)
-- [Release Process](#release-process)
-- [Contributing](#contributing)
+- [API Reference](#api-reference)
+- [Development & Contributing](#development--contributing)
 - [License](#license)
 
 ## Quick Start
 
-### Prerequisites
+Setting up Lintellect for your organization takes three steps: run the API, add the CLI to your pipeline, open a pull request.
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [Visual Studio 2022](https://visualstudio.microsoft.com/) or [VS Code](https://code.visualstudio.com/)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for Aspire orchestration)
+### 1. Run the API
 
-### 1. Clone the Repository
+The API is a single container plus PostgreSQL. Database migrations run automatically on startup.
 
 ```bash
-git clone https://github.com/DawnDevelop/Lintellect.git
-cd lintellect
+# Build the image from this repository
+docker build -t lintellect-api -f src/Lintellect.Api/Dockerfile .
+
+# Start PostgreSQL and the API
+docker network create lintellect
+docker run -d --name lintellect-db --network lintellect \
+  -e POSTGRES_PASSWORD=change-me -e POSTGRES_DB=lintellect postgres:17
+
+docker run -d --name lintellect-api --network lintellect -p 7000:8080 \
+  -e ApiKey="choose-a-secure-api-key" \
+  -e ConnectionStrings__postgresdb="Host=lintellect-db;Database=lintellect;Username=postgres;Password=change-me" \
+  -e CLAUDE_API_KEY="sk-ant-..." \
+  -e AZURE_DEVOPS_PAT="your-pat" \
+  -e AZURE_DEVOPS_ORG_URL="https://dev.azure.com/your-org" \
+  lintellect-api
 ```
 
-### 2. Run with .NET Aspire (Recommended)
+Minimum configuration:
 
-The application is designed to run with .NET Aspire for optimal development experience:
+| Setting | Purpose |
+| --- | --- |
+| `ApiKey` | The key your pipelines use to call this API |
+| `ConnectionStrings__postgresdb` | PostgreSQL connection string |
+| `CLAUDE_API_KEY` **or** `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_DEPLOYMENT_NAME` | At least one AI provider |
+| `AZURE_DEVOPS_PAT` + `AZURE_DEVOPS_ORG_URL` **and/or** `GITHUB_TOKEN` | Credentials for the Git provider(s) that host your PRs |
 
-```bash
-# Start the Aspire AppHost
-cd src/Lintellect.AppHost
-dotnet run
+The Azure DevOps PAT needs **Code (Read & Write)**, **Pull Request (Read & Write)** and **Work Items (Read)** scopes; the GitHub token needs the `repo` scope. Everything else has sensible defaults — see [Configuration](#configuration).
+
+### 2. Add the CLI to your pipeline
+
+The pipeline only needs the API URL and key — Git provider credentials stay on the API server.
+
+**Azure DevOps** (trigger via build validation policy on your target branch):
+
+```yaml
+trigger: none
+
+pool:
+  vmImage: "ubuntu-latest"
+
+steps:
+  - task: UseDotNet@2
+    inputs: { packageType: "sdk", version: "10.0.x" }
+
+  - script: dotnet tool install --global Lintellect.Cli
+    displayName: "Install Lintellect CLI"
+
+  - script: >
+      Lintellect analyze --language "csharp"
+      --enable-summary-comment --enable-inline-suggestions --enable-description-summary
+    displayName: "Analyze PR"
+    env:
+      LINTELLECT_API_URL: $(LINTELLECT_API_URL)
+      LINTELLECT_API_KEY: $(LINTELLECT_API_KEY)
 ```
 
-This will:
+**GitHub Actions:**
 
-- Start PostgreSQL in a container
-- Launch the API service
-- Provide Aspire dashboard at https://localhost:15000
-- Handle service discovery and configuration
+```yaml
+name: PR Analysis
 
-### 3. Configure Environment
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
 
-The Aspire AppHost will automatically configure the environment. For custom configuration, modify `src/Lintellect.AppHost/appsettings.json`:
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-```json
-{
-  "ClaudeAnalyzer": {
-    "ApiKey": "your-claude-api-key"
-  },
-  "GitCredentials": {
-    "GitHub": {
-      "Token": "your-github-token"
-    },
-    "AzureDevOps": {
-      "Pat": "your-pat-token",
-      "OrgUrl": "https://dev.azure.com/your-org"
-    }
-  }
-}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - run: dotnet tool install --global Lintellect.Cli
+
+      - run: >
+          Lintellect analyze --language "csharp"
+          --enable-summary-comment --enable-inline-suggestions --enable-description-summary
+        env:
+          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
+          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
 ```
 
-### 4. Access the Application
+### 3. Open a pull request
 
-- **Aspire Dashboard**: https://localhost:15000
-- **API**: https://localhost:7000
-- **API Documentation**: https://localhost:7000/scalar/v1 (Scalar UI, Development only)
-- **Health Check**: https://localhost:7000/health (readiness: /health/ready)
-
-## Installation
-
-### API Service
-
-```bash
-# Build and run
-cd src/Lintellect.Api
-dotnet run
-
-# Or with Docker
-docker build -t lintellect:latest -f src/Lintellect.Api/Dockerfile .
-docker run -p 7000:7000 lintellect:latest
-```
-
-### CLI Tool
-
-```bash
-# Install globally
-dotnet tool install --global Lintellect.Cli
-
-# Verify installation
-Lintellect --help
-```
+On the next PR you'll see a "🔄 Lintellect analysis is in progress" placeholder, which is replaced by the review once the analysis completes — typically a detailed review comment, inline code suggestions and a summary appended to the PR description.
 
 ## Usage
 
-### CLI Analysis
+### CLI options
 
 ```bash
-# Basic C# analysis with AI features (Semgrep runs by default)
+# Full analysis (summary comment, inline suggestions, description summary; Semgrep runs by default)
 Lintellect analyze \
   --language "csharp" \
   --enable-summary-comment \
   --enable-inline-suggestions \
   --enable-description-summary
 
-# C# analysis with Semgrep (MIT-licensed security analysis)
-Lintellect analyze \
-  --language "csharp" \
-  --enable-semgrep \
-  --enable-summary-comment \
-  --enable-inline-suggestions
-
-# C# analysis WITHOUT Semgrep (AI features only)
-Lintellect analyze \
-  --language "csharp" \
-  --enable-semgrep false \
-  --enable-summary-comment \
-  --enable-inline-suggestions \
-  --enable-description-summary
-
-# Multi-language analysis with exclusions
+# Exclude paths, add Azure DevOps code-owner assignment
 Lintellect analyze \
   --language "csharp" \
   --exclude "**/bin/**" \
   --exclude "**/obj/**" \
-  --exclude "**/test/**" \
   --exclude "**/Generated/**" \
   --enable-summary-comment \
   --enable-inline-suggestions \
   --enable-azure-devops-code-owners
 
-# Linked work items / issues are used as PR context by default.
-# Azure DevOps: linked work items resolved server-side via the WIT REST API.
-# GitHub: PR body parsed for "Closes/Fixes/Resolves #N" keywords.
-# To opt out:
+# Opt out of individual features
 Lintellect analyze \
   --language "csharp" \
   --enable-summary-comment \
+  --enable-semgrep false \
   --enable-work-item-context false
-
-# Python analysis with Semgrep
-Lintellect analyze \
-  --language "python" \
-  --enable-semgrep \
-  --exclude "**/__pycache__/**" \
-  --exclude "**/venv/**" \
-  --exclude "**/node_modules/**" \
-  --enable-summary-comment
-
-# JavaScript/TypeScript analysis
-Lintellect analyze \
-  --language "javascript" \
-  --enable-semgrep \
-  --exclude "**/node_modules/**" \
-  --exclude "**/dist/**" \
-  --exclude "**/build/**" \
-  --enable-summary-comment \
-  --enable-inline-suggestions
 ```
+
+Supported languages: `csharp` (with Roslyn static analysis), `javascript`, `typescript`, `python`, `java` and others (AI review of the diff; Semgrep where applicable).
+
+### What gets posted
+
+- **Review comment** — the detailed analysis, posted into (and resolving) the placeholder comment. It ends with a context footer showing what the review actually saw: linked work items, whether custom instructions were found, and whether the diff was full or incremental.
+- **Description summary** — appended to the PR description.
+- **Inline suggestions** — one suggestion comment per finding, capped per file and globally.
+- **Code owners** (Azure DevOps, opt-in) — reviewers added from CODEOWNERS rules matching the changed files.
+
+Posting is fault-tolerant per step: if the PR becomes read-only mid-analysis, the remaining steps still run and the job still completes. If a job fails outright, the placeholder comment is updated with a failure note instead of staying "in progress" forever.
+
+### Work-item context
+
+Linked work items / issues are used as PR context by default (`--enable-work-item-context false` to opt out):
+
+- **Azure DevOps**: linked work items are resolved server-side via the WIT REST API. The context includes description, acceptance criteria and repro steps (configurable via `Analysis:WorkItemBodyFields`), so the review can flag work-item scope the PR doesn't cover.
+- **GitHub**: the PR body is parsed for `Closes/Fixes/Resolves #N` keywords.
+
+### Custom review instructions
+
+Lintellect looks for a repo-level instruction file on the pull request's source branch and injects it into every review prompt. The first match wins:
+
+```
+/.github/copilot-instructions.md   (+ uppercase and /.copilot, /docs, / variants)
+/AGENTS.md
+/CLAUDE.md                          (+ /CLAUDE, /.claude/CLAUDE.md, /.github/CLAUDE.md)
+/.github/AGENTS.md
+/docs/AGENTS.md
+```
+
+Use it for project conventions the reviewer should enforce ("we ban AutoMapper", "public APIs need XML docs"). No file → no custom instructions; analysis proceeds normally.
 
 ### Re-triggered analyses
 
@@ -192,108 +199,85 @@ The API deduplicates analysis per pull request:
 - **Re-trigger without new commits**, or while a previous job is still running → no new job; the existing job's id is returned.
 - A **failed** job never blocks re-analysis — the next trigger runs a full analysis again.
 
-### CI/CD Integration
+## Configuration
 
-#### GitHub Actions
+All settings can be provided via `appsettings.json` or environment variables (`Section__Key` form); the env vars shown in Quick Start are dedicated fallbacks for the most common secrets.
 
-```yaml
-name: PR Analysis
+### Required Settings
 
-# Environment Variables Required:
-# - LINTELLECT_API_URL: Your Lintellect API endpoint URL
-# - LINTELLECT_API_KEY: Your Lintellect API key
-#
-# Optional Environment Variables:
-# - LINTELLECT_API_URL and LINTELLECT_API_KEY can be provided via command line arguments instead
-
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-
-jobs:
-  analyze:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Fetch full history for better analysis
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Install DevOps PR Analyzer
-        run: |
-          dotnet tool install --global Lintellect.Cli
-
-      - name: Basic C# Analysis
-        run: |
-          Lintellect analyze \
-            --language "csharp" \
-            --enable-summary-comment \
-            --enable-inline-suggestions \
-            --enable-description-summary
-        env:
-          # The CLI only needs the Lintellect API URL + key. Git provider tokens
-          # (GITHUB_TOKEN / AZURE_DEVOPS_PAT) are configured on the Lintellect API, not here.
-          LINTELLECT_API_URL: ${{ secrets.LINTELLECT_API_URL }}
-          LINTELLECT_API_KEY: ${{ secrets.LINTELLECT_API_KEY }}
+```json
+{
+  "ConnectionStrings": {
+    "postgresdb": "Host=localhost;Database=lintellect;Username=postgres;Password=password"
+  },
+  "ApiKey": "your-secure-api-key"
+}
 ```
 
-#### Azure DevOps Pipelines
+### AI Analyzer Settings
 
-```yaml
-trigger: none # Trigger on every pull request by setting build validation inside the options
+#### Claude Analyzer
 
-# Environment Variables Required:
-# - LINTELLECT_API_URL: Your Lintellect API endpoint URL
-# - LINTELLECT_API_KEY: Your Lintellect API key
-#
-# Optional Environment Variables:
-# - LINTELLECT_API_URL and LINTELLECT_API_KEY can be provided via command line arguments instead
-# Note: git provider credentials (AZURE_DEVOPS_PAT / GITHUB_TOKEN) are configured on the
-#       Lintellect API server, not in this pipeline. The CLI only talks to the Lintellect API.
-
-pool:
-  vmImage: "ubuntu-latest"
-
-variables:
-  buildConfiguration: "Release"
-
-stages:
-  - stage: Analyze
-    displayName: "Analyze PR"
-    jobs:
-      - job: AnalyzePR
-        displayName: "Analyze Pull Request"
-        steps:
-          - task: UseDotNet@2
-            displayName: "Use .NET 10"
-            inputs:
-              packageType: "sdk"
-              version: "10.0.x"
-
-          - task: DotNetCoreCLI@2
-            displayName: "Install DevOps PR Analyzer"
-            inputs:
-              command: "custom"
-              custom: "tool"
-              arguments: "install --global Lintellect.Cli"
-
-          - task: DotNetCoreCLI@2
-            displayName: "Basic C# Analysis"
-            inputs:
-              command: "custom"
-              custom: "Lintellect"
-              arguments: 'analyze --language "csharp" --enable-summary-comment --enable-inline-suggestions --enable-description-summary'
-            env:
-              # The CLI only needs the Lintellect API URL + key. Git provider tokens
-              # (AZURE_DEVOPS_PAT / GITHUB_TOKEN) are configured on the Lintellect API, not here.
-              LINTELLECT_API_URL: $(LINTELLECT_API_URL)
-              LINTELLECT_API_KEY: $(LINTELLECT_API_KEY)
+```json
+{
+  "ClaudeAnalyzer": {
+    "ApiKey": "sk-ant-api03-...",
+    "Model": "claude-sonnet-4-5-20250929",
+    "MaxTokens": 40960,
+    "Temperature": 0.5
+  }
+}
 ```
+
+#### Azure AI Foundry
+
+```json
+{
+  "AzureOpenAIAnalyzer": {
+    "ApiKey": "your-azure-ai-key",
+    "Endpoint": "https://your-resource.openai.azure.com/",
+    "DeploymentName": "gpt-4o"
+  }
+}
+```
+
+### Git Provider Settings
+
+Git provider credentials are configured on the API server and used for all analysis requests.
+
+```json
+{
+  "GitCredentials": {
+    "GitHub": {
+      "Token": "ghp_..."
+    },
+    "AzureDevOps": {
+      "Pat": "your-pat-token",
+      "OrgUrl": "https://dev.azure.com/your-org"
+    }
+  }
+}
+```
+
+Or via environment variables: `GITHUB_TOKEN`, `AZURE_DEVOPS_PAT`, `AZURE_DEVOPS_ORG_URL`.
+
+### Analysis Settings
+
+```json
+{
+  "Analysis": {
+    "SynchronousAnalysis": false,
+    "WorkItemBodyFields": [
+      "System.Description",
+      "Microsoft.VSTS.Common.AcceptanceCriteria",
+      "Microsoft.VSTS.TCM.ReproSteps"
+    ]
+  }
+}
+```
+
+- **`SynchronousAnalysis`** (default `false`): when `false`, Claude analyses run through the Message Batches API (~50% cheaper, but no completion-time guarantee — a busy batch queue can delay a review by many minutes). Set to `true` (env: `Analysis__SynchronousAnalysis`) to run direct parallel API calls with predictable latency at full token price.
+- **`WorkItemBodyFields`**: the Azure DevOps work item fields composed (in order, labeled) into the work-item context. Fields a work item type doesn't have are skipped, so the defaults cover both stories/PBIs (acceptance criteria) and bugs (repro steps) on the standard Agile/Scrum/CMMI process templates. Override for custom process templates.
 
 ## API Reference
 
@@ -337,231 +321,74 @@ The CLI submits jobs to `POST /api/analysis/analyze`; the API persists the job, 
 }
 ```
 
-## Configuration
+## Development & Contributing
 
-### Required Settings
+Everything below is for working **on** Lintellect itself, not for using it.
 
-```json
-{
-  "ConnectionStrings": {
-    "postgresdb": "Host=localhost;Database=lintellect;Username=postgres;Password=password"
-  },
-  "ApiKey": "your-secure-api-key"
-}
-```
-
-### AI Analyzer Settings
-
-#### Claude Analyzer
-
-```json
-{
-  "ClaudeAnalyzer": {
-    "ApiKey": "sk-ant-api03-...",
-    "Model": "claude-sonnet-4-5-20250929",
-    "MaxTokens": 40960,
-    "Temperature": 0.5
-  }
-}
-```
-
-#### Azure AI Foundry
-
-```json
-{
-  "AzureOpenAIAnalyzer": {
-    "ApiKey": "your-azure-ai-key",
-    "Endpoint": "https://your-resource.openai.azure.com/",
-    "DeploymentName": "gpt-4o"
-  }
-}
-```
-
-### Git Provider Settings
-
-Git provider credentials are configured at the application level and used for all analysis requests.
-
-#### GitHub
-
-```json
-{
-  "GitCredentials": {
-    "GitHub": {
-      "Token": "ghp_..."
-    }
-  }
-}
-```
-
-Or via environment variable:
-```bash
-export GITHUB_TOKEN="ghp_..."
-```
-
-#### Azure DevOps
-
-```json
-{
-  "GitCredentials": {
-    "AzureDevOps": {
-      "Pat": "your-pat-token",
-      "OrgUrl": "https://dev.azure.com/your-org"
-    }
-  }
-}
-```
-
-Or via environment variables:
-```bash
-export AZURE_DEVOPS_PAT="your-pat-token"
-export AZURE_DEVOPS_ORG_URL="https://dev.azure.com/your-org"
-```
-
-### Key Components
-
-- **Domain Layer**: Core business logic, entities, and domain events
-- **Application Layer**: CQRS with Mediator pattern, commands, queries, and handlers
-- **Infrastructure Layer**: Database, external services, Git clients, and AI integrations
-- **API Layer**: REST endpoints, authentication, and middleware
-
-### Technology Stack
-
-- **.NET 10**: Primary framework with C# 14.0
-- **PostgreSQL**: Database with JSONB support
-- **Mediator**: Source-generator based CQRS implementation
-- **FluentValidation**: Input validation
-- **Polly**: Resilience patterns for external API calls
-- **OpenTelemetry**: Metrics and observability
-- **Testcontainers**: Integration testing with real database
-- **NSubstitute**: Mocking framework for unit tests
-
-## Development
-
-### Prerequisites
-
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [Visual Studio 2022](https://visualstudio.microsoft.com/) or [VS Code](https://code.visualstudio.com/)
-- [PostgreSQL 15+](https://www.postgresql.org/download/)
-- [Docker](https://www.docker.com/get-started) (optional)
-
-### Getting Started
-
-1. **Clone and Setup**
-
-   ```bash
-   git clone https://github.com/DawnDevelop/Lintellect.git
-   cd lintellect
-   dotnet restore
-   ```
-
-2. **Start with Aspire (Recommended)**
-
-   ```bash
-   # Start the Aspire AppHost - this handles everything automatically
-   cd src/Lintellect.AppHost
-   dotnet run
-   ```
-
-   The Aspire AppHost will:
-
-   - Start PostgreSQL in a container
-   - Launch the API service
-   - Provide the Aspire dashboard at https://localhost:15000
-   - Handle all service discovery and configuration
-
-3. **Alternative: Manual Setup**
-
-   ```bash
-   # Database setup (if not using Aspire)
-   docker run --name postgres-dev -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres:15
-   createdb lintellect
-
-   # Run migrations
-   cd src/Lintellect.Api
-   dotnet ef database update
-
-   # Start API manually
-   dotnet run
-   ```
-
-### Testing
+### Local development
 
 ```bash
-# Run all tests
-dotnet test
+git clone https://github.com/DawnDevelop/Lintellect.git
+cd lintellect
 
-# Run with coverage
-dotnet test --collect:"XPlat Code Coverage"
-
-# Run integration tests
-dotnet test tests/Lintellect.Api.FunctionalTests/
+# Recommended: .NET Aspire starts PostgreSQL + API and wires everything up
+cd src/Lintellect.AppHost
+dotnet run
+# Aspire dashboard: https://localhost:15000 | API: https://localhost:7000
 ```
 
-### Building
+Prerequisites: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), [Docker](https://www.docker.com/get-started). Configure API keys and Git credentials in `src/Lintellect.AppHost/appsettings.json` (user secrets are also wired up).
+
+Manual setup without Aspire:
 
 ```bash
-# Build all projects
+docker run --name postgres-dev -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres:17
+cd src/Lintellect.Api
+dotnet ef database update
+dotnet run
+```
+
+### Testing and building
+
+```bash
+dotnet test                                          # all tests
+dotnet test tests/Lintellect.Api.FunctionalTests/    # integration tests (requires Docker)
 dotnet build
-
-# Build specific project
-dotnet build src/Lintellect.Api/Lintellect.Api.csproj
-
-# Publish for production
 dotnet publish src/Lintellect.Api/Lintellect.Api.csproj -c Release -o ./publish
 ```
 
-## Git Workflow
+### Architecture
 
-Lintellect uses **GitHub Flow** with release branches. See [Git Workflow Documentation](docs/GIT_WORKFLOW.md) for complete details.
+Clean Architecture in a single API project:
 
-### Branch Strategy
+- **Domain**: entities (`AnalysisJob`, `WebhookEvent`), domain events, enums
+- **Application**: CQRS with source-generated [Mediator](https://github.com/martinothamar/Mediator), FluentValidation
+- **Infrastructure**: EF Core + PostgreSQL (JSONB), AI services, Git clients, background services
+- **Apis**: minimal API endpoints, API-key auth
 
-- **`main`** - Production-ready code, always stable
-- **`feature/*`** - New features
-- **`bugfix/*`** - Bug fixes
-- **`hotfix/api/*`** or **`hotfix/cli/*`** - Critical fixes
-- **`release/api/v*`** or **`release/cli/v*`** - Release preparation
+Plus **Lintellect.Cli** (stateless pipeline tool), **Lintellect.Shared** (contracts) and **AppHost/ServiceDefaults** (.NET Aspire, local dev only).
 
-## Release Process
+Tech stack: .NET 10 / C# 14, PostgreSQL, Polly (resilience), OpenTelemetry (observability), Testcontainers + NSubstitute (testing).
 
-Lintellect has **two independent releases**:
+### Git workflow and releases
 
-- **API** - Docker images tagged as `api/v1.2.3`
-- **CLI** - NuGet package tagged as `cli/v2.1.0`
-
-### Quick Release
+Lintellect uses **GitHub Flow** with release branches and two independent releases — the API (Docker image, `api/v1.2.3`) and the CLI (NuGet package, `cli/v2.1.0`):
 
 ```bash
-# API Release
 ./scripts/create-release-api.sh 1.2.0
-
-# CLI Release
 ./scripts/create-release-cli.sh 2.1.0
 ```
 
-See [Git Workflow Documentation](docs/GIT_WORKFLOW.md) for detailed release process.
+See the [Git Workflow Documentation](docs/GIT_WORKFLOW.md) for branch strategy and the release process, and [Git Credentials Configuration](docs/GIT_CREDENTIALS_CONFIGURATION.md) for provider credential details.
 
-### Git Provider Credentials
-
-For configuring GitHub / Azure DevOps credentials on the API server, see [Git Credentials Configuration](docs/GIT_CREDENTIALS_CONFIGURATION.md).
-
-## Contributing
+### Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Quick Start
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes using conventional commits
 4. Push to the branch and open a Pull Request
-
-### Code Standards
-
-- Follow [C# Coding Conventions](https://docs.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions)
-- Add XML documentation for public APIs
-- Include unit tests for new functionality
-- Ensure all tests pass before submitting PR
 
 ## License
 

@@ -36,6 +36,19 @@ public sealed class AnalysisOptions
     /// </summary>
     public bool SynchronousAnalysis { get; set; }
 
+    /// <summary>
+    /// Azure DevOps work item fields composed (in order, each labeled) into the work-item body
+    /// fed to the AI. Fields absent on a given work item type are skipped, so the defaults cover
+    /// stories/PBIs (acceptance criteria) and bugs (repro steps) across the standard process
+    /// templates; override for custom processes. Set via env: Analysis__WorkItemBodyFields__0 etc.
+    /// </summary>
+    public List<string> WorkItemBodyFields { get; set; } =
+    [
+        "System.Description",
+        "Microsoft.VSTS.Common.AcceptanceCriteria",
+        "Microsoft.VSTS.TCM.ReproSteps"
+    ];
+
     public bool IncludeSummary { get; set; } = true;
 
     public bool IncludeComprehensiveComment { get; set; } = true;

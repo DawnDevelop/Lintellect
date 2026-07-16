@@ -13,10 +13,12 @@ namespace Lintellect.Api.Infrastructure.Services.Git;
 /// </summary>
 public sealed class GitClientFactory(
     ILogger<GitHubClientService> logger,
-    IOptionsMonitor<GitCredentialsOptions> credentialOptions) : IGitClientFactory
+    IOptionsMonitor<GitCredentialsOptions> credentialOptions,
+    IOptionsMonitor<AnalysisOptions> analysisOptions) : IGitClientFactory
 {
     private readonly ILogger<GitHubClientService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly IOptionsMonitor<GitCredentialsOptions> _credentialOptions = credentialOptions ?? throw new ArgumentNullException(nameof(credentialOptions));
+    private readonly IOptionsMonitor<AnalysisOptions> _analysisOptions = analysisOptions ?? throw new ArgumentNullException(nameof(analysisOptions));
     private readonly ConcurrentDictionary<string, IGitClient> _clientCache = new();
     public IGitClient CreateClient(AnalysisRequest analysisRequest)
     {
@@ -46,7 +48,7 @@ public sealed class GitClientFactory(
         var client = _clientCache.GetOrAdd(token!, _ =>
         {
             _logger.LogInformation("Caching Azure DevOps client for PAT.");
-            return new AzureDevopsClientService(token!, orgUri, _logger);
+            return new AzureDevopsClientService(token!, orgUri, _logger, _analysisOptions.CurrentValue.WorkItemBodyFields);
         });
 
         return (AzureDevopsClientService)client;

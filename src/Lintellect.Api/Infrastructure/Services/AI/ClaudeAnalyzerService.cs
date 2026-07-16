@@ -65,8 +65,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         _templateService = new PromptTemplateService();
         _promptBuilder = new PromptBuilder();
 
-        // The "ClaudeApi" HttpClient is registered in ConfigureServices.AddResiliencePolicies
-        // with retry + 5-minute timeout via Microsoft.Extensions.Http.Polly.
+        // The "ClaudeApi" HttpClient is registered in ConfigureServices.AddResiliencePolicies with retry + 10-minute timeout via Microsoft.Extensions.Http.Polly.
         var httpClient = httpClientFactory.CreateClient("ClaudeApi");
         _client = new AnthropicClient(new APIAuthentication(_options.ApiKey!), httpClient, requestInterceptor: null);
     }
@@ -337,7 +336,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         }
 
         _logger.LogInformation("Submitting Claude batch with {RequestCount} request(s)", requests.Count);
-        var created = await _client.Batches.CreateBatchAsync(requests);
+        var created = await _client.Batches.CreateBatchAsync(requests, cancellationToken);
 
         // Poll until the batch reaches its terminal state ("ended"). Non-terminal states
         // ("in_progress", "canceling") must keep polling — exiting early would read results

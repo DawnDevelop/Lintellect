@@ -111,7 +111,7 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
             "/AGENTS.md",
             "/CLAUDE.md",
             "/CLAUDE",
-            ".claude/CLAUDE.md",
+            "/.claude/CLAUDE.md",
             "/.github/CLAUDE.md",
             "/.github/AGENTS.md",
             "/docs/AGENTS.md"

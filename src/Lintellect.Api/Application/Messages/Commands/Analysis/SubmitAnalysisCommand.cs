@@ -6,6 +6,7 @@ using Lintellect.Api.Infrastructure.Services.Git;
 using Lintellect.Shared.Models;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Lintellect.Api.Application.Messages.Commands.Analysis;
 
@@ -63,11 +64,38 @@ public sealed class SubmitAnalysisCommandHandler(
         }
 
         context.AnalysisJobs.Add(analysisJob);
-        await context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsDuplicateActiveJob(ex))
+        {
+            // A concurrent submission won the race for this PR (unique index on active jobs).
+            // Behave like the check-then-skip path: return the winning job instead of failing.
+            logger.LogInformation(
+                "Concurrent submission for PR #{PullRequestId} in {RepositoryName} lost the active-job race; returning the existing job",
+                analysisRequest.GitInfo?.PullRequestId,
+                analysisRequest.GitInfo?.RepositoryName);
+
+            var winner = await FindLatestTriggeredJobAsync(analysisRequest, cancellationToken);
+            if (winner is null)
+            {
+                throw;
+            }
+
+            return winner.Id;
+        }
 
         await queue.EnqueueAsync(analysisJob, cancellationToken);
 
         return analysisJob.Id;
+    }
+
+    private const string ActiveJobIndexName = "IX_AnalysisJobs_ActiveJobPerPullRequest";
+
+    private static bool IsDuplicateActiveJob(DbUpdateException ex)
+    {
+        return ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: ActiveJobIndexName };
     }
 
     private async Task<TriggeredJob?> FindLatestTriggeredJobAsync(AnalysisRequest analysisRequest, CancellationToken cancellationToken)

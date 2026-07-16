@@ -41,7 +41,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
         // Step 1: Get and filter diffs and findings
 
-        var diffFull = await GetAnalysisDiffsAsync(request);
+        var (diffFull, diffMode) = await GetAnalysisDiffsAsync(request);
 
 
         // Apply file exclusions if specified
@@ -72,7 +72,8 @@ public sealed class ProcessAnalysisJobCommandHandler(
         var analysisResults = await ExecuteAnalysisTasksAsync(analyzerService, aiAnalyzerModel, diffFull, analysisRequest, cancellationToken);
 
         // Step 4: Post results to PR
-        await PostResultsToPullRequestAsync(prService, request.JobId, analysisRequest, analysisResults, cancellationToken);
+        var contextFooter = BuildContextFooter(workItems, customInstructions, diffMode);
+        await PostResultsToPullRequestAsync(prService, request.JobId, analysisRequest, analysisResults, contextFooter, cancellationToken);
 
         // Step 5: Return report
         return BuildAnalysisReport(analysisRequest, analysisResults, diffFull);
@@ -83,21 +84,22 @@ public sealed class ProcessAnalysisJobCommandHandler(
     /// previously analyzed commit and the current source head, otherwise the full PR diff.
     /// Falls back to the full PR diff when the incremental diff fails (e.g. after a force-push).
     /// </summary>
-    private async Task<Dictionary<string, string>> GetAnalysisDiffsAsync(ProcessAnalysisJobCommand request)
+    private async Task<(Dictionary<string, string> Diffs, string DiffMode)> GetAnalysisDiffsAsync(ProcessAnalysisJobCommand request)
     {
         var analysisRequest = request.AnalysisRequest;
         if (request.ReanalysisBaseCommitId is null || request.SourceCommitId is null)
         {
-            return await prService.GetCompactDiffsAsync(analysisRequest, _analysisOptions.ContextLines);
+            return (await prService.GetCompactDiffsAsync(analysisRequest, _analysisOptions.ContextLines), "full");
         }
 
         try
         {
-            return await prService.GetCompactDiffsBetweenCommitsAsync(
+            var diffs = await prService.GetCompactDiffsBetweenCommitsAsync(
                 analysisRequest,
                 request.ReanalysisBaseCommitId,
                 request.SourceCommitId,
                 _analysisOptions.ContextLines);
+            return (diffs, "incremental");
         }
         catch (Exception ex)
         {
@@ -106,7 +108,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
                 request.ReanalysisBaseCommitId,
                 request.SourceCommitId,
                 analysisRequest.GitInfo?.PullRequestId);
-            return await prService.GetCompactDiffsAsync(analysisRequest, _analysisOptions.ContextLines);
+            return (await prService.GetCompactDiffsAsync(analysisRequest, _analysisOptions.ContextLines), "full (incremental fallback)");
         }
     }
 
@@ -272,48 +274,90 @@ public sealed class ProcessAnalysisJobCommandHandler(
         return filtered;
     }
 
+    /// <summary>
+    /// Posts the analysis results to the pull request. Each step is isolated: a PR that became
+    /// read-only mid-analysis (e.g. completed/abandoned, TF401181) must not fail the job or
+    /// block the remaining steps — the analysis is already done and stored.
+    /// </summary>
     private async Task PostResultsToPullRequestAsync(
         PullRequestService prService,
         Guid jobId,
         AnalysisRequest analysisRequest,
         AnalysisResults results,
+        string contextFooter,
         CancellationToken cancellationToken)
     {
-        // Post detailed analysis comment
+        var failedSteps = new List<string>();
+
         if (!string.IsNullOrWhiteSpace(results.DetailedAnalysis) && analysisRequest.EnableSummaryComment)
         {
             var initialCommentThreadId = await GetInitialCommentThreadIdAsync(jobId, cancellationToken);
+            var commentBody = $"{results.DetailedAnalysis}\n\n---\n<sub>{contextFooter}</sub>";
 
-            await prService.AddCommentAsync(
-                analysisRequest,
-                results.DetailedAnalysis,
-                threadId: initialCommentThreadId,
-                isResolved: true);
+            await TryPostStepAsync("summary comment", failedSteps, analysisRequest,
+                () => prService.AddCommentAsync(analysisRequest, commentBody, threadId: initialCommentThreadId, isResolved: true));
         }
 
-        // Append summary to description
         if (!string.IsNullOrWhiteSpace(results.Summary) && analysisRequest.EnableDescriptionSummary)
         {
-            await prService.AppendToDescriptionAsync(analysisRequest, results.Summary);
+            await TryPostStepAsync("description summary", failedSteps, analysisRequest,
+                () => prService.AppendToDescriptionAsync(analysisRequest, results.Summary));
         }
 
-        // Post inline suggestions
         if (analysisRequest.EnableInlineSuggestions && results.InlineSuggestions.Count > 0)
         {
-            await PostInlineSuggestionsAsync(prService, analysisRequest, results.InlineSuggestions);
+            await TryPostStepAsync("inline suggestions", failedSteps, analysisRequest,
+                () => PostInlineSuggestionsAsync(prService, analysisRequest, results.InlineSuggestions));
         }
 
-        // Add code owners
-        if (analysisRequest.EnableAzureDevopsCodeOwners && results.CodeOwners?.CodeOwners.Count > 0)
+        var codeOwners = results.CodeOwners;
+        if (analysisRequest.EnableAzureDevopsCodeOwners && codeOwners?.CodeOwners.Count > 0)
         {
-            await prService.AddCodeOwnersToPullRequest(
-                analysisRequest,
-                results.CodeOwners);
+            await TryPostStepAsync("code owners", failedSteps, analysisRequest,
+                () => prService.AddCodeOwnersToPullRequest(analysisRequest, codeOwners));
         }
         else if (analysisRequest.EnableAzureDevopsCodeOwners)
         {
             logger.LogInformation("Code owners enabled but analysis produced no code owners to assign");
         }
+
+        if (failedSteps.Count > 0)
+        {
+            logger.LogWarning(
+                "Analysis for PR #{PullRequestId} completed but {FailedCount} posting step(s) failed: {FailedSteps}",
+                analysisRequest.GitInfo?.PullRequestId, failedSteps.Count, string.Join(", ", failedSteps));
+        }
+    }
+
+    private async Task TryPostStepAsync(string step, List<string> failedSteps, AnalysisRequest analysisRequest, Func<Task> postAction)
+    {
+        try
+        {
+            await postAction();
+        }
+        catch (Exception ex)
+        {
+            failedSteps.Add(step);
+            logger.LogError(ex,
+                "Posting step '{Step}' failed for PR #{PullRequestId}; continuing with the remaining steps",
+                step, analysisRequest.GitInfo?.PullRequestId);
+        }
+    }
+
+    /// <summary>
+    /// One-line footer appended to the review comment so silently-degrading context enrichments
+    /// (work items, custom instructions, incremental diff fallback) are visible on the PR itself.
+    /// </summary>
+    internal static string BuildContextFooter(List<WorkItemReference> workItems, string? customInstructions, string diffMode)
+    {
+        var workItemPart = workItems.Count > 0
+            ? $"work items: {string.Join(", ", workItems.Select(item => $"#{item.Id}"))}"
+            : "work items: none";
+        var instructionsPart = string.IsNullOrWhiteSpace(customInstructions)
+            ? "custom instructions: none"
+            : "custom instructions: found";
+
+        return $"Lintellect context — {workItemPart} · {instructionsPart} · diff: {diffMode}";
     }
 
     private static async Task PostInlineSuggestionsAsync(

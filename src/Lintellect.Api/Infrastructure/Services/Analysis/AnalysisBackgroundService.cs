@@ -1,8 +1,11 @@
+using Lintellect.Api.Application.Common.Interfaces;
 using Lintellect.Api.Application.Messages.Commands.Analysis;
 using Lintellect.Api.Domain.Entities;
 using Lintellect.Api.Domain.Enums;
+using Lintellect.Api.Infrastructure.Services.Git;
 using Lintellect.Api.Infrastructure.Telemetry;
 using Mediator;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lintellect.Api.Infrastructure.Services.Analysis;
 
@@ -23,6 +26,8 @@ public sealed class AnalysisBackgroundService(
 
         try
         {
+            await RecoverInterruptedJobsAsync(stoppingToken);
+
             await foreach (var job in jobQueue.Reader.ReadAllAsync(stoppingToken))
             {
                 try
@@ -53,6 +58,51 @@ public sealed class AnalysisBackgroundService(
         finally
         {
             logger.LogInformation("Analysis background service stopped");
+        }
+    }
+
+    /// <summary>
+    /// The job queue is in-memory, so a restart loses queued work. Pending jobs are re-enqueued;
+    /// Running jobs are failed rather than re-run because result posting is not idempotent —
+    /// Failed jobs don't block the per-PR dedupe, so the next trigger can re-analyze.
+    /// </summary>
+    private async Task RecoverInterruptedJobsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var scope = serviceProvider.CreateAsyncScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+            var interrupted = await dbContext.AnalysisJobs
+                .Where(job => job.Status == AnalysisStatus.Pending || job.Status == AnalysisStatus.Running)
+                .ToListAsync(cancellationToken);
+
+            if (interrupted.Count == 0)
+            {
+                return;
+            }
+
+            var orphaned = interrupted.Where(job => job.Status == AnalysisStatus.Running).ToList();
+            foreach (var job in orphaned)
+            {
+                job.Fail("Orphaned by service restart");
+            }
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            var pending = interrupted.Where(job => job.Status == AnalysisStatus.Pending).ToList();
+            foreach (var job in pending)
+            {
+                await jobQueue.EnqueueAsync(job, cancellationToken);
+            }
+
+            logger.LogInformation(
+                "Job recovery after restart: re-enqueued {PendingCount} pending job(s), failed {OrphanedCount} orphaned running job(s)",
+                pending.Count, orphaned.Count);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Job recovery after restart failed; continuing with an empty queue");
         }
     }
 
@@ -129,6 +179,8 @@ public sealed class AnalysisBackgroundService(
                 AnalysisStatus.Failed,
                 ErrorMessage: $"Job timed out after {JobTimeout.TotalMinutes} minutes"),
                 cancellationToken);
+
+            await TryReportFailureToPullRequestAsync(job, $"the analysis timed out after {JobTimeout.TotalMinutes} minutes");
         }
         catch (Exception ex)
         {
@@ -139,6 +191,35 @@ public sealed class AnalysisBackgroundService(
             metrics.RecordJobFailed(analyzerType, "exception", duration);
 
             await TryUpdateJobStatusAsync(job.Id, AnalysisStatus.Failed, ex.Message);
+            await TryReportFailureToPullRequestAsync(job, "an unexpected error occurred");
+        }
+    }
+
+    /// <summary>
+    /// Replaces the "analysis in progress" placeholder promise with a failure note so the
+    /// PR is not left waiting for an update that will never come.
+    /// </summary>
+    private async Task TryReportFailureToPullRequestAsync(AnalysisJob job, string reason)
+    {
+        if (job.InitialCommentThreadId is null || job.AnalysisRequest is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await using var scope = serviceProvider.CreateAsyncScope();
+            var prService = scope.ServiceProvider.GetRequiredService<PullRequestService>();
+
+            await prService.AddCommentAsync(
+                job.CreateAnalysisRequestSnapshot(),
+                $"❌ Lintellect analysis failed: {reason}.",
+                threadId: job.InitialCommentThreadId,
+                isResolved: false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update placeholder comment with failure note for job {JobId}", job.Id);
         }
     }
 

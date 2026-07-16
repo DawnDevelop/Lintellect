@@ -78,7 +78,9 @@ public class ProcessAnalysisJobCommandTests
 
         // Assert
         await _mockGitClient.Received(1).CreateCommentAsync(
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>(), "Detailed analysis text", 7, true);
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>(),
+            Arg.Is<string>(body => body.StartsWith("Detailed analysis text") && body.Contains("Lintellect context")),
+            7, true);
     }
 
     [Test]
@@ -98,7 +100,9 @@ public class ProcessAnalysisJobCommandTests
 
         // Assert
         await _mockGitClient.Received(1).CreateCommentAsync(
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>(), "Detailed analysis text", null, true);
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>(),
+            Arg.Is<string>(body => body.StartsWith("Detailed analysis text") && body.Contains("Lintellect context")),
+            null, true);
     }
 
     private static AnalysisRequest InlineOnlyRequest()
@@ -220,5 +224,39 @@ public class ProcessAnalysisJobCommandTests
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
         await _mockGitClient.Received().GetPullRequestCompactDiffsAsync(
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<int>());
+    }
+
+    [Test]
+    public async Task Handle_WhenCommentPostingFails_StillCompletesWithoutThrowing()
+    {
+        var job = new AnalysisJobBuilder().WithAnalysisRequest(ScopedRequest()).Build();
+        var jobsDbSet = new[] { job }.ToMockDbSet();
+        _mockContext.AnalysisJobs.Returns(jobsDbSet);
+        _mockGitClient.CreateCommentAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<bool>())
+            .Returns<PullRequestCommentThread>(_ => throw new InvalidOperationException("TF401181: The pull request cannot be edited due to its state."));
+
+        var command = new ProcessAnalysisJobCommand(job.Id, job.CreateAnalysisRequestSnapshot());
+        var report = await _handler.Handle(command, CancellationToken.None);
+
+        report.DetailedAnalysis.ShouldBe("Detailed analysis text");
+    }
+
+    [Test]
+    public void BuildContextFooter_ListsWorkItemsInstructionsAndDiffMode()
+    {
+        var workItems = new List<WorkItemReference> { new("251344", Title: "t", Body: "b", Type: null, State: null) };
+
+        var footer = ProcessAnalysisJobCommandHandler.BuildContextFooter(workItems, "instructions", "incremental");
+
+        footer.ShouldBe("Lintellect context — work items: #251344 · custom instructions: found · diff: incremental");
+    }
+
+    [Test]
+    public void BuildContextFooter_WithNoContext_ReportsNone()
+    {
+        var footer = ProcessAnalysisJobCommandHandler.BuildContextFooter([], null, "full");
+
+        footer.ShouldBe("Lintellect context — work items: none · custom instructions: none · diff: full");
     }
 }

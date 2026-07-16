@@ -28,8 +28,16 @@ namespace Lintellect.Api.Infrastructure.Services.Git.AzureDevops;
 /// <param name="orgUri">The base URL of the Azure DevOps organization. (https://dev.azure.com/orgname) </param>
 public class AzureDevopsClientService : IGitClient
 {
+    private static readonly string[] DefaultWorkItemBodyFields =
+    [
+        "System.Description",
+        "Microsoft.VSTS.Common.AcceptanceCriteria",
+        "Microsoft.VSTS.TCM.ReproSteps"
+    ];
+
     private readonly VssConnection _connection;
     private readonly ILogger _logger;
+    private readonly IReadOnlyList<string> _workItemBodyFields;
 
     // Thread-safe lazy initialization using Lazy<Task<T>>
     private readonly Lazy<Task<GitHttpClient>> _gitClient;
@@ -38,9 +46,10 @@ public class AzureDevopsClientService : IGitClient
     private readonly Lazy<Task<SecurityHttpClient>> _securityClient;
     private readonly Lazy<Task<WorkItemTrackingHttpClient>> _witClient;
 
-    public AzureDevopsClientService(string devopsPat, Uri orgUri, ILogger logger)
+    public AzureDevopsClientService(string devopsPat, Uri orgUri, ILogger logger, IReadOnlyList<string>? workItemBodyFields = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _workItemBodyFields = workItemBodyFields is { Count: > 0 } ? workItemBodyFields : DefaultWorkItemBodyFields;
         _connection = new VssConnection(orgUri, new VssOAuthAccessTokenCredential(devopsPat));
 
         // Initialize lazy clients with proper async factory
@@ -76,13 +85,15 @@ public class AzureDevopsClientService : IGitClient
         }
 
         var witClient = await _witClient.Value;
-        var fields = new[] { "System.Title", "System.Description", "System.WorkItemType", "System.State", "Microsoft.VSTS.Common.AcceptanceCriteria" };
-        var items = await witClient.GetWorkItemsAsync(ids, fields: fields, expand: AdoWorkItemExpand.None);
+        // No field restriction: requesting a field name that doesn't exist in the collection
+        // (custom process templates) fails the whole call, whereas fetching everything lets
+        // BuildBody pick whichever configured fields each work item actually has.
+        var items = await witClient.GetWorkItemsAsync(ids, expand: AdoWorkItemExpand.None);
 
         return [.. items.Select(MapWorkItem)];
     }
 
-    private static SharedWorkItemReference MapWorkItem(AdoWorkItem item)
+    private SharedWorkItemReference MapWorkItem(AdoWorkItem item)
     {
         var fields = item.Fields ?? new Dictionary<string, object>();
         string? GetField(string key) => fields.TryGetValue(key, out var v) ? v?.ToString() : null;
@@ -91,23 +102,29 @@ public class AzureDevopsClientService : IGitClient
             Id: item.Id?.ToString() ?? string.Empty,
             Url: item.Url,
             Title: GetField("System.Title"),
-            Body: CombineBody(
-                StripHtml(GetField("System.Description")),
-                StripHtml(GetField("Microsoft.VSTS.Common.AcceptanceCriteria"))),
+            Body: BuildBody(GetField),
             State: GetField("System.State"),
             Type: GetField("System.WorkItemType"));
     }
 
-    private static string? CombineBody(string? description, string? acceptanceCriteria)
+    private string? BuildBody(Func<string, string?> getField)
     {
-        if (string.IsNullOrWhiteSpace(acceptanceCriteria))
-        {
-            return description;
-        }
+        var sections = _workItemBodyFields
+            .Select(field => (Label: ToFieldLabel(field), Value: StripHtml(getField(field))))
+            .Where(section => !string.IsNullOrWhiteSpace(section.Value))
+            .Select(section => $"{section.Label}: {section.Value}")
+            .ToList();
 
-        return string.IsNullOrWhiteSpace(description)
-            ? $"Acceptance Criteria: {acceptanceCriteria}"
-            : $"{description}\n\nAcceptance Criteria: {acceptanceCriteria}";
+        return sections.Count > 0 ? string.Join("\n\n", sections) : null;
+    }
+
+    /// <summary>
+    /// "Microsoft.VSTS.TCM.ReproSteps" → "Repro Steps".
+    /// </summary>
+    private static string ToFieldLabel(string fieldReferenceName)
+    {
+        var lastSegment = fieldReferenceName[(fieldReferenceName.LastIndexOf('.') + 1)..];
+        return System.Text.RegularExpressions.Regex.Replace(lastSegment, "(?<=[a-z])(?=[A-Z])", " ");
     }
 
     private static string? StripHtml(string? value)
