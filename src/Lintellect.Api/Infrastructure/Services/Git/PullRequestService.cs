@@ -109,6 +109,10 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
             "/copilot-instructions.md",
             "/COPILOT-INSTRUCTIONS.md",
             "/AGENTS.md",
+            "/CLAUDE.md",
+            "/CLAUDE",
+            ".claude/CLAUDE.md",
+            "/.github/CLAUDE.md",
             "/.github/AGENTS.md",
             "/docs/AGENTS.md"
         };
