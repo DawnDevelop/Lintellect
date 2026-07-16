@@ -155,6 +155,7 @@ Lintellect analyze \
   --language "csharp" \
   --enable-summary-comment \
   --enable-semgrep false \
+  --enable-static-analysis false \
   --enable-work-item-context false
 ```
 

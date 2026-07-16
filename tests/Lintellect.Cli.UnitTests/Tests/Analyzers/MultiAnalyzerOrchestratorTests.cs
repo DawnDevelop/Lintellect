@@ -44,6 +44,22 @@ public class MultiAnalyzerOrchestratorTests
     }
 
     [Test]
+    public void Constructor_WithStaticAnalysisDisabled_ShouldNotThrow()
+    {
+        Should.NotThrow(() => new AnalysisOrchestrator(EProgrammingLanguage.CSharp, enableStaticAnalysis: false));
+    }
+
+    [Test]
+    public async Task RunAsync_WithStaticAnalysisDisabled_ReturnsNoRoslynFindings()
+    {
+        var orchestrator = new AnalysisOrchestrator(EProgrammingLanguage.CSharp, enableStaticAnalysis: false);
+
+        var result = await orchestrator.RunAsync("nonexistent.sln");
+
+        result.Findings.ShouldBeEmpty();
+    }
+
+    [Test]
     public void Constructor_WithExclusionPatterns_ShouldNotThrow()
     {
         // Arrange

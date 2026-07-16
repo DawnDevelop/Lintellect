@@ -118,6 +118,13 @@ internal class StaticAnalysisCommand : Command
             Aliases = { "-semgrep", "-es" }
         };
 
+        var enableStaticAnalysis = new Option<bool>("--enable-static-analysis")
+        {
+            Description = "Enable language-specific static code analysis (Roslyn for C#) (default: true)",
+            DefaultValueFactory = _ => true,
+            Aliases = { "-esa" }
+        };
+
         var mcpServer = new Option<EMcpServer[]>("--mcp-server")
         {
             Description = "MCP (Model Context Protocol) server to use for additional context (default: None)",
@@ -141,6 +148,7 @@ internal class StaticAnalysisCommand : Command
         Options.Add(enableWorkItemContext);
 
         Options.Add(enableSemgrep);
+        Options.Add(enableStaticAnalysis);
 
         Options.Add(mcpServer);
 
@@ -155,6 +163,7 @@ internal class StaticAnalysisCommand : Command
             var apiKeyValue = parseResult.GetValue(apiKey);
             var exclusionPatterns = parseResult.GetValue(exclusions) ?? [];
             var enableSemgrepValue = parseResult.GetValue(enableSemgrep);
+            var enableStaticAnalysisValue = parseResult.GetValue(enableStaticAnalysis);
             var mcpServerValue = parseResult.GetValue(mcpServer);
 
             Console.WriteLine($"Configuration:");
@@ -164,6 +173,7 @@ internal class StaticAnalysisCommand : Command
             Console.WriteLine($"  API Key: {(string.IsNullOrEmpty(apiKeyValue) ? "Not provided" : "***")}");
             Console.WriteLine($"  Exclusions: {(exclusionPatterns.Length > 0 ? string.Join(", ", exclusionPatterns) : "None")}");
             Console.WriteLine($"  Semgrep Analysis: {(enableSemgrepValue ? "Enabled" : "Disabled")}");
+            Console.WriteLine($"  Static Analysis: {(enableStaticAnalysisValue ? "Enabled" : "Disabled")}");
             Console.WriteLine($"  MCP Server: {mcpServerValue}");
 
             Console.WriteLine();
@@ -171,7 +181,8 @@ internal class StaticAnalysisCommand : Command
             var orchestrator = new AnalysisOrchestrator(
                 languageOptionResult,
                 enableSemgrepValue,
-                [.. exclusionPatterns]);
+                [.. exclusionPatterns],
+                enableStaticAnalysisValue);
 
 
             var analysisResult = await orchestrator.RunAsync(path).ConfigureAwait(false);

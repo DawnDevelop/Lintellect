@@ -9,7 +9,8 @@ namespace Lintellect.Cli.Services;
 internal class AnalysisOrchestrator(
     EProgrammingLanguage language,
     bool enableSemgrep = false,
-    List<string>? exclusionPatterns = null)
+    List<string>? exclusionPatterns = null,
+    bool enableStaticAnalysis = true)
 {
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "We need to catch all exceptions for robust error handling in analysis orchestration")]
@@ -37,7 +38,11 @@ internal class AnalysisOrchestrator(
             }
         }
 
-        if (_codeAnalyzer is not null)
+        if (!enableStaticAnalysis)
+        {
+            Console.WriteLine("Static code analysis disabled. Skipping code analysis.");
+        }
+        else if (_codeAnalyzer is not null)
         {
             var languageSpecificFindings = await _codeAnalyzer.AnalyzeAsync(path).ConfigureAwait(false);
             allFindings.AddRange(languageSpecificFindings);
