@@ -34,7 +34,7 @@ public sealed class AnalysisOptions
     /// has no completion-time guarantee and can exceed the job timeout under load.
     /// Set via env: Analysis__SynchronousAnalysis.
     /// </summary>
-    public bool SynchronousAnalysis { get; set; }
+    public bool SynchronousAnalysis { get; set; } = false;
 
     /// <summary>
     /// Azure DevOps work item fields composed (in order, each labeled) into the work-item body

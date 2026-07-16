@@ -118,9 +118,12 @@ public static class ConfigureServices
 
     public static IServiceCollection AddResiliencePolicies(this IServiceCollection services)
     {
-        // Add HTTP client with resilience policies
+
+#pragma warning disable EXTEXP0001 // RemoveAllResilienceHandlers is experimental but is the only way to opt a single client out of the ConfigureHttpClientDefaults handler.
         services.AddHttpClient("ClaudeApi")
+            .RemoveAllResilienceHandlers()
             .AddPolicyHandler(ResiliencePolicies.GetAiApiPolicy());
+#pragma warning restore EXTEXP0001
 
         services.AddHttpClient("GitHubApi")
             .AddPolicyHandler(ResiliencePolicies.GetCombinedPolicy());
