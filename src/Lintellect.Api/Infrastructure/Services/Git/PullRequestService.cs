@@ -80,7 +80,7 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
     }
 
     /// <summary>
-    /// Retrieves custom project-specific instructions from copilot-instructions.md file.
+    /// Retrieves custom project-specific instructions from copilot-instructions.md or AGENTS.md.
     /// Searches common locations in the target branch of the pull request.
     /// </summary>
     /// <param name="analysisResult">Analysis result containing PR information.</param>
@@ -99,7 +99,7 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
         // Extract branch name from refs/heads/branchname format
         var targetBranch = pullRequest.SourceRefName?.Replace("refs/heads/", string.Empty);
 
-        // Common locations where copilot-instructions.md might be stored
+        // Common locations for instruction files; copilot-instructions.md takes precedence over AGENTS.md
         var possiblePaths = new[]
         {
             "/.github/copilot-instructions.md",
@@ -107,7 +107,10 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
             "/.copilot/copilot-instructions.md",
             "/docs/copilot-instructions.md",
             "/copilot-instructions.md",
-            "/COPILOT-INSTRUCTIONS.md"
+            "/COPILOT-INSTRUCTIONS.md",
+            "/AGENTS.md",
+            "/.github/AGENTS.md",
+            "/docs/AGENTS.md"
         };
 
         return await gitClient.GetFileAsync(
