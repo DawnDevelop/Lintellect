@@ -183,6 +183,15 @@ Lintellect analyze \
   --enable-inline-suggestions
 ```
 
+### Re-triggered analyses
+
+The API deduplicates analysis per pull request:
+
+- **First trigger** → full analysis (summary comment, description summary, inline suggestions).
+- **Re-trigger with new commits** → incremental analysis that posts **inline suggestions only**, computed from the diff between the previously analyzed commit and the new source head (falls back to the full PR diff if that range can't be resolved, e.g. after a force-push).
+- **Re-trigger without new commits**, or while a previous job is still running → no new job; the existing job's id is returned.
+- A **failed** job never blocks re-analysis — the next trigger runs a full analysis again.
+
 ### CI/CD Integration
 
 #### GitHub Actions

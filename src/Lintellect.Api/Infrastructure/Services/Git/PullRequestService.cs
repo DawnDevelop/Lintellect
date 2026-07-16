@@ -40,6 +40,46 @@ public sealed class PullRequestService(IGitClientFactory clientFactory)
     }
 
     /// <summary>
+    /// Retrieves compact diffs between two source branch commits.
+    /// Used for incremental re-analysis of code pushed after a previous analysis run.
+    /// </summary>
+    /// <param name="analysisResult">Analysis result containing PR information.</param>
+    /// <param name="baseCommitId">The source branch commit the previous analysis covered.</param>
+    /// <param name="targetCommitId">The current source branch head commit.</param>
+    /// <param name="contextLines">Number of context lines around changes.</param>
+    /// <returns>Dictionary of file paths to compact diff content.</returns>
+    public async Task<Dictionary<string, string>> GetCompactDiffsBetweenCommitsAsync(
+        AnalysisRequest analysisResult,
+        string baseCommitId,
+        string targetCommitId,
+        int contextLines)
+    {
+        var gitClient = _clientFactory.CreateClient(analysisResult);
+
+        return await gitClient.GetCompactDiffsBetweenCommitsAsync(
+            analysisResult.GitInfo!.ProjectName!,
+            analysisResult.GitInfo!.RepositoryName,
+            baseCommitId,
+            targetCommitId,
+            contextLines);
+    }
+
+    /// <summary>
+    /// Retrieves pull request metadata (including the current source branch head commit).
+    /// </summary>
+    /// <param name="analysisResult">Analysis result containing PR information.</param>
+    /// <returns>The pull request metadata.</returns>
+    public async Task<PullRequest> GetPullRequestAsync(AnalysisRequest analysisResult)
+    {
+        var gitClient = _clientFactory.CreateClient(analysisResult);
+
+        return await gitClient.GetPullRequestAsync(
+            analysisResult.GitInfo!.ProjectName!,
+            analysisResult.GitInfo!.RepositoryName,
+            analysisResult.GitInfo!.PullRequestId);
+    }
+
+    /// <summary>
     /// Retrieves custom project-specific instructions from copilot-instructions.md file.
     /// Searches common locations in the target branch of the pull request.
     /// </summary>

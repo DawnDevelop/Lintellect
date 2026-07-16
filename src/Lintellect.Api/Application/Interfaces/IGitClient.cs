@@ -28,6 +28,23 @@ public interface IGitClient
         int contextLines);
 
     /// <summary>
+    /// Retrieves compact diffs between two commits, optimized for AI analysis.
+    /// Used for incremental re-analysis of code pushed after a previous analysis run.
+    /// </summary>
+    /// <param name="projectName">Project/Organization name.</param>
+    /// <param name="repositoryName">Repository name.</param>
+    /// <param name="baseCommitId">The source branch commit the previous analysis covered.</param>
+    /// <param name="targetCommitId">The current source branch head commit.</param>
+    /// <param name="contextLines">Number of context lines around changes.</param>
+    /// <returns>Dictionary mapping file paths to their compact diff content.</returns>
+    Task<Dictionary<string, string>> GetCompactDiffsBetweenCommitsAsync(
+        string projectName,
+        string repositoryName,
+        string baseCommitId,
+        string targetCommitId,
+        int contextLines);
+
+    /// <summary>
     /// Retrieves full pull request diffs (entire file contents).
     /// Warning: Can result in high token usage for large files.
     /// </summary>

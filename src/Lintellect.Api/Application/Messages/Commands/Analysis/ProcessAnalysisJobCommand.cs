@@ -12,10 +12,14 @@ namespace Lintellect.Api.Application.Messages.Commands.Analysis;
 
 /// <summary>
 /// Command to process an analysis job following CleanArchitecture pattern.
+/// When <paramref name="ReanalysisBaseCommitId"/> is set, the job is an incremental re-analysis
+/// that only reviews changes between that commit and <paramref name="SourceCommitId"/>.
 /// </summary>
 public sealed record ProcessAnalysisJobCommand(
     Guid JobId,
-    AnalysisRequest AnalysisRequest) : IRequest<PullRequestAnalysisReportModel>;
+    AnalysisRequest AnalysisRequest,
+    string? SourceCommitId = null,
+    string? ReanalysisBaseCommitId = null) : IRequest<PullRequestAnalysisReportModel>;
 
 /// <summary>
 /// Handler for ProcessAnalysisJobCommand following CleanArchitecture pattern.
@@ -37,9 +41,7 @@ public sealed class ProcessAnalysisJobCommandHandler(
 
         // Step 1: Get and filter diffs and findings
 
-        var diffFull = await prService.GetCompactDiffsAsync(
-            analysisRequest,
-            contextLines: _analysisOptions.ContextLines);
+        var diffFull = await GetAnalysisDiffsAsync(request);
 
 
         // Apply file exclusions if specified
@@ -63,8 +65,8 @@ public sealed class ProcessAnalysisJobCommandHandler(
         var aiAnalyzerModel = new AnalyzerServiceModel(
             analysisRequest,
             customInstructions ?? string.Empty,
-            WorkItemContext: workItemSummary.FullContext,
-            WorkItemGoal: workItemSummary.Goal);
+            WorkItemContext: workItemSummary.ToPromptBlock(),
+            WorkItemGoal: workItemSummary.ToGoalPromptLine());
 
         // Step 3: Execute analysis tasks in parallel
         var analysisResults = await ExecuteAnalysisTasksAsync(analyzerService, aiAnalyzerModel, diffFull, analysisRequest, cancellationToken);
@@ -76,6 +78,38 @@ public sealed class ProcessAnalysisJobCommandHandler(
         return BuildAnalysisReport(analysisRequest, analysisResults, diffFull);
     }
 
+    /// <summary>
+    /// Fetches the diffs to analyze: for incremental re-analysis jobs the compact diff between the
+    /// previously analyzed commit and the current source head, otherwise the full PR diff.
+    /// Falls back to the full PR diff when the incremental diff fails (e.g. after a force-push).
+    /// </summary>
+    private async Task<Dictionary<string, string>> GetAnalysisDiffsAsync(ProcessAnalysisJobCommand request)
+    {
+        var analysisRequest = request.AnalysisRequest;
+        if (request.ReanalysisBaseCommitId is null || request.SourceCommitId is null)
+        {
+            return await prService.GetCompactDiffsAsync(analysisRequest, _analysisOptions.ContextLines);
+        }
+
+        try
+        {
+            return await prService.GetCompactDiffsBetweenCommitsAsync(
+                analysisRequest,
+                request.ReanalysisBaseCommitId,
+                request.SourceCommitId,
+                _analysisOptions.ContextLines);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "Incremental diff {BaseCommitId}..{SourceCommitId} failed for PR #{PullRequestId}; falling back to full PR diff",
+                request.ReanalysisBaseCommitId,
+                request.SourceCommitId,
+                analysisRequest.GitInfo?.PullRequestId);
+            return await prService.GetCompactDiffsAsync(analysisRequest, _analysisOptions.ContextLines);
+        }
+    }
+
     private async Task<AnalysisResults> ExecuteAnalysisTasksAsync(
         IAnalyzerService analyzer,
         AnalyzerServiceModel aiAnalyzerModel,
@@ -83,8 +117,12 @@ public sealed class ProcessAnalysisJobCommandHandler(
         AnalysisRequest analysisRequest,
         CancellationToken cancellationToken)
     {
+        // The batched run always generates summary, detailed analysis and inline suggestions in one
+        // pass; for inline-only jobs (incremental re-analysis) the individual-task path below makes
+        // a single inline call instead of paying for outputs that would never be posted.
+        var needsSummaryOrDetailed = analysisRequest.EnableDescriptionSummary || analysisRequest.EnableSummaryComment;
 
-        if (analyzer is IBatchAnalyzerService batchAnalyzer)
+        if (analyzer is IBatchAnalyzerService batchAnalyzer && needsSummaryOrDetailed)
         {
             var codeOwnersContent = analysisRequest.EnableAzureDevopsCodeOwners
                 ? await ResolveMatchingCodeOwnersAsync(analysisRequest, diffs.Keys)
@@ -107,9 +145,9 @@ public sealed class ProcessAnalysisJobCommandHandler(
         }
 
         var tasks = new List<Task>();
-        var diffPartial = await prService.GetCompactDiffsAsync(
-            analysisRequest,
-            contextLines: _analysisOptions.DetailedContextLines);
+        var diffPartial = needsSummaryOrDetailed
+            ? await prService.GetCompactDiffsAsync(analysisRequest, contextLines: _analysisOptions.DetailedContextLines)
+            : new Dictionary<string, string>();
 
         var summaryTask = CreateSummaryTaskIfEnabled(analyzer, aiAnalyzerModel, diffPartial, analysisRequest, cancellationToken);
         var detailedAnalysisTask = CreateDetailedAnalysisTaskIfEnabled(analyzer, aiAnalyzerModel, diffPartial, analysisRequest, cancellationToken);

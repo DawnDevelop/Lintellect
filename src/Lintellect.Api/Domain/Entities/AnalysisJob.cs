@@ -20,17 +20,31 @@ public sealed class AnalysisJob : BaseAuditableEntity
     public string? AnalyzerUsed { get; private set; }
     public int? InitialCommentThreadId { get; private set; }
 
+    /// <summary>
+    /// The source branch head commit this analysis covers. Used as the diff baseline
+    /// for subsequent incremental re-analysis runs on the same pull request.
+    /// </summary>
+    public string? SourceCommitId { get; private set; }
+
+    /// <summary>
+    /// The source branch commit covered by the previous analysis run. When set, this job
+    /// is an incremental re-analysis that only reviews changes since that commit.
+    /// </summary>
+    public string? ReanalysisBaseCommitId { get; private set; }
+
     public AnalysisRequest? AnalysisRequest { get; private set; }
 
     // Parameterless constructor for EF Core
     private AnalysisJob() { }
 
-    public AnalysisJob(AnalysisRequest cliAnalysisResult)
+    public AnalysisJob(AnalysisRequest cliAnalysisResult, string? sourceCommitId = null, string? reanalysisBaseCommitId = null)
     {
         ArgumentNullException.ThrowIfNull(cliAnalysisResult);
 
         Status = AnalysisStatus.Pending;
         AnalysisRequest = cliAnalysisResult;
+        SourceCommitId = sourceCommitId;
+        ReanalysisBaseCommitId = reanalysisBaseCommitId;
 
         AddDomainEvent(new AnalysisJobCreatedEvent(Id,
             cliAnalysisResult.GitInfo?.ProjectName ?? "Unknown",

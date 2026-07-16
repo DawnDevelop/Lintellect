@@ -94,7 +94,9 @@ public sealed class AnalysisBackgroundService(
             // Perform actual analysis using Mediator command
             var analysisReport = await mediator.Send(new ProcessAnalysisJobCommand(
                 job.Id,
-                analysisRequest),
+                analysisRequest,
+                job.SourceCommitId,
+                job.ReanalysisBaseCommitId),
                 timeoutCts.Token);
 
             // Update job with real results using Mediator

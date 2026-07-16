@@ -141,6 +141,10 @@ CONTEXT:
 
 The full block is injected into the Summary and Detailed-Analysis prompts via `{{workItemContext}}`; only the `GOAL` line is injected into the per-file Inline-Suggestion prompts (per-file calls multiply tokens by file count, so the inline cost stays bounded). Failures during fetch or summarization log + continue with no context. Azure DevOps work items are resolved server-side via the WIT REST API; GitHub uses PR-body parsing for `Closes/Fixes/Resolves #N` keywords.
 
+### Per-PR dedupe and incremental re-analysis
+
+`SubmitAnalysisCommandHandler` deduplicates per PR (provider + project + repo + PR id; `Failed` jobs don't count). Every submission resolves the PR's source-branch head server-side (`PullRequest.SourceCommit`: ADO `LastMergeSourceCommit`, GitHub `pr.Head.Sha`) and stores it as `AnalysisJob.SourceCommitId` — the CLI's `GitInfo.CommitId` is a transient *merge* commit on both providers and must not be used as a diff baseline. Re-trigger rules: previous job Pending/Running or same source head or inline suggestions disabled → skip, return the existing job id; previous job Completed + new commits → new job with `ReanalysisBaseCommitId` = previous head and summary/description/initial-comment/code-owners flags forced off (inline suggestions only). Processing fetches the compact diff `ReanalysisBaseCommitId..SourceCommitId` via `IGitClient.GetCompactDiffsBetweenCommitsAsync`, falling back to the full PR diff on failure (e.g. force-push). Inline-only jobs bypass the batched analyzer path so a re-run costs one AI call. Known gap: the check-then-insert dedupe is not race-safe (no unique constraint).
+
 ### Configuration
 
 Settings fall back to environment variables via `PostConfigure<>()`:

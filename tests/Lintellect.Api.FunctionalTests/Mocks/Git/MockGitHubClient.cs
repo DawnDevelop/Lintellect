@@ -12,6 +12,8 @@ public sealed class MockGitClient : IGitClient
         new("100", Title: "Add foo support", Body: "Implement foo per spec.", Type: "User Story", State: "Active")
     ];
 
+    public string SourceCommitIdToReturn { get; set; } = "mock-source-commit-1";
+
     public Task<List<WorkItemReference>> GetLinkedWorkItemsAsync(
         string projectName,
         string repositoryName,
@@ -37,6 +39,15 @@ public sealed class MockGitClient : IGitClient
         });
     }
 
+    public Task<Dictionary<string, string>> GetCompactDiffsBetweenCommitsAsync(
+        string projectName, string repositoryName, string baseCommitId, string targetCommitId, int contextLines)
+    {
+        return Task.FromResult(new Dictionary<string, string>
+        {
+            ["TestFile.cs"] = "Mock incremental diff content"
+        });
+    }
+
     public Task<Dictionary<string, string>> GetPullRequestFileDiffsAsync(
         string projectName, string repositoryName, int pullRequestId)
     {
@@ -53,7 +64,8 @@ public sealed class MockGitClient : IGitClient
             PullRequestId = pullRequestId,
             Title = "Test PR",
             Description = "Test description",
-            Status = Application.Models.Git.PullRequestStatus.Active
+            Status = Application.Models.Git.PullRequestStatus.Active,
+            SourceCommit = new CommitRef { CommitId = SourceCommitIdToReturn }
         });
     }
 

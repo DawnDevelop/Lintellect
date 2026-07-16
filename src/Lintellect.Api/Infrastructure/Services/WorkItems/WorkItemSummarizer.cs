@@ -34,6 +34,8 @@ internal sealed class WorkItemSummarizer(IAnalyzerService analyzerService, ILogg
         }
 
         var (goal, _) = SplitGoalAndContext(response);
+        logger.LogInformation("Work item summary generated for {Count} item(s). GoalLength={GoalLength}, ContextLength={ContextLength}",
+            workItems.Count, goal.Length, response.Length);
         return new WorkItemSummary(FullContext: response.Trim(), Goal: goal);
     }
 

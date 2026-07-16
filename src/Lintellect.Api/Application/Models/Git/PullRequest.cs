@@ -50,6 +50,11 @@ public sealed class PullRequest
     /// Information about the last merge commit.
     /// </summary>
     public CommitRef? LastMergeCommit { get; init; }
+
+    /// <summary>
+    /// The head commit of the pull request source branch.
+    /// </summary>
+    public CommitRef? SourceCommit { get; init; }
 }
 
 /// <summary>

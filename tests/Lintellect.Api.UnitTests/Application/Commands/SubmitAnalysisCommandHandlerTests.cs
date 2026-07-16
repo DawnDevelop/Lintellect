@@ -11,6 +11,8 @@ namespace Lintellect.Api.UnitTests.Application.Commands;
 [TestFixture]
 public class SubmitAnalysisCommandHandlerTests
 {
+    private const string CurrentSourceHead = "head-current";
+
     private IApplicationDbContext _mockContext = null!;
     private AnalysisJobQueue _queue = null!;
     private IGitClient _mockGitClient = null!;
@@ -26,12 +28,26 @@ public class SubmitAnalysisCommandHandlerTests
         _queue = new AnalysisJobQueue();
 
         _mockGitClient = Substitute.For<IGitClient>();
+        _mockGitClient.GetPullRequestAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>())
+            .Returns(new PullRequest
+            {
+                PullRequestId = 123,
+                SourceCommit = new CommitRef { CommitId = CurrentSourceHead }
+            });
         var mockGitClientFactory = Substitute.For<IGitClientFactory>();
         mockGitClientFactory.CreateClient(Arg.Any<AnalysisRequest>()).Returns(_mockGitClient);
         var prService = new PullRequestService(mockGitClientFactory);
 
         _mockLogger = Substitute.For<ILogger<SubmitAnalysisCommandHandler>>();
         _handler = new SubmitAnalysisCommandHandler(_mockContext, _queue, prService, _mockLogger);
+    }
+
+    private static AnalysisJob CompletedJob(string? sourceCommitId)
+    {
+        var job = new AnalysisJob(AnalysisRequestBuilder.ValidRequest(), sourceCommitId);
+        job.Start();
+        job.Complete("summary", "detailed", null, "TestAnalyzer");
+        return job;
     }
 
     [Test]
@@ -176,7 +192,7 @@ public class SubmitAnalysisCommandHandlerTests
     }
 
     [Test]
-    public async Task Handle_WhenJobForSamePullRequestAlreadyExists_ReturnsExistingJobIdWithoutCreatingNewJob()
+    public async Task Handle_WhenPreviousJobStillPending_ReturnsExistingJobIdWithoutCreatingNewJob()
     {
         var request = AnalysisRequestBuilder.ValidRequest();
         var existingJob = new AnalysisJobBuilder().Build();
@@ -210,6 +226,76 @@ public class SubmitAnalysisCommandHandlerTests
         result.ShouldNotBe(failedJob.Id);
         mockDbSet.Received(1).Add(Arg.Is<AnalysisJob>(j => j.Id == result));
         await _mockContext.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task Handle_WhenPreviousJobCompletedAndNewCommitsPushed_QueuesInlineOnlyReanalysis()
+    {
+        var request = AnalysisRequestBuilder.ValidRequest();
+        var previousJob = CompletedJob("head-old");
+        var mockDbSet = new[] { previousJob }.ToMockDbSet();
+        _mockContext.AnalysisJobs.Returns(mockDbSet);
+        var command = new SubmitAnalysisCommand(request);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.ShouldNotBe(previousJob.Id);
+        mockDbSet.Received(1).Add(Arg.Is<AnalysisJob>(j =>
+            j.Id == result &&
+            j.SourceCommitId == CurrentSourceHead &&
+            j.ReanalysisBaseCommitId == "head-old"));
+        request.EnableInlineSuggestions.ShouldBeTrue();
+        request.EnableSummaryComment.ShouldBeFalse();
+        request.EnableDescriptionSummary.ShouldBeFalse();
+        request.EnableInitialComment.ShouldBeFalse();
+        request.EnableAzureDevopsCodeOwners.ShouldBeFalse();
+        await _mockGitClient.DidNotReceive().CreateCommentAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<bool>());
+    }
+
+    [Test]
+    public async Task Handle_WhenPreviousJobCompletedForSameSourceHead_ReturnsExistingJobIdWithoutCreatingNewJob()
+    {
+        var request = AnalysisRequestBuilder.ValidRequest();
+        var previousJob = CompletedJob(CurrentSourceHead);
+        var mockDbSet = new[] { previousJob }.ToMockDbSet();
+        _mockContext.AnalysisJobs.Returns(mockDbSet);
+
+        var result = await _handler.Handle(new SubmitAnalysisCommand(request), CancellationToken.None);
+
+        result.ShouldBe(previousJob.Id);
+        mockDbSet.DidNotReceive().Add(Arg.Any<AnalysisJob>());
+        await _mockContext.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task Handle_WhenPreviousJobCompletedAndInlineSuggestionsDisabled_ReturnsExistingJobIdWithoutCreatingNewJob()
+    {
+        var request = AnalysisRequestBuilder.ValidRequest();
+        request.EnableInlineSuggestions = false;
+        var previousJob = CompletedJob("head-old");
+        var mockDbSet = new[] { previousJob }.ToMockDbSet();
+        _mockContext.AnalysisJobs.Returns(mockDbSet);
+
+        var result = await _handler.Handle(new SubmitAnalysisCommand(request), CancellationToken.None);
+
+        result.ShouldBe(previousJob.Id);
+        mockDbSet.DidNotReceive().Add(Arg.Any<AnalysisJob>());
+    }
+
+    [Test]
+    public async Task Handle_WhenSourceHeadResolutionFails_StillCreatesJobWithoutSourceCommit()
+    {
+        var request = AnalysisRequestBuilder.ValidRequest();
+        request.EnableInitialComment = false;
+        _mockGitClient.GetPullRequestAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>())
+            .Returns(Task.FromException<PullRequest>(new InvalidOperationException("provider unavailable")));
+
+        var result = await _handler.Handle(new SubmitAnalysisCommand(request), CancellationToken.None);
+
+        result.ShouldNotBe(Guid.Empty);
+        _mockContext.AnalysisJobs.Received(1).Add(Arg.Is<AnalysisJob>(j =>
+            j.Id == result && j.SourceCommitId == null));
     }
 
     [Test]

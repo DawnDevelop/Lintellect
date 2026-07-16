@@ -67,6 +67,38 @@ public sealed class GitHubClientService : IGitClient
         }
     }
 
+    public async Task<Dictionary<string, string>> GetCompactDiffsBetweenCommitsAsync(
+        string projectName,
+        string repositoryName,
+        string baseCommitId,
+        string targetCommitId,
+        int contextLines)
+    {
+        try
+        {
+            _logger.LogInformation("Retrieving GitHub commit range diffs {Base}..{Target} for {Owner}/{Repo}",
+                baseCommitId, targetCommitId, projectName, repositoryName);
+
+            var compareResult = await _client.Repository.Commit.Compare(
+                projectName, repositoryName, baseCommitId, targetCommitId);
+
+            var diffs = compareResult.Files
+                .Where(file => !ShouldSkipFilePath(file.Filename) && !string.IsNullOrWhiteSpace(file.Patch))
+                .ToDictionary(file => file.Filename, file => file.Patch);
+
+            _logger.LogInformation("Retrieved {FileCount} file diffs for GitHub commit range {Base}..{Target}",
+                diffs.Count, baseCommitId, targetCommitId);
+
+            return diffs;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve GitHub commit range diffs {Base}..{Target}",
+                baseCommitId, targetCommitId);
+            throw;
+        }
+    }
+
     public async Task<Dictionary<string, string>> GetPullRequestFileDiffsAsync(
         string projectName,
         string repositoryName,
@@ -125,6 +157,10 @@ public sealed class GitHubClientService : IGitClient
                 },
                 CreationDate = pr.CreatedAt.UtcDateTime,
                 LastMergeCommit = new CommitRef
+                {
+                    CommitId = pr.Head.Sha
+                },
+                SourceCommit = new CommitRef
                 {
                     CommitId = pr.Head.Sha
                 }
@@ -404,8 +440,13 @@ public sealed class GitHubClientService : IGitClient
             return true;
         }
 
+        return ShouldSkipFilePath(file.FileName);
+    }
+
+    private static bool ShouldSkipFilePath(string filePath)
+    {
         // Skip common build artifacts
-        var fileName = Path.GetFileName(file.FileName).ToLowerInvariant();
+        var fileName = Path.GetFileName(filePath).ToLowerInvariant();
         return fileName.EndsWith(".min.js") ||
                fileName.EndsWith(".min.css") ||
                fileName.Contains("node_modules") ||

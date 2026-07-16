@@ -405,8 +405,56 @@ public class AzureDevopsClientService : IGitClient
         int pullRequestId,
         int contextLines)
     {
-        var gitClient = await GetHttpGitClient();
         var pullRequest = await GetPullRequestAsync(projectName, repositoryName, pullRequestId);
+
+        return await GetCompactDiffsCoreAsync(
+            projectName,
+            repositoryName,
+            new GitBaseVersionDescriptor
+            {
+                Version = pullRequest.TargetRefName?.Replace("refs/heads/", string.Empty) ?? string.Empty,
+                VersionType = GitVersionType.Branch
+            },
+            new GitTargetVersionDescriptor
+            {
+                Version = pullRequest.SourceRefName?.Replace("refs/heads/", string.Empty) ?? string.Empty,
+                VersionType = GitVersionType.Branch
+            },
+            contextLines);
+    }
+
+    /// <inheritdoc />
+    public async Task<Dictionary<string, string>> GetCompactDiffsBetweenCommitsAsync(
+        string projectName,
+        string repositoryName,
+        string baseCommitId,
+        string targetCommitId,
+        int contextLines)
+    {
+        return await GetCompactDiffsCoreAsync(
+            projectName,
+            repositoryName,
+            new GitBaseVersionDescriptor
+            {
+                Version = baseCommitId,
+                VersionType = GitVersionType.Commit
+            },
+            new GitTargetVersionDescriptor
+            {
+                Version = targetCommitId,
+                VersionType = GitVersionType.Commit
+            },
+            contextLines);
+    }
+
+    private async Task<Dictionary<string, string>> GetCompactDiffsCoreAsync(
+        string projectName,
+        string repositoryName,
+        GitBaseVersionDescriptor baseVersionDescriptor,
+        GitTargetVersionDescriptor targetVersionDescriptor,
+        int contextLines)
+    {
+        var gitClient = await GetHttpGitClient();
 
         // Get the list of changed files
         var commitDiffs = await gitClient.GetCommitDiffsAsync(
@@ -414,16 +462,8 @@ public class AzureDevopsClientService : IGitClient
             repositoryName,
             true,
             top: 1000,
-            baseVersionDescriptor: new GitBaseVersionDescriptor
-            {
-                Version = pullRequest.TargetRefName?.Replace("refs/heads/", string.Empty) ?? string.Empty,
-                VersionType = GitVersionType.Branch
-            },
-            targetVersionDescriptor: new GitTargetVersionDescriptor
-            {
-                Version = pullRequest.SourceRefName?.Replace("refs/heads/", string.Empty) ?? string.Empty,
-                VersionType = GitVersionType.Branch
-            });
+            baseVersionDescriptor: baseVersionDescriptor,
+            targetVersionDescriptor: targetVersionDescriptor);
 
         var compactDiffs = new Dictionary<string, string>();
         commitDiffs.Changes = commitDiffs.Changes.Where(x => !x.Item.IsFolder);
@@ -913,7 +953,8 @@ public class AzureDevopsClientService : IGitClient
             Status = MapPullRequestStatus(azureDevOpsPr.Status),
             CreatedBy = azureDevOpsPr.CreatedBy != null ? MapToGenericIdentityRef(azureDevOpsPr.CreatedBy) : null,
             CreationDate = azureDevOpsPr.CreationDate,
-            LastMergeCommit = azureDevOpsPr.LastMergeCommit != null ? MapToGenericCommitRef(azureDevOpsPr.LastMergeCommit) : null
+            LastMergeCommit = azureDevOpsPr.LastMergeCommit != null ? MapToGenericCommitRef(azureDevOpsPr.LastMergeCommit) : null,
+            SourceCommit = azureDevOpsPr.LastMergeSourceCommit != null ? MapToGenericCommitRef(azureDevOpsPr.LastMergeSourceCommit) : null
         };
     }
 

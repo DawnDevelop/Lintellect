@@ -33,9 +33,12 @@ public class ProcessAnalysisJobWorkItemContextTests : BaseTestFixture
         await SendAsync(new ProcessAnalysisJobCommand(Guid.NewGuid(), request));
 
         mockAnalyzer.SummarizeContextCallCount.ShouldBe(1);
-        mockAnalyzer.LastSummaryWorkItemContext.ShouldNotBeNull().ShouldContain("GOAL:");
-        mockAnalyzer.LastDetailedWorkItemContext.ShouldNotBeNull().ShouldContain("GOAL:");
-        mockAnalyzer.LastInlineWorkItemGoal.ShouldBe("Implement the linked work item.");
+        mockAnalyzer.LastSummaryWorkItemContext.ShouldNotBeNull().ShouldContain("## Linked Work Item");
+        mockAnalyzer.LastSummaryWorkItemContext.ShouldContain("GOAL:");
+        mockAnalyzer.LastDetailedWorkItemContext.ShouldNotBeNull().ShouldContain("## Linked Work Item");
+        mockAnalyzer.LastDetailedWorkItemContext.ShouldContain("GOAL:");
+        mockAnalyzer.LastInlineWorkItemGoal.ShouldBe(
+            "The intent of this PR (from its linked work item): Implement the linked work item.");
     }
 
     private static async Task<MockAnalyzerService> GetMockAnalyzerAsync()

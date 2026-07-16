@@ -48,4 +48,25 @@ public class ClaudeAnalyzerServiceParseInlineSuggestionsTests
 
         result.ShouldBeEmpty();
     }
+
+    [Test]
+    public void InlineSuggestionsOutputFormat_ExposesSuggestionsWrapperSchema()
+    {
+        var format = ClaudeAnalyzerService.InlineSuggestionsOutputFormat;
+
+        format.Type.ShouldBe("json_schema");
+        var schema = format.Schema.GetRawText();
+        schema.ShouldContain("\"suggestions\"");
+        schema.ShouldContain("\"filePath\"");
+        schema.ShouldContain("\"lineFrom\"");
+    }
+
+    [Test]
+    public void CodeOwnersOutputFormat_ExposesCodeOwnersSchema()
+    {
+        var format = ClaudeAnalyzerService.CodeOwnersOutputFormat;
+
+        format.Type.ShouldBe("json_schema");
+        format.Schema.GetRawText().ShouldContain("\"codeOwners\"");
+    }
 }

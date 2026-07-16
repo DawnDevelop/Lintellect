@@ -20,6 +20,21 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
     private static readonly TimeSpan BatchPollInterval = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan BatchPollTimeout = TimeSpan.FromHours(1);
 
+    // Same schema source as the Azure analyzer's ChatResponseFormat.ForJsonSchema, so Claude
+    // JSON responses are schema-enforced instead of relying on prompt-format compliance.
+    internal static readonly OutputFormat InlineSuggestionsOutputFormat = CreateOutputFormat<InlineSuggestionsResponse>();
+    internal static readonly OutputFormat CodeOwnersOutputFormat = CreateOutputFormat<CodeOwnersResult>();
+
+    private static OutputFormat CreateOutputFormat<T>()
+    {
+        return new()
+        {
+            Schema = Microsoft.Extensions.AI.AIJsonUtilities.CreateJsonSchema(
+                typeof(T),
+                serializerOptions: JsonExtensions.JsonSerializerOptions)
+        };
+    }
+
     private readonly ClaudeAnalyzerOptions _options;
     private readonly PromptTemplateService _templateService;
     private readonly PromptBuilder _promptBuilder;
@@ -96,7 +111,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
 
         var userPrompt = _promptBuilder.BuildInlineSuggestionsPrompt(analysisResult.AnalysisResult, diffs);
 
-        var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken, analysisResult.AnalysisResult.McpServer);
+        var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken, analysisResult.AnalysisResult.McpServer, InlineSuggestionsOutputFormat);
 
         try
         {
@@ -219,7 +234,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         var systemPrompt = _templateService.RenderTemplate("CodeOwnerSystemPrompt");
         var userPrompt = $"CODEOWNERS file content:\n{codeOwnerFileContent}\n\nChanged files:\n{string.Join("\n", changedFilePaths)}";
 
-        var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken);
+        var response = await SendClaudeMessageAsync(systemPrompt, userPrompt, cancellationToken, outputFormat: CodeOwnersOutputFormat);
 
         try
         {
@@ -413,7 +428,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
     /// <summary>
     /// Creates a MessageParameters object with common settings for batch requests.
     /// </summary>
-    private MessageParameters CreateMessageParameters(string systemPrompt, string userPrompt, List<MCPServer>? mcpServers = null)
+    private MessageParameters CreateMessageParameters(string systemPrompt, string userPrompt, List<MCPServer>? mcpServers = null, OutputFormat? outputFormat = null)
     {
         mcpServers ??= [];
 
@@ -424,13 +439,18 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
             MaxTokens = _options.MaxTokens,
             Temperature = (decimal?)_options.Temperature,
             Stream = false,
-            OutputConfig = _options.Effort is null ? null : new OutputConfig { Effort = _options.Effort },
+            OutputConfig = new OutputConfig { Effort = _options.Effort },
             ToolChoice = new ToolChoice { Type = ToolChoiceType.Auto },
             Tools = [],
             Thinking = _options.Thinking is null ? null : new ThinkingParameters { Type = _options.Thinking.Value },
             System = [new(systemPrompt, new CacheControl { TTL = CacheDuration.OneHour })],
             Messages = [new Message { Role = RoleType.User, Content = [new TextContent { Text = userPrompt }] }]
         };
+
+        if (outputFormat is not null)
+        {
+            messageParams.OutputConfig.OutputFormat = outputFormat;
+        }
 
         // Only set MCPServers if list is not empty (Claude API rejects empty lists)
         messageParams.MCPServers ??= [];
@@ -457,7 +477,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         return new()
         {
             CustomId = Guid.NewGuid().ToString(),
-            MessageParameters = CreateMessageParameters(codeownersSystem, codeownersUser, commonMcp)
+            MessageParameters = CreateMessageParameters(codeownersSystem, codeownersUser, commonMcp, CodeOwnersOutputFormat)
         };
     }
 
@@ -475,7 +495,7 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         return new()
         {
             CustomId = Guid.NewGuid().ToString(),
-            MessageParameters = CreateMessageParameters(inlineSystem, inlineUser, commonMcp)
+            MessageParameters = CreateMessageParameters(inlineSystem, inlineUser, commonMcp, InlineSuggestionsOutputFormat)
         };
     }
 
@@ -488,13 +508,13 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         };
     }
 
-    private async Task<string> SendClaudeMessageAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken, List<EMcpServer>? mcpServers = null)
+    private async Task<string> SendClaudeMessageAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken, List<EMcpServer>? mcpServers = null, OutputFormat? outputFormat = null)
     {
         var mcpServerConfigs = BuildMcpServerConfigs(mcpServers ?? []);
 
         // For non-batch requests, we don't use PromptCaching
-        var parameter = CreateMessageParameters(systemPrompt, userPrompt, mcpServerConfigs);
-        parameter.PromptCaching = PromptCacheType.None; // Remove prompt caching for single messages
+        var parameter = CreateMessageParameters(systemPrompt, userPrompt, mcpServerConfigs, outputFormat);
+        parameter.PromptCaching = PromptCacheType.AutomaticToolsAndSystem;
 
         var message = await _client.Messages.GetClaudeMessageAsync(parameter, cancellationToken);
         return message.ContentBlock?.Text ?? string.Empty;
