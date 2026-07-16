@@ -509,7 +509,8 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         parameter.PromptCaching = PromptCacheType.AutomaticToolsAndSystem;
 
         var message = await _client.Messages.GetClaudeMessageAsync(parameter, cancellationToken);
-        return message.ContentBlock?.Text ?? string.Empty;
+
+        return ExtractText(message);
     }
 
     private List<MCPServer> BuildMcpServerConfigs(List<EMcpServer> mcpServers)
