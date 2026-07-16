@@ -12,7 +12,6 @@ internal enum GeneralPromptTemplates
     CodeOwnerSystemPrompt,
     GlobalInstructionsPrompt,
     QuestionAnsweringPrompt,
-    WorkItemSummarizerSystemPrompt,
     InlineSuggestionsCommonRules
 }
 
@@ -31,7 +30,6 @@ internal static class AvailablePrompts
         { GeneralPromptTemplates.CodeOwnerSystemPrompt, "CodeOwnerSystemPrompt" },
         { GeneralPromptTemplates.GlobalInstructionsPrompt, "GlobalInstructionsPrompt" },
         { GeneralPromptTemplates.QuestionAnsweringPrompt, "QuestionAnsweringPrompt" },
-        { GeneralPromptTemplates.WorkItemSummarizerSystemPrompt, "WorkItemSummarizerSystemPrompt" },
         { GeneralPromptTemplates.InlineSuggestionsCommonRules, "InlineSuggestionsCommonRules" }
     };
 }

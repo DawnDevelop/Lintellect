@@ -186,30 +186,6 @@ public sealed class AzureOpenAIAnalyzerService(AzureOpenAIAnalyzerOptions option
     }
 
     // <inheritdoc/>
-    public async Task<string> SummarizeContextAsync(
-        string systemPrompt,
-        string userPrompt,
-        int maxOutputTokens,
-        CancellationToken cancellationToken = default)
-    {
-        _logger.LogInformation("Running context summarization. SystemLength={SystemLength} UserLength={UserLength} MaxTokens={MaxTokens}",
-            systemPrompt.Length, userPrompt.Length, maxOutputTokens);
-
-        var agent = await CreateAgentAsync(_options, systemPrompt);
-
-        var runOptions = new ChatClientAgentRunOptions(new ChatOptions
-        {
-            MaxOutputTokens = maxOutputTokens,
-            Temperature = (float)_options.Temperature,
-            AllowMultipleToolCalls = false,
-            ResponseFormat = ChatResponseFormat.Text
-        });
-
-        var response = await agent.RunAsync(userPrompt, options: runOptions, cancellationToken: cancellationToken);
-        return response.Text ?? string.Empty;
-    }
-
-    // <inheritdoc/>
     public async Task<List<InlineSuggestion>> GenerateInlineSuggestionsAsync(
         AnalyzerServiceModel analysisResult,
         Dictionary<string, string> diffs,

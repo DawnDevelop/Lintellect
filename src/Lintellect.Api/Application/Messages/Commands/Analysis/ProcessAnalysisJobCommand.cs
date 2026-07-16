@@ -1,6 +1,7 @@
 using Lintellect.Api.Application.Common.Interfaces;
 using Lintellect.Api.Application.Interfaces;
 using Lintellect.Api.Application.Models;
+using Lintellect.Api.Application.Services;
 using Lintellect.Api.Infrastructure.Services.Git;
 using Lintellect.Shared.Extensions;
 using Lintellect.Shared.Models;
@@ -29,7 +30,6 @@ public sealed class ProcessAnalysisJobCommandHandler(
     PullRequestService prService,
     IAnalyzerService analyzerService,
     IWorkItemService workItemService,
-    IWorkItemSummarizer workItemSummarizer,
     IOptions<AnalysisOptions> analysisOptions,
     ILogger<ProcessAnalysisJobCommandHandler> logger) : IRequestHandler<ProcessAnalysisJobCommand, PullRequestAnalysisReportModel>
 {
@@ -59,14 +59,14 @@ public sealed class ProcessAnalysisJobCommandHandler(
         // Step 2: Prepare analyzer and custom instructions
         var customInstructions = await prService.GetCustomInstructionsAsync(analysisRequest);
 
-        // Step 2b: Resolve and summarize linked work items (graceful degradation on failure)
-        var workItemSummary = await ResolveWorkItemContextAsync(analysisRequest, cancellationToken);
+        // Step 2b: Resolve linked work items (graceful degradation on failure)
+        var workItems = await ResolveWorkItemsAsync(analysisRequest, cancellationToken);
 
         var aiAnalyzerModel = new AnalyzerServiceModel(
             analysisRequest,
             customInstructions ?? string.Empty,
-            WorkItemContext: workItemSummary.ToPromptBlock(),
-            WorkItemGoal: workItemSummary.ToGoalPromptLine());
+            WorkItemContext: WorkItemPromptFormatter.ToPromptBlock(workItems),
+            WorkItemGoal: WorkItemPromptFormatter.ToGoalPromptLine(workItems));
 
         // Step 3: Execute analysis tasks in parallel
         var analysisResults = await ExecuteAnalysisTasksAsync(analyzerService, aiAnalyzerModel, diffFull, analysisRequest, cancellationToken);
@@ -400,11 +400,11 @@ public sealed class ProcessAnalysisJobCommandHandler(
         };
     }
 
-    private async Task<WorkItemSummary> ResolveWorkItemContextAsync(AnalysisRequest analysisRequest, CancellationToken cancellationToken)
+    private async Task<List<WorkItemReference>> ResolveWorkItemsAsync(AnalysisRequest analysisRequest, CancellationToken cancellationToken)
     {
         if (!analysisRequest.EnableWorkItemContext)
         {
-            return WorkItemSummary.Empty;
+            return [];
         }
 
         try
@@ -414,17 +414,16 @@ public sealed class ProcessAnalysisJobCommandHandler(
             {
                 logger.LogInformation("Work item context enabled but no linked items found for PR #{PullRequestId}",
                     analysisRequest.GitInfo?.PullRequestId);
-                return WorkItemSummary.Empty;
             }
 
-            return await workItemSummarizer.SummarizeAsync(items, cancellationToken);
+            return items;
         }
         catch (Exception ex)
         {
             logger.LogError(ex,
                 "Work item context resolution failed for PR #{PullRequestId}; continuing without context",
                 analysisRequest.GitInfo?.PullRequestId);
-            return WorkItemSummary.Empty;
+            return [];
         }
     }
 

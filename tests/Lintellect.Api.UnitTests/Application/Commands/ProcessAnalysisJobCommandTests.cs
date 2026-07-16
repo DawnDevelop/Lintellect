@@ -42,12 +42,11 @@ public class ProcessAnalysisJobCommandTests
             .Returns([]);
 
         var workItemService = Substitute.For<IWorkItemService>();
-        var workItemSummarizer = Substitute.For<IWorkItemSummarizer>();
         var analysisOptions = Options.Create(new AnalysisOptions());
         var logger = Substitute.For<ILogger<ProcessAnalysisJobCommandHandler>>();
 
         _handler = new ProcessAnalysisJobCommandHandler(
-            _mockContext, prService, _mockAnalyzer, workItemService, workItemSummarizer, analysisOptions, logger);
+            _mockContext, prService, _mockAnalyzer, workItemService, analysisOptions, logger);
     }
 
     private static AnalysisRequest ScopedRequest()

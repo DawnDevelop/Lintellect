@@ -9,7 +9,6 @@ public sealed class MockAnalyzerService : IAnalyzerService
     public string? LastDetailedWorkItemContext { get; private set; }
     public string? LastSummaryWorkItemContext { get; private set; }
     public string? LastInlineWorkItemGoal { get; private set; }
-    public int SummarizeContextCallCount { get; private set; }
 
     public Task<string> GetDetailedAnalysisAsync(AnalyzerServiceModel analysisResult, Dictionary<string, string> diffs, CancellationToken cancellationToken = default)
     {
@@ -21,12 +20,6 @@ public sealed class MockAnalyzerService : IAnalyzerService
     {
         LastSummaryWorkItemContext = analysisResult.WorkItemContext;
         return Task.FromResult("Mock summary");
-    }
-
-    public Task<string> SummarizeContextAsync(string systemPrompt, string userPrompt, int maxOutputTokens, CancellationToken cancellationToken = default)
-    {
-        SummarizeContextCallCount++;
-        return Task.FromResult("GOAL: Implement the linked work item.\n\nCONTEXT:\nThe linked item asks for X to be done.");
     }
 
     public Task<List<InlineSuggestion>> GenerateInlineSuggestionsAsync(AnalyzerServiceModel analysisResult, Dictionary<string, string> diffs, CancellationToken cancellationToken = default)

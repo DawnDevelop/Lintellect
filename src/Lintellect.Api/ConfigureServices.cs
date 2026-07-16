@@ -40,7 +40,6 @@ public static class ConfigureServices
 
         // Register work-item context services (toggled per-job via AnalysisRequest.EnableWorkItemContext)
         services.AddScoped<IWorkItemService, WorkItemService>();
-        services.AddScoped<IWorkItemSummarizer, WorkItemSummarizer>();
 
         return services;
     }

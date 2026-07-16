@@ -76,7 +76,7 @@ public class AzureDevopsClientService : IGitClient
         }
 
         var witClient = await _witClient.Value;
-        var fields = new[] { "System.Title", "System.Description", "System.WorkItemType", "System.State" };
+        var fields = new[] { "System.Title", "System.Description", "System.WorkItemType", "System.State", "Microsoft.VSTS.Common.AcceptanceCriteria" };
         var items = await witClient.GetWorkItemsAsync(ids, fields: fields, expand: AdoWorkItemExpand.None);
 
         return [.. items.Select(MapWorkItem)];
@@ -91,9 +91,23 @@ public class AzureDevopsClientService : IGitClient
             Id: item.Id?.ToString() ?? string.Empty,
             Url: item.Url,
             Title: GetField("System.Title"),
-            Body: StripHtml(GetField("System.Description")),
+            Body: CombineBody(
+                StripHtml(GetField("System.Description")),
+                StripHtml(GetField("Microsoft.VSTS.Common.AcceptanceCriteria"))),
             State: GetField("System.State"),
             Type: GetField("System.WorkItemType"));
+    }
+
+    private static string? CombineBody(string? description, string? acceptanceCriteria)
+    {
+        if (string.IsNullOrWhiteSpace(acceptanceCriteria))
+        {
+            return description;
+        }
+
+        return string.IsNullOrWhiteSpace(description)
+            ? $"Acceptance Criteria: {acceptanceCriteria}"
+            : $"{description}\n\nAcceptance Criteria: {acceptanceCriteria}";
     }
 
     private static string? StripHtml(string? value)

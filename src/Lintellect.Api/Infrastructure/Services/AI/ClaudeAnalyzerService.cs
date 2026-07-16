@@ -214,24 +214,6 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
         return content;
     }
 
-    /// <inheritdoc/>
-    public async Task<string> SummarizeContextAsync(
-        string systemPrompt,
-        string userPrompt,
-        int maxOutputTokens,
-        CancellationToken cancellationToken = default)
-    {
-        _logger.LogInformation("Running context summarization. SystemLength={SystemLength} UserLength={UserLength} MaxTokens={MaxTokens}",
-            systemPrompt.Length, userPrompt.Length, maxOutputTokens);
-
-        var parameter = CreateMessageParameters(systemPrompt, userPrompt);
-        parameter.PromptCaching = PromptCacheType.None;
-        parameter.MaxTokens = maxOutputTokens;
-
-        var message = await _client.Messages.GetClaudeMessageAsync(parameter, cancellationToken);
-        return message.ContentBlock?.Text ?? string.Empty;
-    }
-
     /// <summary>
     /// Analyzes CODEOWNERS file content and extracts structured code ownership information.
     /// </summary>

@@ -115,7 +115,6 @@ Apis/            → Minimal API endpoints, API key auth filter
 | `IPullRequestService` | Fetch diffs, post comments                                           |
 | `IMcpServiceResolver` | Resolve MCP servers for AI context                                   |
 | `IWorkItemService`    | Resolve linked work items / issues for a PR (per-provider)           |
-| `IWorkItemSummarizer` | AI-condense linked work items into a tight GOAL + CONTEXT block      |
 
 Factories (`GitInfoExtractorFactory`, `GitClientFactory`) select implementations based on `EGitProvider` at runtime.
 
@@ -131,15 +130,7 @@ Before a diff is embedded, `DiffGenerationHelper.AnnotateWithLineNumbers` prefix
 
 ### Work-item context (on by default)
 
-When `AnalysisRequest.EnableWorkItemContext` is true (CLI flag `--enable-work-item-context` / `-ewi`, defaults to true; pass `--enable-work-item-context false` to disable), the orchestrator resolves linked work items via `IWorkItemService` and runs a single `IWorkItemSummarizer` pass that produces a structured response:
-
-```
-GOAL: <one sentence>
-CONTEXT:
-<2-3 short paragraphs>
-```
-
-The full block is injected into the Summary and Detailed-Analysis prompts via `{{workItemContext}}`; only the `GOAL` line is injected into the per-file Inline-Suggestion prompts (per-file calls multiply tokens by file count, so the inline cost stays bounded). Failures during fetch or summarization log + continue with no context. Azure DevOps work items are resolved server-side via the WIT REST API; GitHub uses PR-body parsing for `Closes/Fixes/Resolves #N` keywords.
+When `AnalysisRequest.EnableWorkItemContext` is true (CLI flag `--enable-work-item-context` / `-ewi`, defaults to true; pass `--enable-work-item-context false` to disable), the orchestrator resolves linked work items via `IWorkItemService` and injects them verbatim — there is deliberately no AI summarization pass (it was an extra call and failure point). `WorkItemPromptFormatter` (`Application/Services`) renders the context: the full block (per-item heading, type/state, body truncated at 4000 chars, plus a directive to flag missing scope) goes into the Summary and Detailed-Analysis prompts via `{{workItemContext}}`; only a one-line title list goes into the per-file Inline-Suggestion prompts (per-file calls multiply tokens by file count, so the inline cost stays bounded). Empty context renders as an empty string, never a dangling heading. Failures during fetch log + continue with no context. Azure DevOps work items are resolved server-side via the WIT REST API (description + acceptance criteria, HTML-stripped); GitHub uses PR-body parsing for `Closes/Fixes/Resolves #N` keywords.
 
 ### Per-PR dedupe and incremental re-analysis
 
