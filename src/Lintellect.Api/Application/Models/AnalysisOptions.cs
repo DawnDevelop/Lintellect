@@ -28,6 +28,14 @@ public sealed class AnalysisOptions
     /// </summary>
     public int MaxLinesPerFile { get; set; } = 1000;
 
+    /// <summary>
+    /// When true, runs the analysis passes as direct parallel API calls instead of the Claude
+    /// batch endpoint. Trades the ~50% batch token discount for bounded latency — the batch tier
+    /// has no completion-time guarantee and can exceed the job timeout under load.
+    /// Set via env: Analysis__SynchronousAnalysis.
+    /// </summary>
+    public bool SynchronousAnalysis { get; set; }
+
     public bool IncludeSummary { get; set; } = true;
 
     public bool IncludeComprehensiveComment { get; set; } = true;

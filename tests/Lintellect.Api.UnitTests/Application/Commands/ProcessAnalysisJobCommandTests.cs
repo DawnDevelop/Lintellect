@@ -158,6 +158,55 @@ public class ProcessAnalysisJobCommandTests
     }
 
     [Test]
+    public async Task Handle_WhenSynchronousAnalysisEnabled_BypassesBatchAnalyzer()
+    {
+        var batchAnalyzer = Substitute.For<IBatchAnalyzerService>();
+        batchAnalyzer.GetDetailedAnalysisAsync(Arg.Any<AnalyzerServiceModel>(), Arg.Any<Dictionary<string, string>>(), Arg.Any<CancellationToken>())
+            .Returns("Detailed analysis text");
+        var handler = HandlerWith(batchAnalyzer, new AnalysisOptions { SynchronousAnalysis = true });
+
+        var job = new AnalysisJobBuilder().WithAnalysisRequest(ScopedRequest()).Build();
+        var jobsDbSet = new[] { job }.ToMockDbSet();
+        _mockContext.AnalysisJobs.Returns(jobsDbSet);
+
+        await handler.Handle(new ProcessAnalysisJobCommand(job.Id, job.CreateAnalysisRequestSnapshot()), CancellationToken.None);
+
+        await batchAnalyzer.DidNotReceive().RunBatchedAnalysisAsync(
+            Arg.Any<AnalyzerServiceModel>(), Arg.Any<Dictionary<string, string>>(), Arg.Any<string?>(), Arg.Any<List<string>>(), Arg.Any<CancellationToken>());
+        await batchAnalyzer.Received(1).GetDetailedAnalysisAsync(
+            Arg.Any<AnalyzerServiceModel>(), Arg.Any<Dictionary<string, string>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task Handle_WhenSynchronousAnalysisDisabled_UsesBatchAnalyzer()
+    {
+        var batchAnalyzer = Substitute.For<IBatchAnalyzerService>();
+        batchAnalyzer.RunBatchedAnalysisAsync(Arg.Any<AnalyzerServiceModel>(), Arg.Any<Dictionary<string, string>>(), Arg.Any<string?>(), Arg.Any<List<string>>(), Arg.Any<CancellationToken>())
+            .Returns(new BatchedAnalysisResult { DetailedAnalysis = "Detailed analysis text" });
+        var handler = HandlerWith(batchAnalyzer, new AnalysisOptions());
+
+        var job = new AnalysisJobBuilder().WithAnalysisRequest(ScopedRequest()).Build();
+        var jobsDbSet = new[] { job }.ToMockDbSet();
+        _mockContext.AnalysisJobs.Returns(jobsDbSet);
+
+        await handler.Handle(new ProcessAnalysisJobCommand(job.Id, job.CreateAnalysisRequestSnapshot()), CancellationToken.None);
+
+        await batchAnalyzer.Received(1).RunBatchedAnalysisAsync(
+            Arg.Any<AnalyzerServiceModel>(), Arg.Any<Dictionary<string, string>>(), Arg.Any<string?>(), Arg.Any<List<string>>(), Arg.Any<CancellationToken>());
+    }
+
+    private ProcessAnalysisJobCommandHandler HandlerWith(IAnalyzerService analyzer, AnalysisOptions options)
+    {
+        var gitClientFactory = Substitute.For<IGitClientFactory>();
+        gitClientFactory.CreateClient(Arg.Any<AnalysisRequest>()).Returns(_mockGitClient);
+        var workItemService = Substitute.For<IWorkItemService>();
+        var logger = Substitute.For<ILogger<ProcessAnalysisJobCommandHandler>>();
+
+        return new ProcessAnalysisJobCommandHandler(
+            _mockContext, new PullRequestService(gitClientFactory), analyzer, workItemService, Options.Create(options), logger);
+    }
+
+    [Test]
     public async Task Handle_WithoutReanalysisBaseCommit_UsesFullPrDiff()
     {
         var job = new AnalysisJobBuilder().WithAnalysisRequest(ScopedRequest()).Build();

@@ -15,6 +15,7 @@ public sealed class AnalysisBackgroundService(
     ILogger<AnalysisBackgroundService> logger,
     AnalysisMetrics metrics) : BackgroundService
 {
+    internal static readonly TimeSpan JobTimeout = TimeSpan.FromMinutes(60);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -76,9 +77,10 @@ public sealed class AnalysisBackgroundService(
         await using var scope = serviceProvider.CreateAsyncScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-        // Add job timeout (30 minutes)
+        // Job timeout; kept above ClaudeAnalyzerService.BatchPollTimeout so a slow Anthropic batch
+        // gives up gracefully inside the analyzer instead of being cancelled mid-flight here.
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(TimeSpan.FromMinutes(30));
+        timeoutCts.CancelAfter(JobTimeout);
 
         try
         {
@@ -116,7 +118,7 @@ public sealed class AnalysisBackgroundService(
         }
         catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            logger.LogError("Job {JobId} timed out after 30 minutes", job.Id);
+            logger.LogError("Job {JobId} timed out after {Timeout} minutes", job.Id, JobTimeout.TotalMinutes);
 
             // Record failed job
             var duration = (DateTimeOffset.UtcNow - startTime).TotalSeconds;
@@ -125,7 +127,7 @@ public sealed class AnalysisBackgroundService(
             await mediator.Send(new UpdateAnalysisJobStatusCommand(
                 job.Id,
                 AnalysisStatus.Failed,
-                ErrorMessage: "Job timed out after 30 minutes"),
+                ErrorMessage: $"Job timed out after {JobTimeout.TotalMinutes} minutes"),
                 cancellationToken);
         }
         catch (Exception ex)

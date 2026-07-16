@@ -21,7 +21,10 @@ namespace Lintellect.Api.Infrastructure.Services.AI;
 internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
 {
     private static readonly TimeSpan BatchPollInterval = TimeSpan.FromSeconds(2);
-    private static readonly TimeSpan BatchPollTimeout = TimeSpan.FromHours(1);
+
+    // Must stay below AnalysisBackgroundService.JobTimeout so a slow batch returns an empty
+    // result (logged warning) instead of the whole job being cancelled by the job timeout.
+    private static readonly TimeSpan BatchPollTimeout = TimeSpan.FromMinutes(50);
 
     // Same schema source as the Azure analyzer's ChatResponseFormat.ForJsonSchema, so Claude
     // JSON responses are schema-enforced instead of relying on prompt-format compliance.

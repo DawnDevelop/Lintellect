@@ -120,9 +120,11 @@ public sealed class ProcessAnalysisJobCommandHandler(
         // The batched run always generates summary, detailed analysis and inline suggestions in one
         // pass; for inline-only jobs (incremental re-analysis) the individual-task path below makes
         // a single inline call instead of paying for outputs that would never be posted.
+        // SynchronousAnalysis forces the individual-task path: the batch tier has no latency
+        // guarantee, so direct parallel calls are used when review turnaround matters more than cost.
         var needsSummaryOrDetailed = analysisRequest.EnableDescriptionSummary || analysisRequest.EnableSummaryComment;
 
-        if (analyzer is IBatchAnalyzerService batchAnalyzer && needsSummaryOrDetailed)
+        if (!_analysisOptions.SynchronousAnalysis && analyzer is IBatchAnalyzerService batchAnalyzer && needsSummaryOrDetailed)
         {
             var codeOwnersContent = analysisRequest.EnableAzureDevopsCodeOwners
                 ? await ResolveMatchingCodeOwnersAsync(analysisRequest, diffs.Keys)
