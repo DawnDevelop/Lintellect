@@ -55,10 +55,12 @@ public class ClaudeAnalyzerServiceParseInlineSuggestionsTests
         var format = ClaudeAnalyzerService.InlineSuggestionsOutputFormat;
 
         format.Type.ShouldBe("json_schema");
-        var schema = format.Schema.GetRawText();
-        schema.ShouldContain("\"suggestions\"");
-        schema.ShouldContain("\"filePath\"");
-        schema.ShouldContain("\"lineFrom\"");
+        var schema = format.Schema;
+        schema.GetProperty("additionalProperties").GetBoolean().ShouldBeFalse();
+        var suggestionItem = schema.GetProperty("properties").GetProperty("suggestions").GetProperty("items");
+        suggestionItem.GetProperty("additionalProperties").GetBoolean().ShouldBeFalse();
+        suggestionItem.GetProperty("properties").TryGetProperty("filePath", out _).ShouldBeTrue();
+        suggestionItem.GetProperty("properties").TryGetProperty("lineFrom", out _).ShouldBeTrue();
     }
 
     [Test]
@@ -67,6 +69,7 @@ public class ClaudeAnalyzerServiceParseInlineSuggestionsTests
         var format = ClaudeAnalyzerService.CodeOwnersOutputFormat;
 
         format.Type.ShouldBe("json_schema");
-        format.Schema.GetRawText().ShouldContain("\"codeOwners\"");
+        format.Schema.GetProperty("additionalProperties").GetBoolean().ShouldBeFalse();
+        format.Schema.GetProperty("properties").TryGetProperty("codeOwners", out _).ShouldBeTrue();
     }
 }

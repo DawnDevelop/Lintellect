@@ -8,6 +8,9 @@ using Lintellect.Api.Application.Services;
 using Lintellect.Api.Infrastructure.Extensions;
 using Lintellect.Api.Infrastructure.Services.AI.Prompts;
 using Lintellect.Shared.Models;
+using AIJsonSchemaCreateOptions = Microsoft.Extensions.AI.AIJsonSchemaCreateOptions;
+using AIJsonSchemaTransformOptions = Microsoft.Extensions.AI.AIJsonSchemaTransformOptions;
+using AIJsonUtilities = Microsoft.Extensions.AI.AIJsonUtilities;
 
 namespace Lintellect.Api.Infrastructure.Services.AI;
 
@@ -29,9 +32,14 @@ internal sealed class ClaudeAnalyzerService : IBatchAnalyzerService
     {
         return new()
         {
-            Schema = Microsoft.Extensions.AI.AIJsonUtilities.CreateJsonSchema(
+            // Anthropic structured outputs reject schemas whose objects don't set additionalProperties: false.
+            Schema = AIJsonUtilities.CreateJsonSchema(
                 typeof(T),
-                serializerOptions: JsonExtensions.JsonSerializerOptions)
+                serializerOptions: JsonExtensions.JsonSerializerOptions,
+                inferenceOptions: new AIJsonSchemaCreateOptions
+                {
+                    TransformOptions = new AIJsonSchemaTransformOptions { DisallowAdditionalProperties = true }
+                })
         };
     }
 
