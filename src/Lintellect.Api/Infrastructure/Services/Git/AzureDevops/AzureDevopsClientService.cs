@@ -410,7 +410,7 @@ public class AzureDevopsClientService : IGitClient
             var filePath = change.Item.Path;
 
             // Get the base and target commit IDs
-            var baseCommitId = commitDiffs.BaseCommit ?? commitDiffs.CommonCommit;
+            var baseCommitId = commitDiffs.CommonCommit ?? commitDiffs.BaseCommit;
             var targetCommitId = commitDiffs.TargetCommit;
 
             if (baseCommitId is null || targetCommitId is null)
@@ -504,7 +504,7 @@ public class AzureDevopsClientService : IGitClient
             return compactDiffs;
         }
 
-        var baseCommitId = commitDiffs.BaseCommit ?? commitDiffs.CommonCommit;
+        var baseCommitId = commitDiffs.CommonCommit ?? commitDiffs.BaseCommit;
         var targetCommitId = commitDiffs.TargetCommit;
 
         if (baseCommitId is null || targetCommitId is null)
