@@ -196,9 +196,9 @@ internal sealed class PromptBuilder
         }
 
         var builder = new StringBuilder();
-        builder.AppendLine("## Code Changes to Review (Priority: Review Every Line):");
+        builder.AppendLine("## Code Changes to Review (Priority: Review Every Added Line):");
         builder.AppendLine();
-        builder.AppendLine("**Note:** Each diff line is prefixed with `<new-file line number>|<diff marker><code>`. Use the number before the `|` directly for `lineFrom`/`lineTo` — do not calculate it. Removed lines have a blank number. See system prompt for details.");
+        builder.AppendLine("**Note:** Each diff line is prefixed with `<new-file line number>|<diff marker><code>`. Use the number before the `|` directly for `lineFrom`/`lineTo` — do not calculate it. Removed lines have a blank number. Context lines are for understanding only — do not comment on them. See system prompt for details.");
         builder.AppendLine();
 
         // Prioritize files based on findings: errors > warnings > info > none

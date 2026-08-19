@@ -36,6 +36,6 @@ Each diff line is prefixed with `<line number>|<diff marker><code>`:
 ### Rules for Creating Suggestions
 
 1. Take `lineFrom`/`lineTo` straight from the number printed before the `|` on the target line.
-2. Only attach suggestions to added (`+`) or context (` `) lines — those are the lines that have a number.
+2. Only attach suggestions to added (`+`) lines. Context lines (` `) are shown only for surrounding understanding — never attach a suggestion to one, even if it has a valid line number.
 3. **ALWAYS use `lineFrom`** for single-line suggestions (do NOT use `line`).
 4. **Use `lineFrom` and `lineTo`** for multi-line suggestions.
